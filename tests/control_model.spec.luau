@@ -134,4 +134,50 @@ do
 	print("removePlayer: unknown player no-op OK")
 end
 
+-- removePlayer N=3 absorb: 3-cycle then disconnect the leaver; a THIRD player is absorbed.
+do
+	local m = ControlModel.new()
+	ControlModel.addPlayer(m, "A", "a")
+	ControlModel.addPlayer(m, "B", "b")
+	ControlModel.addPlayer(m, "C", "c")
+	ControlModel.swap(m, { "A", "B", "C" }, function(_n) return 1 end) -- A->b, B->c, C->a
+
+	expect(ControlModel.controlledBody(m, "A") == "b", "precondition A->b")
+	expect(ControlModel.controlledBody(m, "B") == "c", "precondition B->c")
+	expect(ControlModel.controlledBody(m, "C") == "a", "precondition C->a")
+
+	local r = ControlModel.removePlayer(m, "A")
+
+	expect(r.destroyOwn == true, "A's avatar body a must be destroyed")
+	expect(r.reassign ~= nil, "a third player must be absorbed")
+	expect(r.reassign.player == "C", "C controlled A's avatar body a, so C is absorbed")
+	expect(r.reassign.body == "b", "C is moved onto the body A vacated (b)")
+	expect(ControlModel.controlledBody(m, "C") == "b", "C now controls b")
+	expect(ControlModel.controlledBody(m, "B") == "c", "B is untouched")
+	expect(m.controllerOf["a"] == nil, "destroyed body a has no controller")
+	expect(ControlModel.bijectionHolds(m), "bijection holds after N=3 absorb")
+	print("removePlayer: N=3 absorb OK")
+end
+
+-- removePlayer sequential disconnects down to zero keep the model consistent and empty.
+do
+	local m = ControlModel.new()
+	ControlModel.addPlayer(m, "A", "a")
+	ControlModel.addPlayer(m, "B", "b")
+	ControlModel.addPlayer(m, "C", "c")
+	ControlModel.swap(m, { "A", "B", "C" }, function(_n) return 1 end)
+
+	ControlModel.removePlayer(m, "A")
+	expect(ControlModel.bijectionHolds(m), "bijection after first disconnect")
+	ControlModel.removePlayer(m, "B")
+	expect(ControlModel.bijectionHolds(m), "bijection after second disconnect")
+	ControlModel.removePlayer(m, "C")
+	expect(ControlModel.bijectionHolds(m), "bijection after final disconnect")
+
+	expect(next(m.players) == nil, "no players remain")
+	expect(next(m.controllerOf) == nil, "no controlled bodies remain")
+	expect(next(m.bodyOf) == nil, "no bodyOf entries remain")
+	print("removePlayer: sequential disconnects to empty OK")
+end
+
 print("ALL CONTROLMODEL TESTS PASSED")
