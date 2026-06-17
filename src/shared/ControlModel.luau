@@ -24,4 +24,44 @@ function ControlModel.derange(list, randint)
 	return list
 end
 
+function ControlModel.new()
+	return {
+		players = {},      -- [player] = true   (connected set)
+		bodyOf = {},       -- [player] = body    (body the player currently controls)
+		controllerOf = {}, -- [body]   = player  (inverse of bodyOf)
+		ownerBody = {},    -- [player] = body    (the body wearing this player's avatar; stable)
+	}
+end
+
+-- A player joins/spawns: they own a fresh body and start by controlling it.
+function ControlModel.addPlayer(model, player, body)
+	model.players[player] = true
+	model.ownerBody[player] = body
+	model.bodyOf[player] = body
+	model.controllerOf[body] = player
+end
+
+function ControlModel.controlledBody(model, player)
+	return model.bodyOf[player]
+end
+
+-- True iff every connected player controls exactly one body and vice versa.
+function ControlModel.bijectionHolds(model)
+	local nPlayers, nBodies = 0, 0
+	for player in pairs(model.players) do
+		nPlayers += 1
+		local body = model.bodyOf[player]
+		if body == nil or model.controllerOf[body] ~= player then
+			return false
+		end
+	end
+	for _body, player in pairs(model.controllerOf) do
+		nBodies += 1
+		if model.players[player] == nil then
+			return false
+		end
+	end
+	return nPlayers == nBodies
+end
+
 return ControlModel
