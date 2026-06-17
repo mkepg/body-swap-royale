@@ -46,4 +46,40 @@ do
 	print("addPlayer: self-control + bijection OK")
 end
 
+-- swap: 3 players, deterministic rng -> single-cycle derangement of current bodies.
+do
+	local m = ControlModel.new()
+	ControlModel.addPlayer(m, "A", "a")
+	ControlModel.addPlayer(m, "B", "b")
+	ControlModel.addPlayer(m, "C", "c")
+
+	local pairs_ = ControlModel.swap(m, { "A", "B", "C" }, function(_n) return 1 end)
+
+	-- No player keeps their previous body.
+	expect(ControlModel.controlledBody(m, "A") ~= "a", "A must not keep a")
+	expect(ControlModel.controlledBody(m, "B") ~= "b", "B must not keep b")
+	expect(ControlModel.controlledBody(m, "C") ~= "c", "C must not keep c")
+
+	-- Still a bijection (every body controlled once, every player controls once).
+	expect(ControlModel.bijectionHolds(m), "bijection must survive swap")
+
+	-- Returned pairs describe exactly who now controls what.
+	expect(#pairs_ == 3, "swap should return 3 pairs")
+	for _, pr in ipairs(pairs_) do
+		expect(ControlModel.controlledBody(m, pr.player) == pr.body, "pair must match model")
+	end
+	print("swap: derangement + bijection + pairs OK")
+end
+
+-- swap: 2 players always exchange.
+do
+	local m = ControlModel.new()
+	ControlModel.addPlayer(m, "A", "a")
+	ControlModel.addPlayer(m, "B", "b")
+	ControlModel.swap(m, { "A", "B" }, function(_n) return 1 end)
+	expect(ControlModel.controlledBody(m, "A") == "b", "A should now control b")
+	expect(ControlModel.controlledBody(m, "B") == "a", "B should now control a")
+	print("swap: n=2 exchange OK")
+end
+
 print("ALL CONTROLMODEL TESTS PASSED")
