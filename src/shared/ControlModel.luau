@@ -129,6 +129,7 @@ function ControlModel.removePlayer(model, player)
 			model.bodyOf[otherController] = freed
 			model.controllerOf[freed] = otherController
 			reassign = { player = otherController, body = freed }
+			-- Q's ownerBody is intentionally left unchanged: it tracks avatar identity, not control.
 		end
 		model.ownerBody[player] = nil
 	end
