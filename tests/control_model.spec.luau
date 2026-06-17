@@ -82,4 +82,56 @@ do
 	print("swap: n=2 exchange OK")
 end
 
+-- removePlayer CASE 1: player controls their OWN avatar body (no swap happened).
+-- Their body is destroyed; no reassignment; remaining players keep a valid bijection.
+do
+	local m = ControlModel.new()
+	ControlModel.addPlayer(m, "A", "a")
+	ControlModel.addPlayer(m, "B", "b")
+
+	local r = ControlModel.removePlayer(m, "A")
+
+	expect(r.destroyOwn == true, "A's own body must be destroyed")
+	expect(r.reassign == nil, "no reassignment needed when controlling own body")
+	expect(m.players["A"] == nil, "A must be removed from players")
+	expect(ControlModel.controlledBody(m, "B") == "b", "B unaffected")
+	expect(ControlModel.bijectionHolds(m), "bijection holds for remaining players")
+	print("removePlayer: case 1 (own body) OK")
+end
+
+-- removePlayer CASE 2 (THE REGRESSION): after a swap A controls b, B controls a.
+-- A disconnects. B (controller of A's avatar body `a`) must be ABSORBED onto the
+-- body A vacated (`b`), then `a` is destroyed. B must NOT be yanked.
+do
+	local m = ControlModel.new()
+	ControlModel.addPlayer(m, "A", "a")
+	ControlModel.addPlayer(m, "B", "b")
+	ControlModel.swap(m, { "A", "B" }, function(_n) return 1 end) -- A->b, B->a
+
+	expect(ControlModel.controlledBody(m, "A") == "b", "precondition: A controls b")
+	expect(ControlModel.controlledBody(m, "B") == "a", "precondition: B controls a")
+
+	local r = ControlModel.removePlayer(m, "A")
+
+	expect(r.destroyOwn == true, "A's avatar body (a) must be destroyed")
+	expect(r.reassign ~= nil, "B must be reassigned (absorbed)")
+	expect(r.reassign.player == "B", "the absorbed player is B")
+	expect(r.reassign.body == "b", "B is moved onto the vacated body b")
+	expect(ControlModel.controlledBody(m, "B") == "b", "B now controls a LIVE body (not yanked)")
+	expect(m.controllerOf["a"] == nil, "destroyed body a has no controller")
+	expect(m.players["A"] == nil, "A removed")
+	expect(ControlModel.bijectionHolds(m), "bijection holds after absorb")
+	print("removePlayer: case 2 (absorb / regression) OK")
+end
+
+-- removePlayer: unknown player is a no-op.
+do
+	local m = ControlModel.new()
+	ControlModel.addPlayer(m, "A", "a")
+	local r = ControlModel.removePlayer(m, "ghost")
+	expect(r.destroyOwn == false and r.reassign == nil, "removing unknown player is a no-op")
+	expect(ControlModel.bijectionHolds(m), "bijection unaffected")
+	print("removePlayer: unknown player no-op OK")
+end
+
 print("ALL CONTROLMODEL TESTS PASSED")

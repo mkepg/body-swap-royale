@@ -90,4 +90,51 @@ function ControlModel.swap(model, orderedPlayers, randint)
 	return result
 end
 
+-- Handle a player disconnecting while preserving the bijection.
+--
+-- `freed` = the body the player currently controls (it loses its controller).
+-- `own`   = the body wearing the leaving player's avatar (it must be destroyed,
+--           since its owner is gone).
+--
+-- If another connected player Q controls `own`, ABSORB: move Q onto `freed`
+-- (the just-vacated body), so `own` becomes controllerless and can be destroyed
+-- without yanking Q. If the player controlled their own avatar body
+-- (freed == own), there is nobody to absorb and we simply destroy it.
+--
+-- Returns: {
+--   destroyOwn = boolean,                       -- caller destroys the player's avatar body
+--   reassign   = { player = Q, body = freed } | nil,  -- caller hands Q ownership of `freed`
+-- }
+function ControlModel.removePlayer(model, player)
+	if not model.players[player] then
+		return { destroyOwn = false, reassign = nil }
+	end
+
+	local freed = model.bodyOf[player]
+	local own = model.ownerBody[player]
+
+	-- Drop the leaving player's control first.
+	if freed ~= nil then
+		model.controllerOf[freed] = nil
+	end
+	model.bodyOf[player] = nil
+
+	local reassign = nil
+	if own ~= nil then
+		-- If freed == own this is already nil (we just cleared it): nobody to absorb.
+		local otherController = model.controllerOf[own]
+		if otherController ~= nil and freed ~= nil and freed ~= own then
+			-- Absorb: move the other controller onto the vacated body.
+			model.controllerOf[own] = nil
+			model.bodyOf[otherController] = freed
+			model.controllerOf[freed] = otherController
+			reassign = { player = otherController, body = freed }
+		end
+		model.ownerBody[player] = nil
+	end
+
+	model.players[player] = nil
+	return { destroyOwn = (own ~= nil), reassign = reassign }
+end
+
 return ControlModel
