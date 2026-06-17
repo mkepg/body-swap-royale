@@ -306,7 +306,7 @@ If a player disconnects:
 
 ### ⚠️ Known Open Issue — disconnect cleanup vs. the ownership model
 
-**Status: unresolved; must be fixed before MVP.**
+**Status: RESOLVED (2026-06-18).** Implemented via the pure `ControlModel` absorb rule and `ControlManager.removePlayer`; see `docs/superpowers/plans/2026-06-18-disconnect-control-model-fix.md`. Regression covered by `tests/control_model.spec.luau` (case 2, plus N=3 absorb). The notes below are retained as the rationale.
 
 In the ownership model, **the body wearing a player's avatar is not necessarily the body that player controls** — after the first swap, a player controls someone else's avatar-body, and their own avatar-body is driven by a stranger. The current prototype (`init.server.luau` → `BodyManager.removeBody`) destroys the *leaving player's avatar-body immediately* on `PlayerRemoving`. Two failure modes follow:
 
@@ -609,7 +609,7 @@ Mobile users represent ~60% of Roblox's audience. Mobile performance is a tier-o
 | Swap mechanic feels buggy | Medium | Prototyped & validated on the ownership-transfer model (smooth under simulated latency); continue camera-cut polish and playtesting |
 | Movement feels laggy | **Resolved** | Was high under the original server-routing plan (0.3–0.6s). Fixed by client-owned bodies (prediction). See revision history. |
 | Client-owned physics widens cheat surface (speed/teleport) | Medium | Server-side movement validation, pulled into MVP as load-bearing (§7) |
-| **Disconnect cleanup corrupts the controllers↔bodies bijection** | **High** | See §4 Known Open Issue — decouple body lifecycle from control map before MVP |
+| **Disconnect cleanup corrupts the controllers↔bodies bijection** | **Resolved** | Fixed via the ControlModel absorb rule + `ControlManager.removePlayer`; bijection asserted by lune tests. See §4. |
 | API costs exceed budget | Medium | Caching, rate limiting, fallbacks |
 | Mobile performance issues | High | Early mobile testing, performance budgets; ownership model lowers server CPU |
 | Data loss from DataStore failure | High | Backup datastores, defensive code |
