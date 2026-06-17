@@ -34,4 +34,16 @@ do
 	print("derange: n=2 swaps OK")
 end
 
+-- new + addPlayer: each player spawns controlling their own avatar body.
+do
+	local m = ControlModel.new()
+	ControlModel.addPlayer(m, "A", "a")
+	ControlModel.addPlayer(m, "B", "b")
+
+	expect(ControlModel.controlledBody(m, "A") == "a", "A should control a")
+	expect(ControlModel.controlledBody(m, "B") == "b", "B should control b")
+	expect(ControlModel.bijectionHolds(m), "bijection should hold after spawns")
+	print("addPlayer: self-control + bijection OK")
+end
+
 print("ALL CONTROLMODEL TESTS PASSED")
