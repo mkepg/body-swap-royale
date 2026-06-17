@@ -25,7 +25,8 @@
 
     "Workspace": {
       "$properties": {
-        "FilteringEnabled": true
+        "FilteringEnabled": true,
+        "StreamingEnabled": false
       },
       "Baseplate": {
         "$className": "Part",
