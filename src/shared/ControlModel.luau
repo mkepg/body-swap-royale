@@ -64,4 +64,30 @@ function ControlModel.bijectionHolds(model)
 	return nPlayers == nBodies
 end
 
+-- Rotate control among the given connected players. Deranges their CURRENT bodies
+-- (Sattolo), so nobody keeps the body they were just in. Because it permutes the
+-- exact same set of bodies the players already hold, it stays a bijection.
+-- Returns an array of { player = <player>, body = <body> } describing the new map.
+function ControlModel.swap(model, orderedPlayers, randint)
+	assert(#orderedPlayers >= 2, "swap needs >= 2 players")
+
+	local bodies = {}
+	for i, player in ipairs(orderedPlayers) do
+		bodies[i] = model.bodyOf[player]
+	end
+
+	ControlModel.derange(bodies, randint)
+
+	-- Every body in `bodies` gets exactly one new controller, so overwriting
+	-- controllerOf/bodyOf fully reassigns with no stale entries.
+	local result = {}
+	for i, player in ipairs(orderedPlayers) do
+		local newBody = bodies[i]
+		model.bodyOf[player] = newBody
+		model.controllerOf[newBody] = player
+		result[i] = { player = player, body = newBody }
+	end
+	return result
+end
+
 return ControlModel
