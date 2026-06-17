@@ -1,52 +1,66 @@
 --[[
-	ControlManager (server)
-	Location: ServerScriptService/Server/ControlManager  (ModuleScript)
+	ControlManager (server) -- thin glue over the pure ControlModel.
 
-	Grants a player control of a body by handing them its network ownership.
-	The client then drives that body locally (predicted -> smooth) and points its
-	camera at it. Because control is ownership (not Character), it can be rotated
-	freely with no destruction -- which is the entire reason this model exists.
-
-	This is the piece SwapController calls to actually perform the swap.
+	Holds one ControlModel instance (the controllers<->bodies state) and turns its
+	decisions into Roblox side effects: network ownership, the SetControlledBody
+	notification, and avatar-body destruction on disconnect.
 
 	Depends on:
-	  ReplicatedStorage.Shared.Remotes -> SetControlledBody  (RemoteEvent)
+	  ReplicatedStorage.Shared.Remotes      -> SetControlledBody  (RemoteEvent)
+	  ReplicatedStorage.Shared.ControlModel -> pure state machine
+	  ServerScriptService.Server.BodyManager -> destroys the leaving player's body
 --]]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local ControlModel = require(ReplicatedStorage.Shared.ControlModel)
+local BodyManager = require(script.Parent.BodyManager)
 local SetControlledBody = Remotes.get("SetControlledBody")
 
 local ControlManager = {}
-ControlManager.bodyOf = {}       -- [player] = body they currently control
-ControlManager.controllerOf = {} -- [body]   = player
+local model = ControlModel.new()
 
--- Assign one player to one body. Used for both initial spawn and swaps.
--- For a full-bijection swap every entry is overwritten, so no stale links.
-function ControlManager.assignOne(player, body, isSwap)
-	local root = body:FindFirstChild("HumanoidRootPart")
+-- Hand `player` network ownership of `body` and tell their client to retarget.
+local function applyOwnership(player, body, isSwap)
+	local root = body and body:FindFirstChild("HumanoidRootPart")
 	if root then
-		pcall(function() root:SetNetworkOwner(player) end)
+		pcall(function()
+			root:SetNetworkOwner(player)
+		end)
 	end
-	ControlManager.bodyOf[player] = body
-	ControlManager.controllerOf[body] = player
 	SetControlledBody:FireClient(player, body, isSwap == true)
 end
 
-function ControlManager.getControlledBody(player)
-	return ControlManager.bodyOf[player]
+-- Player spawned: they own `body` and start by controlling it.
+function ControlManager.addPlayer(player, body)
+	ControlModel.addPlayer(model, player, body)
+	applyOwnership(player, body, false)
 end
 
-function ControlManager.release(player)
-	local body = ControlManager.bodyOf[player]
-	if body and ControlManager.controllerOf[body] == player then
-		ControlManager.controllerOf[body] = nil
-		local root = body:FindFirstChild("HumanoidRootPart")
-		if root then
-			pcall(function() root:SetNetworkOwner(nil) end) -- back to server
-		end
+-- Rotate control across `orderedPlayers` (a swap). Returns how many were swapped.
+function ControlManager.swap(orderedPlayers)
+	local result = ControlModel.swap(model, orderedPlayers, function(n)
+		return math.random(1, n)
+	end)
+	for _, pair in ipairs(result) do
+		applyOwnership(pair.player, pair.body, true)
 	end
-	ControlManager.bodyOf[player] = nil
+	return #result
+end
+
+-- Player left: apply the model's absorb decision, then destroy their avatar body.
+function ControlManager.removePlayer(player)
+	local decision = ControlModel.removePlayer(model, player)
+	if decision.reassign then
+		applyOwnership(decision.reassign.player, decision.reassign.body, false)
+	end
+	if decision.destroyOwn then
+		BodyManager.removeBody(player) -- destroys bodyByOwner[player] = the leaving player's avatar body
+	end
+end
+
+function ControlManager.getControlledBody(player)
+	return ControlModel.controlledBody(model, player)
 end
 
 return ControlManager
