@@ -73,4 +73,17 @@ do
 	print("grace: clear OK")
 end
 
+-- re-swap: a second onSwap on the same player (re-swapped while still inside a
+-- prior window) fully resets the window -- fresh floor/until AND hasMoved cleared.
+do
+	local m = GraceModel.new()
+	GraceModel.onSwap(m, "A", 0, GRACE, FLOOR)
+	GraceModel.markMoved(m, "A")
+	expect(GraceModel.canDieFromHazard(m, "A", 1.0) == true, "precondition: moved -> can die in old window")
+	GraceModel.onSwap(m, "A", 10, GRACE, FLOOR) -- swapped into a new body at t=10
+	expect(GraceModel.canDieFromHazard(m, "A", 10) == false, "re-swap restores the hard floor")
+	expect(GraceModel.canDieFromHazard(m, "A", 11.0) == false, "re-swap clears hasMoved -> protected again")
+	print("grace: re-swap resets window OK")
+end
+
 print("ALL GRACEMODEL TESTS PASSED")
