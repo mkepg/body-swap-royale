@@ -104,6 +104,11 @@ end
 -- the Humanoid.Died hook for future health-based hazards). Idempotent: a no-op for
 -- a player who is not currently alive.
 function RoundManager.eliminate(player)
+	-- Idempotent: if the player isn't currently alive, RoundState.eliminate would
+	-- no-op, so skip the side effects (event/park/spectate) entirely.
+	if not RoundState.isAlive(model, player) then
+		return { ended = false, winner = nil }
+	end
 	local result = RoundState.eliminate(model, player)
 	local body = ControlManager.getControlledBody(player)
 	if body then
