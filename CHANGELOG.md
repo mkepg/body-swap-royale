@@ -7,6 +7,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- `src/server/RoundManager.luau` — server glue driving the MVP win/lose loop:
+  sequences `Lobby → Active → Ended → reset` on real clocks, gates swaps to the
+  Active phase (roster = `RoundState`'s alive set), runs a void death monitor that
+  logically eliminates a body crossing `Config.VOID_Y` (parked, never killed), and
+  broadcasts phase/elimination/spectate to clients. Declares a winner.
+- `src/client/ClientRoundHud.luau` — minimal round feedback (lobby countdown,
+  "You were eliminated", "Winner: <name>") plus spectator-camera retarget.
+- `ControlModel.resetControl` — pure op returning every player to their own avatar
+  body with a rebuilt bijection (lune-tested); used at each round start.
+- `Config.LOBBY_COUNTDOWN_SECONDS` / `Config.ROUND_END_SECONDS` / `Config.VOID_Y`.
+- `RoundStateChanged` / `EliminationEvent` / `SpectateBody` remotes.
 - `src/shared/RoundState.luau` — pure, Roblox-free round-lifecycle state
   machine (phase `Lobby`/`Active`/`Ended`, present/alive sets, winner). Auto-ends
   when fewer than `Config.MIN_PLAYERS_TO_CONTINUE` remain alive; last one standing
@@ -47,6 +58,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `default.project.json` — explicitly set `Workspace.StreamingEnabled = false`.
   With no player `Character` there is no streaming focus, so streaming withholds
   all spatial parts and clients render only the skybox (GDD §15).
+- `src/server/SwapController.luau` — no longer owns a loop or an eligibility
+  filter; `swap(orderedAlive)` performs one swap over the roster RoundManager
+  passes. RoundManager decides *when*, RoundState decides *who*.
+- `src/server/init.server.luau` — routes join/leave through RoundManager and
+  starts the round loop instead of the old unconditional swap loop.
+- `src/server/BodyManager.luau` — added `resetBody` (round-start reposition) and
+  `parkBody` (anchor an eliminated body), with per-owner spawn-CFrame storage.
 
 ### Fixed
 - Disconnect handling no longer destroys a leaving player's avatar body
