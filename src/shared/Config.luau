@@ -13,9 +13,11 @@ Config.GRACE_SECONDS = 1.5
 Config.GRACE_FLOOR_SECONDS = 0.5
 
 -- Round population thresholds (consumed by RoundState via the server glue).
--- Defaults of 2 keep the MVP playable with two friends; raise toward the GDD's
--- 4/6 numbers later with no logic change. "Continue = 2" => the round ends the
--- instant fewer than 2 players remain alive, so the last one standing wins.
+-- MIN_PLAYERS_TO_START gates beginning a round; default 2 keeps the MVP playable
+-- with two friends, and it can be raised toward the GDD's 4/6 numbers later with
+-- no logic change. MIN_PLAYERS_TO_CONTINUE encodes the last-one-standing rule:
+-- the round ends the instant fewer than this many remain alive. Keep it at 2
+-- (end at 1 survivor); values > 2 have no single winner and are unsupported.
 Config.MIN_PLAYERS_TO_START = 2
 Config.MIN_PLAYERS_TO_CONTINUE = 2
 

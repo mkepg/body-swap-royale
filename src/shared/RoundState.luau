@@ -84,12 +84,17 @@ local function maybeEnd(model)
 	if model.phase ~= "Active" then
 		return { ended = false, winner = nil }
 	end
-	if count(model.alive) < model.minToContinue then
+	local n = count(model.alive)
+	if n < model.minToContinue then
 		model.phase = "Ended"
+		-- Last-one-standing: a winner exists only when exactly one survivor
+		-- remains. Zero alive (or any non-1 count) ends with no winner.
 		local sole = nil
-		for player in pairs(model.alive) do
-			sole = player
-			break
+		if n == 1 then
+			for player in pairs(model.alive) do
+				sole = player
+				break
+			end
 		end
 		model.winner = sole
 		return { ended = true, winner = sole }
@@ -126,6 +131,7 @@ end
 -- Ended -> Lobby for the next round. Clears `alive` and `winner`; keeps
 -- `present` so still-connected players carry over.
 function RoundState.reset(model)
+	assert(model.phase == "Ended", "reset requires the Ended phase")
 	model.phase = "Lobby"
 	model.alive = {}
 	model.winner = nil

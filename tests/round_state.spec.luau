@@ -176,6 +176,8 @@ do
 	expect(rGhost.ended == false and rGhost.winner == nil, "removing unknown player is a no-op")
 
 	RoundState.addPlayer(m, "C") -- joins mid-round: present, not alive
+	expect(not RoundState.isAlive(m, "C"), "mid-round join is not alive")
+	expect(RoundState.aliveCount(m) == 2, "mid-round join does not change alive count")
 	local rSpec = RoundState.removePlayer(m, "C")
 	expect(rSpec.ended == false and rSpec.winner == nil, "removing a spectator does not end the round")
 	expect(RoundState.getPhase(m) == "Active", "round still Active")
@@ -236,6 +238,20 @@ do
 	expect(RoundState.canStart(m), "can start the next round with carried players")
 	expect(aliveSubsetOfPresent(m), "invariant holds after reset")
 	print("reset: full-cycle + invariant OK")
+end
+
+-- reset: refuses to run outside the Ended phase (symmetry with beginRound's guard).
+do
+	local m = RoundState.new(2, 2)
+	RoundState.addPlayer(m, "A")
+	RoundState.addPlayer(m, "B")
+	local okLobby = pcall(RoundState.reset, m)
+	expect(not okLobby, "reset errors in Lobby")
+
+	RoundState.beginRound(m)
+	local okActive = pcall(RoundState.reset, m)
+	expect(not okActive, "reset errors while Active")
+	print("reset: refuses outside Ended OK")
 end
 
 print("ALL ROUNDSTATE TESTS PASSED")
