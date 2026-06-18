@@ -105,4 +105,81 @@ do
 	print("eliminate: no-op cases OK")
 end
 
+-- eliminate: a dead player while the round is STILL Active is a no-op
+-- (exercises the not-alive guard distinctly from the Ended-phase guard).
+do
+	local m = RoundState.new(2, 2)
+	RoundState.addPlayer(m, "A")
+	RoundState.addPlayer(m, "B")
+	RoundState.addPlayer(m, "C")
+	RoundState.beginRound(m)
+
+	RoundState.eliminate(m, "A") -- A dead; B and C still alive, round Active
+	expect(RoundState.getPhase(m) == "Active", "round still Active with 2 alive")
+
+	local rAgain = RoundState.eliminate(m, "A") -- A already dead, still Active
+	expect(rAgain.ended == false and rAgain.winner == nil, "re-eliminating a dead player is a no-op")
+	expect(RoundState.aliveCount(m) == 2, "alive count unchanged by no-op")
+	expect(RoundState.getPhase(m) == "Active", "phase unchanged by no-op")
+	print("eliminate: dead-while-Active no-op OK")
+end
+
+-- removePlayer: a disconnect that drops alive to 1 declares the remaining winner.
+do
+	local m = RoundState.new(2, 2)
+	RoundState.addPlayer(m, "A")
+	RoundState.addPlayer(m, "B")
+	RoundState.beginRound(m)
+
+	local r = RoundState.removePlayer(m, "A")
+	expect(r.ended == true, "disconnect to 1 alive ends the round")
+	expect(r.winner == "B", "B wins when A disconnects")
+	expect(RoundState.getPhase(m) == "Ended", "phase Ended after disconnect win")
+	expect(m.present["A"] == nil, "A removed from present")
+	print("removePlayer: disconnect win OK")
+end
+
+-- removePlayer: dropping the alive set to 0 ends with no winner (round aborted).
+do
+	local m = RoundState.new(2, 2)
+	RoundState.addPlayer(m, "A")
+	RoundState.addPlayer(m, "B")
+	RoundState.beginRound(m)
+
+	-- minToContinue is 2, so removing ONE alive player already ends the round
+	-- (1 < 2) with the other as winner. To reach 0 we construct the boundary
+	-- case directly: a model whose continue threshold is 1, so it only ends at 0.
+	local m0 = RoundState.new(2, 1)
+	RoundState.addPlayer(m0, "A")
+	RoundState.addPlayer(m0, "B")
+	RoundState.beginRound(m0)
+
+	local r1 = RoundState.removePlayer(m0, "A")
+	expect(r1.ended == false, "with continue=1, 1 alive keeps going")
+	local r2 = RoundState.removePlayer(m0, "B")
+	expect(r2.ended == true, "0 alive ends the round")
+	expect(r2.winner == nil, "0 alive -> no winner")
+	expect(RoundState.getPhase(m0) == "Ended", "phase Ended on abort")
+	expect(RoundState.getWinner(m0) == nil, "winner stays nil on abort")
+	print("removePlayer: drop-to-zero abort OK")
+end
+
+-- removePlayer: removing a non-present player is a no-op; removing a present but
+-- non-alive (spectating) player does not affect the round outcome.
+do
+	local m = RoundState.new(2, 2)
+	RoundState.addPlayer(m, "A")
+	RoundState.addPlayer(m, "B")
+	RoundState.beginRound(m)
+
+	local rGhost = RoundState.removePlayer(m, "ghost")
+	expect(rGhost.ended == false and rGhost.winner == nil, "removing unknown player is a no-op")
+
+	RoundState.addPlayer(m, "C") -- joins mid-round: present, not alive
+	local rSpec = RoundState.removePlayer(m, "C")
+	expect(rSpec.ended == false and rSpec.winner == nil, "removing a spectator does not end the round")
+	expect(RoundState.getPhase(m) == "Active", "round still Active")
+	print("removePlayer: no-op cases OK")
+end
+
 print("ALL ROUNDSTATE TESTS PASSED")

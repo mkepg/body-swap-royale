@@ -107,4 +107,20 @@ function RoundState.eliminate(model, player)
 	return maybeEnd(model)
 end
 
+-- Handle a disconnect: drop the player from `present` and (if alive) from
+-- `alive`. If removing an alive player during an Active round pushes the
+-- survivor count below threshold, auto-end. No-op if the player is not present.
+function RoundState.removePlayer(model, player)
+	if not model.present[player] then
+		return { ended = false, winner = nil }
+	end
+	model.present[player] = nil
+	local wasAlive = model.alive[player] == true
+	model.alive[player] = nil
+	if wasAlive then
+		return maybeEnd(model)
+	end
+	return { ended = false, winner = nil }
+end
+
 return RoundState
