@@ -12,6 +12,16 @@ Config.PREVIEW_SECONDS = 3
 Config.GRACE_SECONDS = 1.5
 Config.GRACE_FLOOR_SECONDS = 0.5
 
+-- RoundManager loop tunables (server-owned clocks + the void death source).
+-- LOBBY_COUNTDOWN_SECONDS: pre-round countdown once enough players are present.
+-- ROUND_END_SECONDS: winner-display window before resetting to Lobby.
+-- VOID_Y: a controlled body whose root falls below this Y is eliminated. It sits
+-- well above Workspace.FallenPartsDestroyHeight (default -500), so a falling body
+-- is caught and parked here long before the engine would destroy it.
+Config.LOBBY_COUNTDOWN_SECONDS = 5
+Config.ROUND_END_SECONDS = 5
+Config.VOID_Y = -50
+
 -- Round population thresholds (consumed by RoundState via the server glue).
 -- MIN_PLAYERS_TO_START gates beginning a round; default 2 keeps the MVP playable
 -- with two friends, and it can be raised toward the GDD's 4/6 numbers later with
