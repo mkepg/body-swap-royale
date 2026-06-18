@@ -116,7 +116,7 @@ The void path never sets `Humanoid.Health = 0`. The eliminated body is parked (a
 | Name | Payload | Purpose |
 |------|---------|---------|
 | `RoundStateChanged` | `{ phase, secondsRemaining?, aliveCount?, winnerName? }` | Phase transitions and countdown ticks. |
-| `EliminationEvent` | `{ playerName }` (fired to all) | Drives "You were eliminated" / "<name> eliminated" text. |
+| `EliminationEvent` | `playerName` (fired to all) | Drives "You were eliminated" / "<name> eliminated" text. |
 | `SpectateBody` | `body` (fired to one eliminated player) | Client points its camera (`CameraSubject`) at this body **without** taking ownership. |
 
 ## Client display

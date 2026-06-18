@@ -4,8 +4,9 @@ Validates the RoundManager win/lose loop, which lune can't reach. Run a **2-play
 local server** in Studio (Test → Clients and Servers → 2 → Start).
 
 **Setup for a fast test** (Server view, command bar): temporarily shorten the clocks
-so you don't wait 30s per cycle, e.g.
-`require(game.ReplicatedStorage.Shared.Config).CYCLE_SECONDS = 8`.
+so you don't wait out the full timers, e.g.
+`local C = require(game.ReplicatedStorage.Shared.Config); C.CYCLE_SECONDS = 8; C.LOBBY_COUNTDOWN_SECONDS = 2; C.ROUND_END_SECONDS = 2`.
+Raise `VOID_Y` (e.g. `C.VOID_Y = 0`) if you want bodies to die from a small drop.
 
 **Procedure & PASS criteria:**
 1. **Round start.** After both clients join, the lobby countdown text appears and
