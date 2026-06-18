@@ -12,6 +12,13 @@ Config.PREVIEW_SECONDS = 3
 Config.GRACE_SECONDS = 1.5
 Config.GRACE_FLOOR_SECONDS = 0.5
 
+-- Round population thresholds (consumed by RoundState via the server glue).
+-- Defaults of 2 keep the MVP playable with two friends; raise toward the GDD's
+-- 4/6 numbers later with no logic change. "Continue = 2" => the round ends the
+-- instant fewer than 2 players remain alive, so the last one standing wins.
+Config.MIN_PLAYERS_TO_START = 2
+Config.MIN_PLAYERS_TO_CONTINUE = 2
+
 -- Movement, normalized so avatar choice never confers an advantage.
 Config.WALK_SPEED = 16
 Config.JUMP_HEIGHT = 7.2
