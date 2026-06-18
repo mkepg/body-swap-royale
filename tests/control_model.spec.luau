@@ -180,4 +180,35 @@ do
 	print("removePlayer: sequential disconnects to empty OK")
 end
 
+-- resetControl: after a swap moves players off their own bodies, resetControl
+-- returns everyone to their OWN avatar body and rebuilds a clean bijection.
+do
+	local m = ControlModel.new()
+	ControlModel.addPlayer(m, "A", "a")
+	ControlModel.addPlayer(m, "B", "b")
+	ControlModel.addPlayer(m, "C", "c")
+	ControlModel.swap(m, { "A", "B", "C" }, function(_n) return 1 end) -- nobody on own body
+
+	expect(ControlModel.controlledBody(m, "A") ~= "a", "precondition: A off own body")
+
+	local pairs_ = ControlModel.resetControl(m)
+
+	expect(ControlModel.controlledBody(m, "A") == "a", "A back on own body a")
+	expect(ControlModel.controlledBody(m, "B") == "b", "B back on own body b")
+	expect(ControlModel.controlledBody(m, "C") == "c", "C back on own body c")
+	expect(ControlModel.bijectionHolds(m), "bijection holds after resetControl")
+
+	-- controllerOf has no stale entries: exactly the three own bodies, each -> owner.
+	expect(m.controllerOf["a"] == "A" and m.controllerOf["b"] == "B" and m.controllerOf["c"] == "C",
+		"controllerOf maps each own body to its owner")
+
+	-- returned pairs describe the reset mapping.
+	expect(#pairs_ == 3, "resetControl returns one pair per player")
+	for _, pr in ipairs(pairs_) do
+		expect(ControlModel.controlledBody(m, pr.player) == pr.body, "pair matches model")
+		expect(pr.body == m.ownerBody[pr.player], "pair body is the player's own body")
+	end
+	print("resetControl: everyone back on own body + clean bijection OK")
+end
+
 print("ALL CONTROLMODEL TESTS PASSED")

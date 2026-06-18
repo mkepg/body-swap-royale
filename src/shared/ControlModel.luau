@@ -138,4 +138,22 @@ function ControlModel.removePlayer(model, player)
 	return { destroyOwn = (own ~= nil), reassign = reassign }
 end
 
+-- Reset every connected player's control back to their OWN avatar body
+-- (ownerBody). Rebuilds controllerOf from scratch so a body a stranger controlled
+-- last round is cleanly handed back to its owner with no stale entries. Used by
+-- the server glue at each round start to get an identical, predictable starting
+-- state. Returns an array of { player = <player>, body = <ownBody> } so the glue
+-- can re-grant network ownership and fire SetControlledBody.
+function ControlModel.resetControl(model)
+	model.controllerOf = {}
+	local result = {}
+	for player in pairs(model.players) do
+		local own = model.ownerBody[player]
+		model.bodyOf[player] = own
+		model.controllerOf[own] = player
+		result[#result + 1] = { player = player, body = own }
+	end
+	return result
+end
+
 return ControlModel

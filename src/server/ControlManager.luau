@@ -59,6 +59,17 @@ function ControlManager.removePlayer(player)
 	end
 end
 
+-- Reset every player to their own avatar body (round start). Applies the pure
+-- ControlModel.resetControl, then re-grants network ownership and notifies each
+-- client (isSwap = false: a clean spawn-style retarget, no FOV punch).
+function ControlManager.resetControl()
+	local result = ControlModel.resetControl(model)
+	for _, pair in ipairs(result) do
+		applyOwnership(pair.player, pair.body, false)
+	end
+	return result
+end
+
 function ControlManager.getControlledBody(player)
 	return ControlModel.controlledBody(model, player)
 end
