@@ -14,6 +14,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 
 local BodyManager = {}
 BodyManager.bodyByOwner = {} -- [player] = body wearing that player's avatar
+BodyManager.spawnByOwner = {} -- [player] = CFrame the body spawned at (for round-start reposition)
 BodyManager.folder = nil
 BodyManager._index = 0
 
@@ -58,7 +59,9 @@ function BodyManager.createBody(player)
 
 	BodyManager._index += 1
 	local pos = Config.SPAWN_ORIGIN + Vector3.new((BodyManager._index - 1) * Config.SPAWN_SPACING, 0, 0)
-	body:PivotTo(CFrame.new(pos))
+	local spawnCFrame = CFrame.new(pos)
+	body:PivotTo(spawnCFrame)
+	BodyManager.spawnByOwner[player] = spawnCFrame
 	body:SetAttribute("OwnerUserId", player.UserId)
 	body.Parent = ensureFolder()
 
@@ -86,6 +89,37 @@ function BodyManager.removeBody(player)
 		body:Destroy()
 	end
 	BodyManager.bodyByOwner[player] = nil
+	BodyManager.spawnByOwner[player] = nil
+end
+
+-- Round start: reposition a player's OWN body to its spawn slot and re-enable
+-- physics. The body was never killed (elimination is logical), so no revive is
+-- needed -- just unanchor, zero velocity, and pivot back to the spawn CFrame.
+function BodyManager.resetBody(player)
+	local body = BodyManager.bodyByOwner[player]
+	local cf = BodyManager.spawnByOwner[player]
+	if not body or not cf then
+		return
+	end
+	local root = body:FindFirstChild("HumanoidRootPart")
+	if root then
+		root.Anchored = false
+		root.AssemblyLinearVelocity = Vector3.zero
+		root.AssemblyAngularVelocity = Vector3.zero
+	end
+	body:PivotTo(cf)
+end
+
+-- Elimination: park a body in place so it stops falling and is never destroyed by
+-- FallenPartsDestroyHeight. Anchoring the root halts physics; the next round's
+-- resetBody unanchors and repositions it.
+function BodyManager.parkBody(body)
+	local root = body and body:FindFirstChild("HumanoidRootPart")
+	if root then
+		root.AssemblyLinearVelocity = Vector3.zero
+		root.AssemblyAngularVelocity = Vector3.zero
+		root.Anchored = true
+	end
 end
 
 return BodyManager
