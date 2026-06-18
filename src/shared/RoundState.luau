@@ -123,4 +123,12 @@ function RoundState.removePlayer(model, player)
 	return { ended = false, winner = nil }
 end
 
+-- Ended -> Lobby for the next round. Clears `alive` and `winner`; keeps
+-- `present` so still-connected players carry over.
+function RoundState.reset(model)
+	model.phase = "Lobby"
+	model.alive = {}
+	model.winner = nil
+end
+
 return RoundState
