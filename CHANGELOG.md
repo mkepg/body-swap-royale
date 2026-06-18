@@ -7,6 +7,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- `src/shared/RoundState.luau` — pure, Roblox-free round-lifecycle state
+  machine (phase `Lobby`/`Active`/`Ended`, present/alive sets, winner). Auto-ends
+  when fewer than `Config.MIN_PLAYERS_TO_CONTINUE` remain alive; last one standing
+  wins, 0 alive aborts to lobby. Time-agnostic and event-driven like
+  `ControlModel`; unit tested with lune (`tests/round_state.spec.luau`).
+- `Config.MIN_PLAYERS_TO_START` / `Config.MIN_PLAYERS_TO_CONTINUE` (both default 2).
 - `src/shared/ControlModel.luau` — pure, Roblox-free controllers↔bodies state
   machine (spawn / swap / disconnect) maintaining a player↔body bijection. Unit
   tested from the terminal with lune (`tests/control_model.spec.luau`).
