@@ -4,10 +4,11 @@
 
 	Players have NO Character; they're disembodied controllers. Each gets a
 	persistent body wearing their avatar, and starts by controlling their own.
-	Every CYCLE_SECONDS the SwapController rotates ownership so nobody keeps it.
+	Every CYCLE_SECONDS the SwapController rotates control so nobody keeps it.
 
-	Animation is driven client-side per body (see Client/ClientAnimator); there
-	is no server-side animator.
+	On disconnect, ControlManager.removePlayer applies the absorb rule so a leaving
+	player never yanks a body someone else controls, then destroys the leaver's
+	avatar body. (It is NOT safe to destroy the avatar body directly here.)
 --]]
 
 local Players = game:GetService("Players")
@@ -18,8 +19,8 @@ local ControlManager = require(script.ControlManager)
 local SwapController = require(script.SwapController)
 
 local function onPlayerAdded(player)
-	local body = BodyManager.createBody(player)        -- persistent avatar body
-	ControlManager.assignOne(player, body, false)      -- start in your own body
+	local body = BodyManager.createBody(player) -- persistent avatar body
+	ControlManager.addPlayer(player, body)      -- start in your own body
 	print(string.format("[BSR] %s -> own body (%s)", player.Name, body.Name))
 end
 
@@ -29,8 +30,7 @@ for _, p in ipairs(Players:GetPlayers()) do
 end
 
 Players.PlayerRemoving:Connect(function(player)
-	ControlManager.release(player)
-	BodyManager.removeBody(player)
+	ControlManager.removePlayer(player) -- absorb + destroy; never a bare removeBody
 end)
 
 SwapController.start()
