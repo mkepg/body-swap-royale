@@ -62,4 +62,19 @@ function RoundState.canStart(model)
 	return model.phase == "Lobby" and count(model.present) >= model.minToStart
 end
 
+-- Lobby -> Active. Snapshots the current `present` set into `alive` and returns
+-- the starting roster as an array so the caller can spawn / assign control.
+function RoundState.beginRound(model)
+	assert(RoundState.canStart(model), "beginRound requires canStart")
+	model.phase = "Active"
+	model.winner = nil
+	model.alive = {}
+	local roster = {}
+	for player in pairs(model.present) do
+		model.alive[player] = true
+		roster[#roster + 1] = player
+	end
+	return roster
+end
+
 return RoundState
