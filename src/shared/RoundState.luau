@@ -77,4 +77,34 @@ function RoundState.beginRound(model)
 	return roster
 end
 
+-- After `alive` shrinks during an Active round, end it if fewer than
+-- minToContinue remain. Winner = the sole survivor, or nil if none remain.
+-- Returns { ended, winner }.
+local function maybeEnd(model)
+	if model.phase ~= "Active" then
+		return { ended = false, winner = nil }
+	end
+	if count(model.alive) < model.minToContinue then
+		model.phase = "Ended"
+		local sole = nil
+		for player in pairs(model.alive) do
+			sole = player
+			break
+		end
+		model.winner = sole
+		return { ended = true, winner = sole }
+	end
+	return { ended = false, winner = nil }
+end
+
+-- Remove a player from the alive set due to death. No-op unless the round is
+-- Active and the player is currently alive. May auto-end the round.
+function RoundState.eliminate(model, player)
+	if model.phase ~= "Active" or not model.alive[player] then
+		return { ended = false, winner = nil }
+	end
+	model.alive[player] = nil
+	return maybeEnd(model)
+end
+
 return RoundState
