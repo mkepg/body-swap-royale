@@ -265,6 +265,8 @@ end
 function RoundManager.removePlayer(player)
 	RoundState.removePlayer(model, player) -- lifecycle (may auto-end the round)
 	ControlManager.removePlayer(player)    -- absorb + destroy the leaver's own body
+	GraceModel.clear(grace, player)
+	swapPos[player] = nil
 	if RoundState.getPhase(model) == "Active" then
 		resendSpectate() -- the alive set may have shrunk
 	end
