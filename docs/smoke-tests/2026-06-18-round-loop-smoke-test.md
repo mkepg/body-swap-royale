@@ -26,6 +26,15 @@ Raise `VOID_Y` (e.g. `C.VOID_Y = 0`) if you want bodies to die from a small drop
 6. **Disconnect win.** In a fresh round, kick one player from the Server command bar:
    `game.Players:GetPlayers()[1]:Kick("test")`. The round ends with the remaining
    player as winner; their controlled body is never yanked (absorb rule still holds).
+7. **Grace protects after a swap.** Set `C.VOID_Y = 0` so a small drop kills. First,
+   *before* any swap, walk a body below Y=0 → it is eliminated immediately (baseline:
+   round-start spawn has no grace). Then in a fresh round, `forceSwap()` and
+   *immediately* walk/drop that body below Y=0: it is **not** eliminated for ~1.5s
+   (`Config.GRACE_SECONDS`), then is eliminated and parked when the window expires.
+   The contrast with the baseline is the proof the grace gate works.
+8. **Grace early-exit on movement.** `forceSwap()`, move a body horizontally more than
+   `Config.GRACE_MOVE_EPSILON` (a step or two) to orient, then drop it below Y=0:
+   it is eliminated promptly (the window ended on movement), not after the full ~1.5s.
 
 Bodies are named `Body_<UserId>` under `workspace.Bodies`; players have no
 `Character` (`CharacterAutoLoads = false`).
