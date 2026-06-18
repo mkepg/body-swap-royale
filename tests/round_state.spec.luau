@@ -182,4 +182,60 @@ do
 	print("removePlayer: no-op cases OK")
 end
 
+-- Post-Ended: eliminate / removePlayer are no-ops for phase and winner.
+do
+	local m = RoundState.new(2, 2)
+	RoundState.addPlayer(m, "A")
+	RoundState.addPlayer(m, "B")
+	RoundState.addPlayer(m, "C")
+	RoundState.beginRound(m)
+	RoundState.eliminate(m, "A") -- B, C alive
+	RoundState.eliminate(m, "B") -- C wins -> Ended
+
+	local rElim = RoundState.eliminate(m, "C")
+	expect(rElim.ended == false and rElim.winner == nil, "eliminate after Ended is a no-op")
+	expect(RoundState.getPhase(m) == "Ended", "phase stays Ended")
+	expect(RoundState.getWinner(m) == "C", "winner stays C")
+
+	-- removePlayer after Ended may still drop from present, but never re-ends.
+	local rRem = RoundState.removePlayer(m, "C")
+	expect(rRem.ended == false and rRem.winner == nil, "removePlayer after Ended does not re-end")
+	expect(RoundState.getWinner(m) == "C", "winner still C")
+	expect(m.present["C"] == nil, "C still dropped from present")
+	print("terminal Ended: no-op OK")
+end
+
+-- reset + full cycle: Ended -> Lobby keeps still-connected players; alive subset
+-- of present holds throughout.
+do
+	local function aliveSubsetOfPresent(m)
+		for p in pairs(m.alive) do
+			if not m.present[p] then
+				return false
+			end
+		end
+		return true
+	end
+
+	local m = RoundState.new(2, 2)
+	RoundState.addPlayer(m, "A")
+	RoundState.addPlayer(m, "B")
+	expect(aliveSubsetOfPresent(m), "invariant holds in Lobby")
+
+	RoundState.beginRound(m)
+	expect(aliveSubsetOfPresent(m), "invariant holds in Active")
+
+	RoundState.eliminate(m, "A") -- B wins -> Ended
+	expect(aliveSubsetOfPresent(m), "invariant holds in Ended")
+
+	RoundState.reset(m)
+	expect(RoundState.getPhase(m) == "Lobby", "reset returns to Lobby")
+	expect(RoundState.getWinner(m) == nil, "reset clears winner")
+	expect(RoundState.aliveCount(m) == 0, "reset clears alive")
+	expect(m.present["A"] and m.present["B"], "still-connected players carry to next round")
+	expect(RoundState.canStart(m), "can start the next round with carried players")
+	expect(aliveSubsetOfPresent(m), "invariant holds after reset")
+	print("reset: full-cycle + invariant OK")
+end
+
 print("ALL ROUNDSTATE TESTS PASSED")
