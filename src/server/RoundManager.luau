@@ -164,10 +164,13 @@ end
 
 local function beginRound()
 	RoundState.beginRound(model) -- Lobby -> Active; present snapshot into alive
-	ControlManager.resetControl() -- everyone back on their own body (+ retarget)
+	-- Unanchor + reposition bodies BEFORE re-granting ownership: SetNetworkOwner
+	-- errors on an anchored part, and a body parked on elimination last round
+	-- stays anchored until resetBody runs.
 	for _, p in ipairs(Players:GetPlayers()) do
-		BodyManager.resetBody(p) -- reposition own body to spawn
+		BodyManager.resetBody(p) -- reposition own body to spawn + unanchor
 	end
+	ControlManager.resetControl() -- everyone back on their own body (+ retarget)
 	broadcastState() -- phase Active
 	startMonitor()
 	print("[BSR] round started")
