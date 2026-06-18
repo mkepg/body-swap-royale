@@ -64,4 +64,45 @@ do
 	print("beginRound: refuses below threshold OK")
 end
 
+-- eliminate: down to one survivor -> Ended with the correct winner.
+do
+	local m = RoundState.new(2, 2)
+	RoundState.addPlayer(m, "A")
+	RoundState.addPlayer(m, "B")
+	RoundState.addPlayer(m, "C")
+	RoundState.beginRound(m)
+
+	local r1 = RoundState.eliminate(m, "A")
+	expect(r1.ended == false, "round continues with 2 alive")
+	expect(r1.winner == nil, "no winner while 2 alive")
+	expect(RoundState.getPhase(m) == "Active", "still Active after first elimination")
+
+	local r2 = RoundState.eliminate(m, "B")
+	expect(r2.ended == true, "round ends when 1 remains")
+	expect(r2.winner == "C", "C is the last one standing")
+	expect(RoundState.getPhase(m) == "Ended", "phase is Ended")
+	expect(RoundState.getWinner(m) == "C", "winner recorded on the model")
+	print("eliminate: auto-end + winner OK")
+end
+
+-- eliminate: no-op on a non-alive player and outside Active.
+do
+	local m = RoundState.new(2, 2)
+	RoundState.addPlayer(m, "A")
+	RoundState.addPlayer(m, "B")
+
+	-- Before the round starts (Lobby), eliminate does nothing.
+	local rLobby = RoundState.eliminate(m, "A")
+	expect(rLobby.ended == false and rLobby.winner == nil, "eliminate is a no-op in Lobby")
+
+	RoundState.beginRound(m)
+	RoundState.eliminate(m, "A") -- A now dead, B wins -> Ended
+
+	-- Eliminating an already-dead player changes nothing.
+	local rDead = RoundState.eliminate(m, "A")
+	expect(rDead.ended == false and rDead.winner == nil, "eliminate on dead player is a no-op")
+	expect(RoundState.getWinner(m) == "B", "winner unchanged")
+	print("eliminate: no-op cases OK")
+end
+
 print("ALL ROUNDSTATE TESTS PASSED")
