@@ -11,6 +11,12 @@ Config.CYCLE_SECONDS = 30
 Config.PREVIEW_SECONDS = 3
 Config.GRACE_SECONDS = 1.5
 Config.GRACE_FLOOR_SECONDS = 0.5
+-- Horizontal studs of displacement since the last swap that counts as the player
+-- having "oriented", ending the post-swap grace window early (the
+-- GRACE_FLOOR_SECONDS hard floor still applies first). At WALK_SPEED (16) a body
+-- covers ~1.6 studs per 0.1s monitor tick, so 0.5 detects intentional movement
+-- quickly while ignoring sampling jitter. Vertical fall does not count.
+Config.GRACE_MOVE_EPSILON = 0.5
 
 -- RoundManager loop tunables (server-owned clocks + the void death source).
 -- LOBBY_COUNTDOWN_SECONDS: pre-round countdown once enough players are present.
