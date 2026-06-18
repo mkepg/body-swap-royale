@@ -102,11 +102,12 @@ function BodyManager.resetBody(player)
 		return
 	end
 	local root = body:FindFirstChild("HumanoidRootPart")
-	if root then
-		root.Anchored = false
-		root.AssemblyLinearVelocity = Vector3.zero
-		root.AssemblyAngularVelocity = Vector3.zero
+	if not root then
+		return -- can't safely reset (and reposition) without a root
 	end
+	root.Anchored = false
+	root.AssemblyLinearVelocity = Vector3.zero
+	root.AssemblyAngularVelocity = Vector3.zero
 	body:PivotTo(cf)
 end
 
