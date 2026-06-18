@@ -124,9 +124,9 @@ end
 
 -- ===== elimination =====
 
--- The single logical elimination entry point. Called by the void monitor (and by
--- the Humanoid.Died hook for future health-based hazards). Idempotent: a no-op for
--- a player who is not currently alive.
+-- The single logical elimination entry point. Hazard deaths reach it through
+-- eliminateFromHazard (which applies the grace gate); disconnects call it via
+-- removePlayer. Idempotent: a no-op for a player who is not currently alive.
 function RoundManager.eliminate(player)
 	-- Idempotent: if the player isn't currently alive, RoundState.eliminate would
 	-- no-op, so skip the side effects (event/park/spectate) entirely.
