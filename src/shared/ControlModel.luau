@@ -117,8 +117,9 @@ function ControlModel.planStillValid(model, plan)
 end
 
 -- Rotate control among the given connected players (plan + apply in one call).
--- Unchanged external behavior: deranges their CURRENT bodies and returns the new
--- { player, body } map. Used by the immediate (no-preview) forceSwap path.
+-- Deranges their CURRENT bodies and returns the new { player, body } map. The
+-- server glue drives swaps via planSwap/applySwap directly (so it can preview the
+-- plan before committing); this one-call form is kept as a tested primitive.
 function ControlModel.swap(model, orderedPlayers, randint)
 	assert(#orderedPlayers >= 2, "swap needs >= 2 players")
 	local plan = ControlModel.planSwap(model, orderedPlayers, randint)
