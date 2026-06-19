@@ -14,11 +14,31 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local ControlModel = require(ReplicatedStorage.Shared.ControlModel)
+local SoulPalette = require(ReplicatedStorage.Shared.SoulPalette)
+local Config = require(ReplicatedStorage.Shared.Config)
 local BodyManager = require(script.Parent.BodyManager)
 local SetControlledBody = Remotes.get("SetControlledBody")
+local SoulMap = Remotes.get("SoulMap")
 
 local ControlManager = {}
 local model = ControlModel.new()
+
+-- Per-player Soul colors, auto-assigned by join order (stable for the session).
+local soulColor = {} -- [player] = Color3
+local soulIndex = 0
+
+-- Broadcast every controlled body's current Soul color so each client can place
+-- a halo on it (and follow it across swaps). Built from the live control map.
+function ControlManager.broadcastSoulMap()
+	local list = {}
+	for body, player in pairs(model.controllerOf) do
+		local color = soulColor[player]
+		if color then
+			list[#list + 1] = { body = body, color = color }
+		end
+	end
+	SoulMap:FireAllClients(list)
+end
 
 -- Hand `player` network ownership of `body` and tell their client to retarget.
 local function applyOwnership(player, body, isSwap)
@@ -33,19 +53,34 @@ end
 
 -- Player spawned: they own `body` and start by controlling it.
 function ControlManager.addPlayer(player, body)
+	soulIndex += 1
+	soulColor[player] = SoulPalette.colorForIndex(soulIndex, Config.SOUL_PALETTE)
 	ControlModel.addPlayer(model, player, body)
 	applyOwnership(player, body, false)
+	ControlManager.broadcastSoulMap()
 end
 
--- Rotate control across `orderedPlayers` (a swap). Returns how many were swapped.
-function ControlManager.swap(orderedPlayers)
-	local result = ControlModel.swap(model, orderedPlayers, function(n)
+-- Compute the next swap without applying it (no ownership change, no notify).
+function ControlManager.planSwap(orderedPlayers)
+	return ControlModel.planSwap(model, orderedPlayers, function(n)
 		return math.random(1, n)
 	end)
+end
+
+-- Apply a plan: rotate network ownership + notify each client (isSwap = true),
+-- then rebroadcast the Soul map (halos follow control). Returns how many moved.
+function ControlManager.commitSwap(plan)
+	local result = ControlModel.applySwap(model, plan)
 	for _, pair in ipairs(result) do
 		applyOwnership(pair.player, pair.body, true)
 	end
+	ControlManager.broadcastSoulMap()
 	return #result
+end
+
+-- True iff `plan` still matches the current control map (re-plan decision).
+function ControlManager.planStillValid(plan)
+	return ControlModel.planStillValid(model, plan)
 end
 
 -- Player left: apply the model's absorb decision, then destroy their avatar body.
@@ -57,6 +92,8 @@ function ControlManager.removePlayer(player)
 	if decision.destroyOwn then
 		BodyManager.removeBody(player) -- destroys bodyByOwner[player] = the leaving player's avatar body
 	end
+	soulColor[player] = nil
+	ControlManager.broadcastSoulMap()
 end
 
 -- Reset every player to their own avatar body (round start). Applies the pure
@@ -67,6 +104,7 @@ function ControlManager.resetControl()
 	for _, pair in ipairs(result) do
 		applyOwnership(pair.player, pair.body, false)
 	end
+	ControlManager.broadcastSoulMap()
 	return result
 end
 
