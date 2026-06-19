@@ -33,10 +33,9 @@ Raise `VOID_Y` (e.g. `C.VOID_Y = 0`) if you want bodies to die from a small drop
    floor onto a **stationary** post-swap body (zero horizontal travel) and using a long
    test window. Verified PASS 2026-06-19 (`protected ~3.15s … then eliminated`).
 
-> **Arena note:** the synced place has no baseplate under the spawn, so bodies fall
-> on their own and the round ends instantly. Add a temporary floor before testing:
+> **Test floor (only if needed):** if bodies fall on their own in your test session,
+> drop in a temporary floor so they have ground to rest on:
 > `local f = Instance.new("Part"); f.Size = Vector3.new(400,1,400); f.Position = Vector3.new(0,0,0); f.Anchored = true; f.Parent = workspace`
-> (A real arena floor is a separate map task; this is test-only.)
 
 Paste into the **server** command bar with a round Active and clients idle:
 
