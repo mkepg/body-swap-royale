@@ -11,9 +11,11 @@
 local ClientControl = require(script.ClientControl)
 local ClientAnimator = require(script.ClientAnimator)
 local ClientRoundHud = require(script.ClientRoundHud)
+local ClientSwapHud = require(script.ClientSwapHud)
 
 ClientControl.start()
 ClientAnimator.start()
 ClientRoundHud.start()
+ClientSwapHud.start()
 
 print("[BSR] Client ready (ownership-transfer model).")
