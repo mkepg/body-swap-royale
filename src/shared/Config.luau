@@ -68,7 +68,12 @@ Config.NORMALIZED_SCALES = {
 	ProportionScale = 0,
 }
 
--- Spawn spreading for the persistent bodies.
+-- Spawn spreading for the persistent bodies. Bodies spawn along +X at
+-- SPAWN_ORIGIN + index*SPAWN_SPACING, dropping onto the solid tile floor.
+-- NOTE: the tile field spans X in [-TILE_GRID_SIZE*TILE_SIZE/2, +half] (±32 at
+-- 8x8 @ 8 studs). With spacing 8 the 5th+ body (index >= 4, X >= 32) reaches the
+-- field edge; index >= 5 would spawn past it and fall at round start. Fine for the
+-- 2-player MVP -- when raising player count, center the row or enlarge the grid.
 Config.SPAWN_ORIGIN = Vector3.new(0, 5, 0)
 Config.SPAWN_SPACING = 8
 
