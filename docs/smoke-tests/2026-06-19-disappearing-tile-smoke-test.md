@@ -32,10 +32,14 @@ with 2 players, or Team Test).
 ### 4. Grace protects a fresh swap (the second-source check)
 - [ ] In the command bar run `require(game.ServerScriptService.Server.RoundManager).forceSwap()`
       to swap controls.
-- [ ] If a player is swapped onto a tile that is `warning`/`gone`, they are NOT
-      eliminated during the grace floor/window even as they fall a little — they
-      get the beat to move to a neighbor tile. (Repeat `forceSwap()` a few times
-      to land this case; grace is `GRACE_SECONDS = 1.5`, floor `0.5`.)
+- [ ] **The grace beat only fires if the player is swapped onto a tile already in
+      `gone`** (or the last sliver of `warning`) — a `solid`/early-`warning` tile
+      stays collidable, so the body does not fall and grace never engages. Repeat
+      `forceSwap()` until a player lands on a *vanished* tile and confirm they are
+      NOT eliminated during the grace floor/window as they begin to fall — they
+      get the beat to move to a neighbor tile. (Grace is `GRACE_SECONDS = 1.5`,
+      floor `0.5`.) If this case is hard to land with 2 players on the
+      deterministic pattern, note that as a finding.
 
 ### 5. Round boundaries leave a clean floor
 - [ ] When the round ends (one survivor), all tiles return to solid grey.
