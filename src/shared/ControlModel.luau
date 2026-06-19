@@ -64,30 +64,65 @@ function ControlModel.bijectionHolds(model)
 	return nPlayers == nBodies
 end
 
--- Rotate control among the given connected players. Deranges their CURRENT bodies
--- (Sattolo), so nobody keeps the body they were just in. Because it permutes the
--- exact same set of bodies the players already hold, it stays a bijection.
--- Returns an array of { player = <player>, body = <body> } describing the new map.
-function ControlModel.swap(model, orderedPlayers, randint)
-	assert(#orderedPlayers >= 2, "swap needs >= 2 players")
+-- Compute (but DO NOT apply) the next swap. Deranges a COPY of the players'
+-- current bodies so the model is untouched; returns:
+--   { from = {[player] = sourceBody}, to = { {player, body}, ... } }
+-- `from` is the snapshot the plan was derived from (used by planStillValid);
+-- `to` is the future control map. Lets the swap be previewed at T-3s and the
+-- SAME permutation committed at T0 (a truthful preview).
+function ControlModel.planSwap(model, orderedPlayers, randint)
+	assert(#orderedPlayers >= 2, "planSwap needs >= 2 players")
 
+	local from = {}
 	local bodies = {}
 	for i, player in ipairs(orderedPlayers) do
-		bodies[i] = model.bodyOf[player]
+		local body = model.bodyOf[player]
+		from[player] = body
+		bodies[i] = body
 	end
 
-	ControlModel.derange(bodies, randint)
+	ControlModel.derange(bodies, randint) -- `bodies` is a fresh copy; model untouched
 
-	-- Every body in `bodies` gets exactly one new controller, so overwriting
-	-- controllerOf/bodyOf fully reassigns with no stale entries.
-	local result = {}
+	local to = {}
 	for i, player in ipairs(orderedPlayers) do
-		local newBody = bodies[i]
-		model.bodyOf[player] = newBody
-		model.controllerOf[newBody] = player
-		result[i] = { player = player, body = newBody }
+		to[i] = { player = player, body = bodies[i] }
+	end
+	return { from = from, to = to }
+end
+
+-- Apply a plan produced by planSwap: rewrite bodyOf/controllerOf from plan.to.
+-- Because plan.to permutes the exact set of bodies those players held, the
+-- overwrite leaves no stale entries. Returns the array of { player, body }.
+function ControlModel.applySwap(model, plan)
+	local result = {}
+	for i, pair in ipairs(plan.to) do
+		model.bodyOf[pair.player] = pair.body
+		model.controllerOf[pair.body] = pair.player
+		result[i] = { player = pair.player, body = pair.body }
 	end
 	return result
+end
+
+-- True iff, for every player in the plan, the model's CURRENT controlled body
+-- still equals the source body the plan was derived from. Goes false if a
+-- planned player left, or a disconnect-absorb moved a survivor onto another body
+-- -- i.e. whenever the committed swap would no longer match the previewed one.
+function ControlModel.planStillValid(model, plan)
+	for player, sourceBody in pairs(plan.from) do
+		if model.bodyOf[player] ~= sourceBody then
+			return false
+		end
+	end
+	return true
+end
+
+-- Rotate control among the given connected players (plan + apply in one call).
+-- Unchanged external behavior: deranges their CURRENT bodies and returns the new
+-- { player, body } map. Used by the immediate (no-preview) forceSwap path.
+function ControlModel.swap(model, orderedPlayers, randint)
+	assert(#orderedPlayers >= 2, "swap needs >= 2 players")
+	local plan = ControlModel.planSwap(model, orderedPlayers, randint)
+	return ControlModel.applySwap(model, plan)
 end
 
 -- Handle a player disconnecting while preserving the bijection.

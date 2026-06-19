@@ -211,4 +211,91 @@ do
 	print("resetControl: everyone back on own body + clean bijection OK")
 end
 
+-- planSwap: does NOT mutate the model (it only computes the future assignment).
+do
+	local m = ControlModel.new()
+	ControlModel.addPlayer(m, "A", "a")
+	ControlModel.addPlayer(m, "B", "b")
+	ControlModel.addPlayer(m, "C", "c")
+
+	local plan = ControlModel.planSwap(m, { "A", "B", "C" }, function(_n) return 1 end)
+
+	-- model is untouched: everyone still controls their own body.
+	expect(ControlModel.controlledBody(m, "A") == "a", "planSwap must not move A")
+	expect(ControlModel.controlledBody(m, "B") == "b", "planSwap must not move B")
+	expect(ControlModel.controlledBody(m, "C") == "c", "planSwap must not move C")
+	expect(ControlModel.bijectionHolds(m), "planSwap must not break the bijection")
+
+	-- plan captures the source snapshot and the future map.
+	expect(plan.from["A"] == "a" and plan.from["B"] == "b" and plan.from["C"] == "c",
+		"plan.from is the source snapshot")
+	expect(#plan.to == 3, "plan.to has one entry per player")
+	print("planSwap: non-mutating + captures from/to OK")
+end
+
+-- applySwap(planSwap(...)) matches the old swap behavior (n=2 deterministic).
+do
+	local m = ControlModel.new()
+	ControlModel.addPlayer(m, "A", "a")
+	ControlModel.addPlayer(m, "B", "b")
+
+	local plan = ControlModel.planSwap(m, { "A", "B" }, function(_n) return 1 end)
+	ControlModel.applySwap(m, plan)
+
+	expect(ControlModel.controlledBody(m, "A") == "b", "apply: A -> b")
+	expect(ControlModel.controlledBody(m, "B") == "a", "apply: B -> a")
+	expect(ControlModel.bijectionHolds(m), "apply keeps the bijection")
+	print("applySwap: matches swap behavior OK")
+end
+
+-- planStillValid: true while nothing changes; false when a player leaves.
+do
+	local m = ControlModel.new()
+	ControlModel.addPlayer(m, "A", "a")
+	ControlModel.addPlayer(m, "B", "b")
+	ControlModel.addPlayer(m, "C", "c")
+
+	local plan = ControlModel.planSwap(m, { "A", "B", "C" }, function(_n) return 1 end)
+	expect(ControlModel.planStillValid(m, plan) == true, "plan valid before any change")
+
+	ControlModel.removePlayer(m, "A") -- A leaves: plan.from references A's old body
+	expect(ControlModel.planStillValid(m, plan) == false, "plan invalid after a player leaves")
+	print("planStillValid: leave invalidates OK")
+end
+
+-- planStillValid: false when a disconnect-absorb changes a SURVIVOR's body.
+do
+	local m = ControlModel.new()
+	ControlModel.addPlayer(m, "A", "a")
+	ControlModel.addPlayer(m, "B", "b")
+	ControlModel.addPlayer(m, "C", "c")
+	ControlModel.swap(m, { "A", "B", "C" }, function(_n) return 1 end) -- A->b, B->c, C->a
+
+	-- plan over the current (post-swap) state.
+	local plan = ControlModel.planSwap(m, { "A", "B", "C" }, function(_n) return 1 end)
+	expect(ControlModel.planStillValid(m, plan) == true, "fresh plan valid")
+
+	ControlModel.removePlayer(m, "A") -- absorbs C (controller of a) onto b -> C's body changes
+	expect(ControlModel.planStillValid(m, plan) == false, "absorb changes a survivor's body -> stale")
+	print("planStillValid: absorb invalidates OK")
+end
+
+-- commit after a roster change still yields a valid bijection (re-plan path).
+do
+	local m = ControlModel.new()
+	ControlModel.addPlayer(m, "A", "a")
+	ControlModel.addPlayer(m, "B", "b")
+	ControlModel.addPlayer(m, "C", "c")
+
+	local plan = ControlModel.planSwap(m, { "A", "B", "C" }, function(_n) return 1 end)
+	ControlModel.removePlayer(m, "A") -- roster now {B, C}
+	expect(ControlModel.planStillValid(m, plan) == false, "old plan is stale")
+
+	-- glue would re-plan over the current roster and apply that instead.
+	local fresh = ControlModel.planSwap(m, { "B", "C" }, function(_n) return 1 end)
+	ControlModel.applySwap(m, fresh)
+	expect(ControlModel.bijectionHolds(m), "commit over current roster keeps the bijection")
+	print("commit-after-change: bijection preserved OK")
+end
+
 print("ALL CONTROLMODEL TESTS PASSED")
