@@ -14,7 +14,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local FOLDER_NAME = "Remotes"
-local REMOTE_EVENTS = { "SetControlledBody", "RoundStateChanged", "EliminationEvent", "SpectateBody" }
+local REMOTE_EVENTS =
+	{ "SetControlledBody", "RoundStateChanged", "EliminationEvent", "SpectateBody", "SwapPreview", "SoulMap" }
 
 local function getFolder()
 	if RunService:IsServer() then
