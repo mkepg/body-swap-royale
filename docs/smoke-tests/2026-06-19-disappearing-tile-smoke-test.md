@@ -15,7 +15,8 @@ with 2 players, or Team Test).
 ## Checks
 
 ### 1. Arena is a tile floor, baseplate gone
-- [ ] `Workspace` has a `TileField` folder with 64 `Tile_r_c` parts; no `Baseplate`.
+- [ ] `Workspace` has a `TileField` folder with 64 `Tile_r_c` parts; no `Baseplate`
+      and no `SpawnLocation` (both are removed at startup by `HazardSystem.build()`).
 - [ ] At round start the whole floor is solid grey (no red, no gaps).
 
 ### 2. Telegraph + vanish cycle

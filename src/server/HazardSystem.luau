@@ -60,16 +60,25 @@ local function forceAllSolid()
 	end
 end
 
--- Build the tile grid once. The tile field IS the floor, so the baseplate is
--- removed. Singleton: a second call is a no-op (the tiles already exist).
+-- Build the tile grid once. The tile field IS the floor, so any leftover floor
+-- from the place template is removed: the `Baseplate`, plus any `SpawnLocation`
+-- (this game never spawns player Characters -- CharacterAutoLoads is off -- so a
+-- spawn plate is dead weight and a stray safe platform). Neither is Rojo-managed
+-- once the project tree drops them, so we clear them defensively here.
+-- Singleton: a second call is a no-op (the tiles already exist).
 function HazardSystem.build()
 	if #tiles > 0 then
 		return -- already built; build once at startup
 	end
 
-	local existing = workspace:FindFirstChild("Baseplate")
-	if existing then
-		existing:Destroy()
+	local baseplate = workspace:FindFirstChild("Baseplate")
+	if baseplate then
+		baseplate:Destroy()
+	end
+	for _, child in ipairs(workspace:GetChildren()) do
+		if child:IsA("SpawnLocation") then
+			child:Destroy()
+		end
 	end
 
 	local folder = workspace:FindFirstChild("TileField")
