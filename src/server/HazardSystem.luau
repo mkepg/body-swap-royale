@@ -22,7 +22,6 @@ local TileFieldModel = require(ReplicatedStorage.Shared.TileFieldModel)
 local HazardSystem = {}
 
 local tiles = {} -- array of { part = Part, offset = number, phase = string }
-local folder = nil
 local roundStart = 0
 
 -- A unique token gates the apply loop; setting it to a new value (or nil) stops
@@ -50,6 +49,7 @@ local function applyPhase(part, phase)
 	else -- "gone"
 		part.CanCollide = false
 		part.Transparency = 1
+		part.Color = Config.TILE_COLOR_SOLID -- pre-set so revival shows grey instantly
 	end
 end
 
@@ -61,14 +61,18 @@ local function forceAllSolid()
 end
 
 -- Build the tile grid once. The tile field IS the floor, so the baseplate is
--- removed. Idempotent-ish: safe to call once at startup.
+-- removed. Singleton: a second call is a no-op (the tiles already exist).
 function HazardSystem.build()
+	if #tiles > 0 then
+		return -- already built; build once at startup
+	end
+
 	local existing = workspace:FindFirstChild("Baseplate")
 	if existing then
 		existing:Destroy()
 	end
 
-	folder = workspace:FindFirstChild("TileField")
+	local folder = workspace:FindFirstChild("TileField")
 	if not folder then
 		folder = Instance.new("Folder")
 		folder.Name = "TileField"
