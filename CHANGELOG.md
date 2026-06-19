@@ -7,6 +7,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- `src/shared/GraceModel.luau` — pure, Roblox-free post-swap grace state machine
+  (per-player `graceUntil`/`graceMinFloor`/`hasMoved` + `canDieFromHazard`,
+  TDD §2). Time-agnostic like `RoundState`/`ControlModel`; unit tested with lune
+  (`tests/grace_model.spec.luau`).
+- `Config.GRACE_MOVE_EPSILON` — horizontal displacement that ends the grace window
+  early once the player has oriented.
 - `src/server/RoundManager.luau` — server glue driving the MVP win/lose loop:
   sequences `Lobby → Active → Ended → reset` on real clocks, gates swaps to the
   Active phase (roster = `RoundState`'s alive set), runs a void death monitor that
@@ -65,6 +71,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   starts the round loop instead of the old unconditional swap loop.
 - `src/server/BodyManager.luau` — added `resetBody` (round-start reposition) and
   `parkBody` (anchor an eliminated body), with per-owner spawn-CFrame storage.
+- `src/server/RoundManager.luau` — routes the void death through a new
+  `eliminateFromHazard` gate that consults `GraceModel` (stamped on each swap),
+  and derives `HasMovedSinceSwap` from horizontal travel in the void monitor.
+  Inherited bodies are protected from hazard death for the post-swap grace window
+  (GDD §4). Disconnect elimination remains ungated.
 
 ### Fixed
 - Disconnect handling no longer destroys a leaving player's avatar body

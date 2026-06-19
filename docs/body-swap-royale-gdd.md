@@ -953,7 +953,7 @@ See the [TDD §10 Development Roadmap](body-swap-royale-tdd.md#10-development-ro
 #### Core Gameplay (MVP)
 1. 🟢 Random body swap every 30s *(ownership-transfer model, Sattolo derangement)*
 2. 🟡 Swap preview (target-body highlight + ping) *(v1.1 — `PREVIEW_SECONDS` defined, behavior not built)*
-3. 🟡 Post-swap grace window (1.5s) *(v1.1 — `GRACE_SECONDS` defined, behavior not built)*
+3. 🟢 Post-swap grace window (1.5s) *(v1.1 — `GraceModel` + `RoundManager.eliminateFromHazard` gate; client visual deferred)*
 4. 🟢 Camera transition on swap *(hard cut + 0.3s FOV punch)*
 5. 🟡 Last-body-standing win condition *(no elimination/death logic yet)*
 6. 🟡 Control Signature — free Soul halo *(v1.1)*

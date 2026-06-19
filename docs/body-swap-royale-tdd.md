@@ -180,7 +180,7 @@ A **derangement** (permutation where no element stays in place) guarantees every
 
 *Implemented* in `SwapController.luau` (`sattoloDerangement` draws `j` from `1..i-1`, never `i`). The actual ownership transfer is delegated to `ControlManager.assignOne`, which calls `root:SetNetworkOwner(player)` and fires `SetControlledBody`.
 
-### Grace Window Logic *(🟡 designed, not implemented)*
+### Grace Window Logic *(🟢 implemented — `src/shared/GraceModel.luau`)*
 
 ```
 function OnSwapComplete(player, character):
@@ -195,7 +195,7 @@ function CanDieFromHazard(character):
     return true
 ```
 
-The constants exist (`Config.GRACE_SECONDS = 1.5`, `Config.GRACE_FLOOR_SECONDS = 0.5`) but no hazard/elimination path consumes them yet. `HasMovedSinceSwap` must be derived server-side from observed position change on the client-owned body (the server already needs this signal for movement validation).
+This logic is implemented in the pure `GraceModel` (time-injected, lune-tested). `RoundManager` stamps a window on each swap (`Config.GRACE_SECONDS = 1.5`, `Config.GRACE_FLOOR_SECONDS = 0.5`) and routes the void death through `RoundManager.eliminateFromHazard`, which consults `GraceModel.canDieFromHazard` before eliminating. `HasMovedSinceSwap` is derived server-side from observed **horizontal** position change on the client-owned body (vertical fall does not count, per GDD §4), sampled in the void monitor against the body's swap-time position; the threshold is `Config.GRACE_MOVE_EPSILON`. The client-side grace visual (shield shimmer + Soul pulse) is deferred to the Soul/VFX work.
 
 ### Camera Transition (implementation)
 
@@ -634,7 +634,7 @@ Mobile users represent ~60% of Roblox's audience. Mobile performance is a tier-o
 
 - [x] 🟢 Core swap mechanic working with 4+ players *(ownership-transfer model)* — *prototyped; not yet tested at 4+ concurrent*
 - [ ] 🟡 Swap preview (target-body highlight + ping) — *`PREVIEW_SECONDS` defined; no behavior*
-- [ ] 🟡 Post-swap grace window (1.5s) — *`GRACE_SECONDS`/`GRACE_FLOOR_SECONDS` defined; no `CanDieFromHazard`*
+- [x] 🟢 Post-swap grace window (1.5s) — *`GraceModel.canDieFromHazard` + `RoundManager.eliminateFromHazard` gate; server-only (visual deferred)*
 - [ ] 🟡 Control Signature — free Soul halo + floor ring
 - [ ] 🟡 Basic server-side movement validation (speed/teleport sanity) *(load-bearing under client-owned physics)*
 - [x] 🟢 Client control layer + client-side per-body animation *(every client animates every body locally from replicated velocity)*
@@ -706,7 +706,7 @@ Mobile users represent ~60% of Roblox's audience. Mobile performance is a tier-o
 
 ### Prioritized Implementation Order
 
-**Priority 1 (Cannot ship without):** core swap mechanic 🟢 · swap preview 🟡 · post-swap grace window 🟡 · free Soul halo 🟡 · client-side per-body animation 🟢 · basic server-side movement validation 🟡 · one map with hazards 🟡 · win/lose conditions 🟡 · lobby and matchmaking ⚪ · basic UI ⚪ · DataStore persistence ⚪
+**Priority 1 (Cannot ship without):** core swap mechanic 🟢 · swap preview 🟡 · post-swap grace window 🟢 · free Soul halo 🟡 · client-side per-body animation 🟢 · basic server-side movement validation 🟡 · one map with hazards 🟡 · win/lose conditions 🟡 · lobby and matchmaking ⚪ · basic UI ⚪ · DataStore persistence ⚪
 
 **Priority 2 (Should ship with):** 3+ maps · 3+ modifiers · cosmetic system + shop · premium Souls + updated economy mix · legible mastery stats · tutorial · daily rewards · achievements · mobile optimization
 
