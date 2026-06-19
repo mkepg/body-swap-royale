@@ -94,4 +94,26 @@ Config.ANIM = {
 	fall = "rbxassetid://507767968",
 }
 
+-- Swap telegraph + Soul (the swap-legibility piece).
+-- SWAP_WARNING_SOUND_ID: the "incoming" rumble played once when the 3s telegraph
+-- begins. Leave "" to keep the telegraph silent (it is fully communicative
+-- visually -- accessibility). Set to an "rbxassetid://..." string to enable.
+Config.SWAP_WARNING_SOUND_ID = ""
+-- TELEGRAPH_FLASH_COLOR: the warm base color of the full-screen flash that ramps
+-- up over the 3s preview window.
+Config.TELEGRAPH_FLASH_COLOR = Color3.fromRGB(255, 110, 40)
+-- SOUL_PALETTE: distinct, mobile-legible colors auto-assigned one per player (by
+-- join order, wrapping) as their persistent identity halo. The free "which body
+-- am I?" anchor (GDD §5). Index->color mapping is the pure SoulPalette module.
+Config.SOUL_PALETTE = {
+	Color3.fromRGB(255, 80, 80),    -- red
+	Color3.fromRGB(80, 160, 255),   -- blue
+	Color3.fromRGB(90, 220, 120),   -- green
+	Color3.fromRGB(255, 210, 70),   -- yellow
+	Color3.fromRGB(200, 110, 255),  -- purple
+	Color3.fromRGB(255, 150, 60),   -- orange
+	Color3.fromRGB(80, 230, 230),   -- cyan
+	Color3.fromRGB(255, 130, 200),  -- pink
+}
+
 return Config
