@@ -14,14 +14,34 @@ local ControlManager = require(script.Parent.ControlManager)
 
 local SwapController = {}
 
--- Rotate control across `orderedAlive` (the alive roster, built by RoundManager
--- from RoundState). Needs >= 2 players. Returns ok, message.
+-- Compute the next swap over `orderedAlive` WITHOUT applying it (drives the
+-- T-3s preview). Returns a plan, or nil + message if too few players.
+function SwapController.plan(orderedAlive)
+	if #orderedAlive < 2 then
+		return nil, "need >=2 alive players"
+	end
+	return ControlManager.planSwap(orderedAlive)
+end
+
+-- Apply a previously computed plan (the authoritative T0 commit). Returns how
+-- many players were swapped.
+function SwapController.commit(plan)
+	return ControlManager.commitSwap(plan)
+end
+
+-- True iff `plan` still matches the current control map (re-plan decision).
+function SwapController.planStillValid(plan)
+	return ControlManager.planStillValid(plan)
+end
+
+-- Immediate plan+commit over `orderedAlive` (the no-preview forceSwap path).
 function SwapController.swap(orderedAlive)
 	if #orderedAlive < 2 then
 		return false, "need >=2 alive players"
 	end
-	local n = ControlManager.swap(orderedAlive)
-	return true, string.format("swapped %d players", n)
+	local plan = ControlManager.planSwap(orderedAlive)
+	ControlManager.commitSwap(plan)
+	return true, string.format("swapped %d players", #orderedAlive)
 end
 
 return SwapController
