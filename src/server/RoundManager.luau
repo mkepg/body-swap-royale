@@ -126,12 +126,31 @@ local function stampGrace(players)
 	end
 end
 
+-- A plan is current iff it still matches the live control map AND every player
+-- in it is still alive. planStillValid alone only sees control-map changes
+-- (disconnect / absorb) because ControlModel is unaware of death -- a hazard
+-- death updates RoundState + parks the body but leaves bodyOf untouched. Without
+-- the aliveness check, a death during the 3s preview would commit a stale plan:
+-- a live player would be handed the dead player's parked (anchored) body, and the
+-- dead player would keep a live body (orphaned next cycle).
+local function planIsCurrent(plan)
+	if not SwapController.planStillValid(plan) then
+		return false
+	end
+	for _, pair in ipairs(plan.to) do
+		if not RoundState.isAlive(model, pair.player) then
+			return false
+		end
+	end
+	return true
+end
+
 -- Commit a planned swap. The commit is authoritative over the CURRENT roster: if
 -- the plan went stale during the preview window (someone died/left, or an absorb
 -- moved a survivor), recompute over the live roster before applying. Aborts if
 -- fewer than 2 remain (the round is ending).
 local function commitSwap(plan)
-	if not SwapController.planStillValid(plan) then
+	if not planIsCurrent(plan) then
 		local roster = aliveRoster()
 		if #roster < 2 then
 			return
@@ -297,7 +316,7 @@ local function runActivePhase()
 			task.wait(0.25)
 			elapsed += 0.25
 			-- Re-plan if the roster changed mid-preview (death / disconnect / absorb).
-			if plan and not SwapController.planStillValid(plan) then
+			if plan and not planIsCurrent(plan) then
 				roster = aliveRoster()
 				if #roster >= 2 then
 					plan = SwapController.plan(roster)
