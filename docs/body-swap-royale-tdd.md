@@ -90,7 +90,7 @@ The server-side animator built during prototyping was removed. **The core swap m
 | BodyManager | Creates one persistent body per player, baked once with that player's avatar (normalized dimensions); owns body lifecycle | 🟢 `BodyManager.luau` |
 | ControlManager | Holds the Player↔Body control map; grants control by assigning network ownership of a body to a player | 🟢 `ControlManager.luau` |
 | SwapController | Computes derangements and executes swaps by rotating ownership via ControlManager | 🟢 `SwapController.luau` |
-| HazardSystem | Spawns and updates environmental dangers | 🟡 |
+| HazardSystem | Spawns and updates environmental dangers | 🟢 `HazardSystem.luau` (disappearing-tile floor; phase logic in pure `TileFieldModel`) |
 | ScoreTracker | Tracks survivors, eliminations, attributions, and mastery stats | 🟡 |
 | PlayerStateManager | Holds canonical alive/dead status per player | 🟡 |
 | AnalyticsLogger | Pushes events to analytics endpoint | ⚪ |
@@ -638,7 +638,7 @@ Mobile users represent ~60% of Roblox's audience. Mobile performance is a tier-o
 - [ ] 🟡 Control Signature — free Soul halo + floor ring
 - [ ] 🟡 Basic server-side movement validation (speed/teleport sanity) *(load-bearing under client-owned physics)*
 - [x] 🟢 Client control layer + client-side per-body animation *(every client animates every body locally from replicated velocity)*
-- [ ] 🟡 One arena map with basic hazards — *only a baseplate exists*
+- [x] 🟢 One arena map with basic hazards — *full disappearing-tile floor (`HazardSystem` + `TileFieldModel`); baseplate replaced*
 - [x] 🟢 Standard 30-second swap cycle — *implemented as an unconditional loop; needs RoundManager gating*
 - [ ] ⚪ Lobby matchmaking (basic, no skill tiers)
 - [ ] 🟡 Round state machine — *RoundManager not implemented*
