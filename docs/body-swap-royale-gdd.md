@@ -958,7 +958,7 @@ See the [TDD §10 Development Roadmap](body-swap-royale-tdd.md#10-development-ro
 5. 🟡 Last-body-standing win condition *(no elimination/death logic yet)*
 6. 🟡 Control Signature — free Soul halo *(v1.1)*
 7. 🟡 One arena map *(only a baseplate exists)*
-8. 🟡 Disappearing tile hazard *(no hazards implemented)*
+8. 🟢 Disappearing tile hazard *(v1.1 — pure `TileFieldModel` + `HazardSystem`; full tile-field arena, death via the existing grace-gated void monitor; visuals are flat colors, polish deferred)*
 9. 🟡 Round state machine *(RoundManager not implemented; swap loop runs unconditionally)*
 10. 🟡 Lobby matchmaking
 11. 🟡 Round start/end flow

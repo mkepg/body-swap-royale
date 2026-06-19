@@ -26,6 +26,7 @@ local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local BodyManager = require(script.Parent.BodyManager)
 local ControlManager = require(script.Parent.ControlManager)
 local SwapController = require(script.Parent.SwapController)
+local HazardSystem = require(script.Parent.HazardSystem)
 
 local RoundStateChanged = Remotes.get("RoundStateChanged")
 local EliminationEvent = Remotes.get("EliminationEvent")
@@ -223,6 +224,7 @@ local function beginRound()
 	end
 	ControlManager.resetControl() -- everyone back on their own body (+ retarget)
 	broadcastState() -- phase Active
+	HazardSystem.start(now()) -- tile floor begins its cycles (solid at round start)
 	startMonitor()
 	print("[BSR] round started")
 end
@@ -245,6 +247,7 @@ end
 
 local function endRound()
 	stopMonitor()
+	HazardSystem.stop() -- freeze tiles solid for the Ended/Lobby floor
 	broadcastState() -- phase Ended (+ winnerName)
 	local winner = RoundState.getWinner(model)
 	print("[BSR] round ended; winner:", winner and winner.Name or "(none)")
@@ -281,6 +284,7 @@ function RoundManager.forceSwap()
 end
 
 function RoundManager.start()
+	HazardSystem.build() -- construct the tile-field arena once (replaces the baseplate)
 	task.spawn(function()
 		while true do
 			broadcastState() -- Lobby

@@ -7,6 +7,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- `src/shared/TileFieldModel.luau` — pure, Roblox-free disappearing-tile phase
+  decision (`phaseAt` → `solid`/`warning`/`gone`, deterministic `offsetFor`).
+  Time-agnostic like `RoundState`/`GraceModel`; unit tested with lune
+  (`tests/tile_field_model.spec.luau`).
+- `src/server/HazardSystem.luau` — server glue building the MVP tile-field arena
+  (replaces the baseplate) and driving each tile's color/transparency/collision
+  from `TileFieldModel` during Active rounds. Death reuses the existing void
+  monitor (no new death path); grace gates it automatically.
+- `Config` tile tunables (`TILE_SOLID_SECONDS`, `TILE_WARNING_SECONDS`,
+  `TILE_GONE_SECONDS`, `TILE_GRID_SIZE`, `TILE_SIZE`, `TILE_SURFACE_Y`,
+  `TILE_THICKNESS`, `TILE_COLOR_SOLID`, `TILE_COLOR_WARNING`).
 - `src/shared/GraceModel.luau` — pure, Roblox-free post-swap grace state machine
   (per-player `graceUntil`/`graceMinFloor`/`hasMoved` + `canDieFromHazard`,
   TDD §2). Time-agnostic like `RoundState`/`ControlModel`; unit tested with lune
@@ -56,6 +67,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
     the default `Animate` cannot drive them.
 
 ### Changed
+- `Config.VOID_Y` raised from `-50` to `-4` so it sits just under the tile floor;
+  falling through a vanished tile is now a quick, grace-protectable death.
+- Removed the `Baseplate` from `default.project.json`; the tile field is the floor.
+- `src/server/RoundManager.luau` — builds the tile-field arena once at startup
+  (`HazardSystem.build()`), starts it driving at round begin (`HazardSystem.start`)
+  and freezes it solid at round end (`HazardSystem.stop()`).
 - `src/server/init.server.luau` — bootstraps the swap mechanic: disables
   `CharacterAutoLoads`, spawns each player a body, assigns initial control, and
   starts the swap loop.
