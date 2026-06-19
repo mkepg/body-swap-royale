@@ -21,6 +21,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local RoundState = require(ReplicatedStorage.Shared.RoundState)
+local GraceModel = require(ReplicatedStorage.Shared.GraceModel)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local BodyManager = require(script.Parent.BodyManager)
 local ControlManager = require(script.Parent.ControlManager)
@@ -32,6 +33,17 @@ local SpectateBody = Remotes.get("SpectateBody")
 
 local RoundManager = {}
 local model = RoundState.new(Config.MIN_PLAYERS_TO_START, Config.MIN_PLAYERS_TO_CONTINUE)
+
+-- Post-swap grace: per-player timers + a server-derived "has moved" flag (pure
+-- decision in GraceModel). swapPos holds each player's controlled-body root
+-- position at its last swap, so the void monitor can derive horizontal travel.
+local grace = GraceModel.new()
+local swapPos = {} -- [player] = Vector3
+
+-- The single monotonic clock for grace. Pure GraceModel takes `now` injected.
+local function now()
+	return os.clock()
+end
 
 -- A unique token gates the void monitor; setting it to a new value (or nil) stops
 -- any previously-running monitor loop.
@@ -95,14 +107,26 @@ local function doSwap()
 	if #roster >= 2 then
 		local ok, msg = SwapController.swap(roster)
 		print("[BSR] swap:", ok, msg)
+		if ok then
+			-- Open a grace window for everyone who just swapped, and record the
+			-- starting position of the body they now control so the monitor can
+			-- tell when they have moved (oriented).
+			local t = now()
+			for _, player in ipairs(roster) do
+				GraceModel.onSwap(grace, player, t, Config.GRACE_SECONDS, Config.GRACE_FLOOR_SECONDS)
+				local body = ControlManager.getControlledBody(player)
+				local root = body and body:FindFirstChild("HumanoidRootPart")
+				swapPos[player] = root and root.Position or nil
+			end
+		end
 	end
 end
 
 -- ===== elimination =====
 
--- The single logical elimination entry point. Called by the void monitor (and by
--- the Humanoid.Died hook for future health-based hazards). Idempotent: a no-op for
--- a player who is not currently alive.
+-- The single logical elimination entry point. Hazard deaths reach it through
+-- eliminateFromHazard (which applies the grace gate); disconnects call it via
+-- removePlayer. Idempotent: a no-op for a player who is not currently alive.
 function RoundManager.eliminate(player)
 	-- Idempotent: if the player isn't currently alive, RoundState.eliminate would
 	-- no-op, so skip the side effects (event/park/spectate) entirely.
@@ -116,7 +140,20 @@ function RoundManager.eliminate(player)
 	end
 	EliminationEvent:FireAllClients(player.Name)
 	resendSpectate()
+	GraceModel.clear(grace, player)
+	swapPos[player] = nil
 	return result
+end
+
+-- Hazard-sourced elimination passes through the post-swap grace gate: a body still
+-- within its grace window cannot be eliminated by a hazard (the void now, and any
+-- future hazard). Disconnect-driven elimination does NOT use this path. Idempotent
+-- via RoundManager.eliminate.
+function RoundManager.eliminateFromHazard(player)
+	if GraceModel.canDieFromHazard(grace, player, now()) then
+		return RoundManager.eliminate(player)
+	end
+	return { ended = false, winner = nil }
 end
 
 -- ===== void monitor =====
@@ -130,8 +167,22 @@ local function startMonitor()
 				if RoundState.isAlive(model, player) then
 					local body = ControlManager.getControlledBody(player)
 					local root = body and body:FindFirstChild("HumanoidRootPart")
-					if root and root.Position.Y < Config.VOID_Y then
-						RoundManager.eliminate(player)
+					if root then
+						-- Derive HasMovedSinceSwap from horizontal travel since the
+						-- last swap; vertical fall does not count (GDD: grace does
+						-- not block falling), so a dropped body keeps its window.
+						local origin = swapPos[player]
+						if origin then
+							local d = root.Position - origin
+							if Vector3.new(d.X, 0, d.Z).Magnitude > Config.GRACE_MOVE_EPSILON then
+								GraceModel.markMoved(grace, player)
+								swapPos[player] = nil
+							end
+						end
+						-- Void death source, gated by the post-swap grace window.
+						if root.Position.Y < Config.VOID_Y then
+							RoundManager.eliminateFromHazard(player)
+						end
 					end
 				end
 			end
@@ -214,6 +265,8 @@ end
 function RoundManager.removePlayer(player)
 	RoundState.removePlayer(model, player) -- lifecycle (may auto-end the round)
 	ControlManager.removePlayer(player)    -- absorb + destroy the leaver's own body
+	GraceModel.clear(grace, player)
+	swapPos[player] = nil
 	if RoundState.getPhase(model) == "Active" then
 		resendSpectate() -- the alive set may have shrunk
 	end
