@@ -9,7 +9,6 @@
 	(Grace shimmer is added in Task 12.)
 --]]
 
-local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 
