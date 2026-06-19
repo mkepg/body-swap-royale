@@ -31,6 +31,7 @@ local HazardSystem = require(script.Parent.HazardSystem)
 local RoundStateChanged = Remotes.get("RoundStateChanged")
 local EliminationEvent = Remotes.get("EliminationEvent")
 local SpectateBody = Remotes.get("SpectateBody")
+local SwapPreview = Remotes.get("SwapPreview")
 
 local RoundManager = {}
 local model = RoundState.new(Config.MIN_PLAYERS_TO_START, Config.MIN_PLAYERS_TO_CONTINUE)
@@ -104,23 +105,53 @@ local function aliveRoster()
 	return roster
 end
 
+-- Tell each player in the plan which body they will inherit (drives the
+-- client-side preview highlight). Fired at preview start and on any re-plan.
+local function firePreview(plan)
+	for _, pair in ipairs(plan.to) do
+		SwapPreview:FireClient(pair.player, pair.body)
+	end
+end
+
+-- After control has been committed, open the post-swap grace window for `players`
+-- and record each one's new controlled-body position so the void monitor can
+-- derive "has moved" (horizontal travel since the swap).
+local function stampGrace(players)
+	local t = now()
+	for _, player in ipairs(players) do
+		GraceModel.onSwap(grace, player, t, Config.GRACE_SECONDS, Config.GRACE_FLOOR_SECONDS)
+		local body = ControlManager.getControlledBody(player)
+		local root = body and body:FindFirstChild("HumanoidRootPart")
+		swapPos[player] = root and root.Position or nil
+	end
+end
+
+-- Commit a planned swap. The commit is authoritative over the CURRENT roster: if
+-- the plan went stale during the preview window (someone died/left, or an absorb
+-- moved a survivor), recompute over the live roster before applying. Aborts if
+-- fewer than 2 remain (the round is ending).
+local function commitSwap(plan)
+	if not SwapController.planStillValid(plan) then
+		local roster = aliveRoster()
+		if #roster < 2 then
+			return
+		end
+		plan = SwapController.plan(roster)
+	end
+	SwapController.commit(plan)
+	local players = {}
+	for _, pair in ipairs(plan.to) do
+		players[#players + 1] = pair.player
+	end
+	stampGrace(players)
+end
+
+-- Immediate plan+commit (no preview) -- used by forceSwap for the smoke test.
 local function doSwap()
 	local roster = aliveRoster()
 	if #roster >= 2 then
-		local ok, msg = SwapController.swap(roster)
-		print("[BSR] swap:", ok, msg)
-		if ok then
-			-- Open a grace window for everyone who just swapped, and record the
-			-- starting position of the body they now control so the monitor can
-			-- tell when they have moved (oriented).
-			local t = now()
-			for _, player in ipairs(roster) do
-				GraceModel.onSwap(grace, player, t, Config.GRACE_SECONDS, Config.GRACE_FLOOR_SECONDS)
-				local body = ControlManager.getControlledBody(player)
-				local root = body and body:FindFirstChild("HumanoidRootPart")
-				swapPos[player] = root and root.Position or nil
-			end
-		end
+		local plan = SwapController.plan(roster)
+		commitSwap(plan)
 	end
 end
 
@@ -230,20 +261,60 @@ local function beginRound()
 	print("[BSR] round started")
 end
 
--- Spin during Active: swap every CYCLE_SECONDS until the phase leaves Active
--- (an elimination or disconnect auto-ended it inside RoundState).
+-- Wait up to `seconds`, breaking early if the round leaves Active. Polls at the
+-- same 0.25s cadence used elsewhere.
+local function waitActive(seconds)
+	local elapsed = 0
+	while elapsed < seconds and RoundState.getPhase(model) == "Active" do
+		task.wait(0.25)
+		elapsed += 0.25
+	end
+end
+
+-- Spin during Active. Each cycle: broadcast the swap deadline, free-play for
+-- (CYCLE - PREVIEW), then run the PREVIEW window (plan + per-client preview,
+-- re-planning if the roster churns), then commit the swap at T0.
 local function runActivePhase()
 	while RoundState.getPhase(model) == "Active" do
 		broadcastState(nil, workspace:GetServerTimeNow() + Config.CYCLE_SECONDS)
+
+		-- Free play.
+		waitActive(Config.CYCLE_SECONDS - Config.PREVIEW_SECONDS)
+		if RoundState.getPhase(model) ~= "Active" then
+			break
+		end
+
+		-- Preview window: plan now and tell each client their target body.
+		local plan = nil
+		local roster = aliveRoster()
+		if #roster >= 2 then
+			plan = SwapController.plan(roster)
+			firePreview(plan)
+		end
+
 		local elapsed = 0
-		while elapsed < Config.CYCLE_SECONDS and RoundState.getPhase(model) == "Active" do
+		while elapsed < Config.PREVIEW_SECONDS and RoundState.getPhase(model) == "Active" do
 			task.wait(0.25)
 			elapsed += 0.25
+			-- Re-plan if the roster changed mid-preview (death / disconnect / absorb).
+			if plan and not SwapController.planStillValid(plan) then
+				roster = aliveRoster()
+				if #roster >= 2 then
+					plan = SwapController.plan(roster)
+					firePreview(plan)
+				else
+					plan = nil
+				end
+			end
 		end
 		if RoundState.getPhase(model) ~= "Active" then
 			break
 		end
-		doSwap()
+
+		-- Commit at T0.
+		if plan then
+			commitSwap(plan)
+		end
 	end
 end
 
