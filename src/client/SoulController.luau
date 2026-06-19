@@ -11,8 +11,10 @@
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared:WaitForChild("Config"))
 local Remotes = require(Shared:WaitForChild("Remotes"))
 local SoulMap = Remotes.get("SoulMap")
 local SetControlledBody = Remotes.get("SetControlledBody")
@@ -93,14 +95,69 @@ local function reconcile(list)
 	end
 end
 
+-- A brief shield shimmer on the body you just swapped into, mirroring the
+-- post-swap grace window: it pulses for up to GRACE_SECONDS and fades early once
+-- you've moved (after the GRACE_FLOOR_SECONDS hard floor). Cosmetic only -- the
+-- server owns the real grace gate; this approximates its feel from local input.
+local shimmerToken = nil
+
+local function playGraceShimmer(body)
+	if not (body and body.Parent) then
+		return
+	end
+	local token = {}
+	shimmerToken = token
+
+	local hl = Instance.new("Highlight")
+	hl.Name = "GraceShimmer"
+	hl.FillColor = Color3.fromRGB(120, 200, 255)
+	hl.OutlineColor = Color3.fromRGB(200, 240, 255)
+	hl.FillTransparency = 0.6
+	hl.Adornee = body
+	hl.Parent = body
+
+	local start = os.clock()
+	local moved = false
+	local conn = UserInputService.InputBegan:Connect(function(input, gpe)
+		if gpe then
+			return
+		end
+		local kc = input.KeyCode
+		if kc == Enum.KeyCode.W or kc == Enum.KeyCode.A or kc == Enum.KeyCode.S
+			or kc == Enum.KeyCode.D or kc == Enum.KeyCode.Space then
+			moved = true
+		end
+	end)
+
+	task.spawn(function()
+		while shimmerToken == token do
+			local elapsed = os.clock() - start
+			hl.FillTransparency = 0.5 + 0.3 * math.sin(elapsed * 8) -- pulse
+			local floorDone = elapsed >= Config.GRACE_FLOOR_SECONDS
+			if elapsed >= Config.GRACE_SECONDS or (floorDone and moved) then
+				break
+			end
+			task.wait()
+		end
+		conn:Disconnect()
+		hl:Destroy()
+		if shimmerToken == token then
+			shimmerToken = nil
+		end
+	end)
+end
+
 function SoulController.start()
 	SoulMap.OnClientEvent:Connect(reconcile)
 
-	SetControlledBody.OnClientEvent:Connect(function(body)
+	SetControlledBody.OnClientEvent:Connect(function(body, isSwap)
 		myBody = body
 		-- Re-emphasize immediately (don't wait for the next SoulMap broadcast).
 		for b, halo in pairs(halos) do
 			applyEmphasis(b, halo)
+		end
+		if isSwap and body then
+			playGraceShimmer(body)
 		end
 	end)
 end
