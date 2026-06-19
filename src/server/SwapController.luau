@@ -34,14 +34,4 @@ function SwapController.planStillValid(plan)
 	return ControlManager.planStillValid(plan)
 end
 
--- Immediate plan+commit over `orderedAlive` (the no-preview forceSwap path).
-function SwapController.swap(orderedAlive)
-	if #orderedAlive < 2 then
-		return false, "need >=2 alive players"
-	end
-	local plan = ControlManager.planSwap(orderedAlive)
-	ControlManager.commitSwap(plan)
-	return true, string.format("swapped %d players", #orderedAlive)
-end
-
 return SwapController

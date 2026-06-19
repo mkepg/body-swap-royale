@@ -6,7 +6,7 @@
 	(color = whoever currently controls that body), so you can recognize players
 	across swaps. THIS client's own controlled body (from SetControlledBody) gets
 	an emphasized halo so "which one is me?" is unmistakable after the camera cut.
-	(Grace shimmer is added in Task 12.)
+	Also plays the brief post-swap grace shield shimmer on the body you inherit.
 --]]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -129,7 +129,10 @@ local function playGraceShimmer(body)
 	end)
 
 	task.spawn(function()
-		while shimmerToken == token do
+		-- `hl.Parent` guard: if the body is destroyed mid-grace (its owner
+		-- disconnects -> BodyManager.removeBody), hl is destroyed with it; stop
+		-- before writing to the locked instance so we still disconnect cleanly.
+		while shimmerToken == token and hl.Parent do
 			local elapsed = os.clock() - start
 			hl.FillTransparency = 0.5 + 0.3 * math.sin(elapsed * 8) -- pulse
 			local floorDone = elapsed >= Config.GRACE_FLOOR_SECONDS
