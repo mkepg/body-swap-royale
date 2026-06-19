@@ -52,13 +52,14 @@ local monitorToken = nil
 
 -- ===== broadcasts =====
 
-local function broadcastState(secondsRemaining)
+local function broadcastState(secondsRemaining, swapAtServerTime)
 	local winner = RoundState.getWinner(model)
 	RoundStateChanged:FireAllClients({
 		phase = RoundState.getPhase(model),
 		aliveCount = RoundState.aliveCount(model),
 		winnerName = winner and winner.Name or nil,
 		secondsRemaining = secondsRemaining,
+		swapAtServerTime = swapAtServerTime,
 	})
 end
 
@@ -233,6 +234,7 @@ end
 -- (an elimination or disconnect auto-ended it inside RoundState).
 local function runActivePhase()
 	while RoundState.getPhase(model) == "Active" do
+		broadcastState(nil, workspace:GetServerTimeNow() + Config.CYCLE_SECONDS)
 		local elapsed = 0
 		while elapsed < Config.CYCLE_SECONDS and RoundState.getPhase(model) == "Active" do
 			task.wait(0.25)
