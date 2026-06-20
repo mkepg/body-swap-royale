@@ -125,6 +125,12 @@ end
 function HazardSystem.start(startTime)
 	roundStart = startTime
 	forceAllSolid()
+	-- Dev/test switch: with hazards off, leave the floor permanently solid (no
+	-- disappearing cycle) so swaps can be reached/observed without bodies falling.
+	if not Config.HAZARDS_ENABLED then
+		loopToken = nil -- ensure no prior loop keeps running
+		return
+	end
 	local token = {}
 	loopToken = token
 	task.spawn(function()
