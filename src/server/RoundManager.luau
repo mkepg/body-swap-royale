@@ -340,10 +340,18 @@ end
 local function endRound()
 	stopMonitor()
 	HazardSystem.stop() -- freeze tiles solid for the Ended/Lobby floor
-	broadcastState() -- phase Ended (+ winnerName)
 	local winner = RoundState.getWinner(model)
 	print("[BSR] round ended; winner:", winner and winner.Name or "(none)")
-	task.wait(Config.ROUND_END_SECONDS)
+	-- Tick the post-round countdown so the Results banner shows a truthful
+	-- "Next round in N" -- reusing the same secondsRemaining channel the Lobby
+	-- countdown uses, so the client stays clock-free (server owns clocks).
+	-- broadcastState already carries winnerName during Ended.
+	local remaining = Config.ROUND_END_SECONDS
+	while remaining > 0 do
+		broadcastState(remaining) -- phase Ended (+ winnerName) + secondsRemaining
+		task.wait(1)
+		remaining -= 1
+	end
 	RoundState.reset(model) -- Ended -> Lobby
 	broadcastState() -- phase Lobby
 end
