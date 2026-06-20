@@ -101,9 +101,18 @@ function ClientSwapHud.start()
 		local d = SwapTelegraphModel.display(secondsUntilSwap, Config.PREVIEW_SECONDS)
 
 		timer.Text = d.timerText
-		if d.inPreview and d.bigCountdownInt then
-			big.Text = tostring(d.bigCountdownInt)
+
+		-- Flash follows telegraph intensity, independent of the number, so it stays
+		-- visible through the swap moment (bigCountdownInt is already nil by then and
+		-- flashAlpha is held at peak until the next cycle's deadline arrives).
+		if d.inPreview then
 			flash.BackgroundTransparency = 1 - (d.flashAlpha * 0.5) -- up to 50% opaque
+		else
+			flash.BackgroundTransparency = 1
+		end
+
+		if d.bigCountdownInt then
+			big.Text = tostring(d.bigCountdownInt)
 			if d.bigCountdownInt ~= lastBigInt then
 				lastBigInt = d.bigCountdownInt
 				if warningSound and d.bigCountdownInt == Config.PREVIEW_SECONDS then
@@ -112,7 +121,6 @@ function ClientSwapHud.start()
 			end
 		else
 			big.Text = ""
-			flash.BackgroundTransparency = 1
 		end
 	end)
 end

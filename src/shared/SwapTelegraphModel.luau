@@ -25,11 +25,20 @@ function SwapTelegraphModel.display(secondsUntilSwap, previewSeconds)
 	local bigCountdownInt = nil
 	local flashAlpha = 0
 
-	if inPreview and s > 0 then
-		bigCountdownInt = math.ceil(s)
-		flashAlpha = (previewSeconds - s) / previewSeconds
-		if flashAlpha < 0 then flashAlpha = 0 end
-		if flashAlpha > 1 then flashAlpha = 1 end
+	if inPreview then
+		if s > 0 then
+			bigCountdownInt = math.ceil(s)
+			flashAlpha = (previewSeconds - s) / previewSeconds
+			if flashAlpha < 0 then flashAlpha = 0 end
+			if flashAlpha > 1 then flashAlpha = 1 end
+		else
+			-- Swap is due (the countdown hit 0). The actual swap (SetControlledBody)
+			-- and the next cycle's deadline arrive a beat later -- server task.wait
+			-- overshoot + replication -- so HOLD the flash at peak through that gap
+			-- instead of blinking out before the swap is visible. The next cycle's
+			-- deadline broadcast (fired right after the commit) clears it.
+			flashAlpha = 1
+		end
 	end
 
 	return {

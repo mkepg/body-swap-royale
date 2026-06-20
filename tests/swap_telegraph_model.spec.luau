@@ -47,15 +47,21 @@ do
 	print("telegraph: mid-preview ramp OK")
 end
 
--- At/after the swap moment: clamp to 0, no negative text, no big countdown.
+-- At/after the swap moment: clamp text to 0, no big countdown, but HOLD the flash
+-- at peak. The actual swap (SetControlledBody) and the next cycle's deadline land
+-- a beat after the predicted T0 (server task.wait overshoot + replication), so the
+-- flash must stay up through that gap instead of blinking out before the swap.
 do
 	local d0 = SwapTelegraphModel.display(0, PREVIEW)
 	expect(d0.timerText == "0", "timerText at 0 should be '0'")
 	expect(d0.bigCountdownInt == nil, "no big countdown at the swap moment (s <= 0)")
+	expect(d0.inPreview == true, "still in preview at the swap moment")
+	expect(d0.flashAlpha == 1, "flash holds at peak at the swap moment")
 	local dn = SwapTelegraphModel.display(-1.5, PREVIEW)
 	expect(dn.timerText == "0", "negative seconds clamp to '0'")
-	expect(dn.flashAlpha == 0, "no flash past the swap")
-	print("telegraph: swap-moment clamp OK")
+	expect(dn.bigCountdownInt == nil, "no big countdown past the swap")
+	expect(dn.flashAlpha == 1, "flash stays held just past the swap until the next cycle")
+	print("telegraph: swap-moment hold OK")
 end
 
 print("ALL SwapTelegraphModel TESTS PASSED")
