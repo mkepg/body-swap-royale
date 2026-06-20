@@ -7,6 +7,9 @@
 	semantic accent to a Color3. Also keeps the spectator-camera retarget and a
 	brief "you were eliminated" notice (Active-phase only -- the banner owns the
 	screen during Lobby/Ended).
+
+	Started once per client (LocalScript lifetime); all event connections live for
+	the session, matching the pattern used by ClientSwapHud and SoulController.
 --]]
 
 local Players = game:GetService("Players")
@@ -95,7 +98,7 @@ local function build()
 
 	-- WINNER mini-label + the winner's name (shown only on Ended with a winner).
 	winnerTag = bannerLabel(banner, "WinnerTag", 0.16, 1)
-	winnerTag.Text = "WINNER"
+	winnerTag.Text = "WINNER" -- static label text; only its visibility is toggled in applyDisplay
 	winnerTag.TextColor3 = Color3.fromRGB(150, 170, 190)
 
 	winnerName = bannerLabel(banner, "WinnerName", 0.30, 2)
@@ -139,11 +142,6 @@ local function applyDisplay(d)
 	bottomLabel.Visible = d.visible and d.bottomText ~= nil
 	bottomLabel.Text = d.bottomText or ""
 
-	-- When a banner takes the screen (Lobby/Ended), clear the Active-only notice.
-	if d.visible then
-		elim.Visible = false
-	end
-
 	local accent = ACCENT[d.accent] or ACCENT.neutral
 	stroke.Color = accent
 
@@ -169,6 +167,9 @@ function ClientRoundHud.start()
 			connectedCount = #Players:GetPlayers(),
 			minPlayers = Config.MIN_PLAYERS_TO_START,
 		})
+		if state.phase ~= "Active" then
+			elim.Visible = false -- the eliminated notice is Active-phase only
+		end
 		applyDisplay(d)
 	end)
 
