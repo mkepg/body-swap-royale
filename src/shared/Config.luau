@@ -33,6 +33,11 @@ Config.VOID_Y = -4
 -- Disappearing-tile hazard (the MVP arena floor). The pure TileFieldModel decides
 -- each tile's phase from these durations; HazardSystem maps phase -> part props.
 -- A tile cycles solid -> warning(red) -> gone(no collision) -> solid.
+-- HAZARDS_ENABLED: dev/test switch (NOT a gameplay tunable). When false,
+-- HazardSystem builds the floor but never runs the disappearing cycle, so tiles
+-- stay solid and nobody falls -- lets you reach/observe the 30s swap without a
+-- body dying first. Leave true for real play.
+Config.HAZARDS_ENABLED = true
 Config.TILE_SOLID_SECONDS = 4 -- standable time per cycle
 Config.TILE_WARNING_SECONDS = 2 -- red telegraph (GDD §5: "red 2s before")
 Config.TILE_GONE_SECONDS = 1.5 -- vanished (fall-through) window
