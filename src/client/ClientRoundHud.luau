@@ -3,13 +3,13 @@
 	Location: StarterPlayerScripts/Client/ClientRoundHud  (ModuleScript)
 
 	Draws the keep-arena-visible banner from RoundStateChanged. WHAT to show is the
-	pure RoundScreenModel's decision; this module only renders it and maps the
-	semantic accent to a Color3. Also keeps the spectator-camera retarget and a
-	brief "you were eliminated" notice (Active-phase only -- the banner owns the
-	screen during Lobby/Ended).
+	pure RoundScreenModel's decision; this module only renders it (kid-friendly skin
+	via HudTheme). Also keeps the spectator-camera retarget and a brief "you were
+	eliminated" notice (Active-phase only -- the banner owns the screen during
+	Lobby/Ended).
 
 	Started once per client (LocalScript lifetime); all event connections live for
-	the session, matching the pattern used by ClientSwapHud and SoulController.
+	the session, matching ClientSwapHud and SoulController.
 --]]
 
 local Players = game:GetService("Players")
@@ -24,64 +24,43 @@ local RoundStateChanged = Remotes.get("RoundStateChanged")
 local EliminationEvent = Remotes.get("EliminationEvent")
 local SpectateBody = Remotes.get("SpectateBody")
 
+local HudTheme = require(script.Parent:WaitForChild("HudTheme"))
+
 local ClientRoundHud = {}
 
 local player = Players.LocalPlayer
 local camera = workspace.CurrentCamera
 
--- accent -> Color3 (lives in the renderer; the pure model stays Roblox-free).
-local ACCENT = {
-	neutral = Color3.fromRGB(180, 200, 220),
-	win = Color3.fromRGB(45, 212, 191),
-	lose = Color3.fromRGB(220, 90, 90),
-}
-
--- A stacked text line inside the banner. scaleY is its share of the banner height.
-local function bannerLabel(parent, name, scaleY, order)
+-- A stacked text line inside a panel. scaleY is its share of the panel height.
+local function panelLabel(parent, name, scaleY, order)
 	local l = Instance.new("TextLabel")
 	l.Name = name
 	l.BackgroundTransparency = 1
-	l.Size = UDim2.fromScale(0.96, scaleY)
-	l.Font = Enum.Font.GothamBold
-	l.TextScaled = true
-	l.TextColor3 = Color3.new(1, 1, 1)
-	l.TextStrokeTransparency = 0.4
+	l.Size = UDim2.fromScale(0.92, scaleY)
 	l.LayoutOrder = order
 	l.Text = ""
 	l.Visible = false
+	HudTheme.styleText(l, "title")
 	l.Parent = parent
 	return l
 end
 
 -- Built once in start(); held here so the update closure can reach them.
-local banner, winnerTag, winnerName, title, subtitle, stroke, bottomLabel, elim
+local bannerHandle, winnerTag, winnerName, title, subtitle
+local bottomHandle, bottomText, elim
+local bannerShown, bottomShown = false, false
 
 local function build()
 	local gui = Instance.new("ScreenGui")
 	gui.Name = "RoundHud"
 	gui.ResetOnSpawn = false
 	gui.IgnoreGuiInset = true
+	gui.DisplayOrder = HudTheme.DisplayOrder.bookend
 	gui.Parent = player:WaitForChild("PlayerGui")
 
-	-- Top banner (keep-arena-visible): semi-transparent dark panel + accent stroke.
-	banner = Instance.new("Frame")
-	banner.Name = "Banner"
-	banner.AnchorPoint = Vector2.new(0.5, 0)
-	banner.Position = UDim2.new(0.5, 0, 0, 12)
-	banner.Size = UDim2.fromScale(0.94, 0.2)
-	banner.BackgroundColor3 = Color3.fromRGB(17, 22, 31)
-	banner.BackgroundTransparency = 0.25
-	banner.Visible = false
-	banner.Parent = gui
-
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, 12)
-	corner.Parent = banner
-
-	stroke = Instance.new("UIStroke")
-	stroke.Thickness = 2
-	stroke.Color = ACCENT.neutral
-	stroke.Parent = banner
+	-- Banner: chunky state-colored panel in the TOP zone.
+	bannerHandle = HudTheme.makePanel(gui, UDim2.fromScale(0.6, 0.16), "top", "banner")
+	bannerHandle.root.Visible = false
 
 	local layout = Instance.new("UIListLayout")
 	layout.FillDirection = Enum.FillDirection.Vertical
@@ -89,70 +68,97 @@ local function build()
 	layout.VerticalAlignment = Enum.VerticalAlignment.Center
 	layout.SortOrder = Enum.SortOrder.LayoutOrder
 	layout.Padding = UDim.new(0, 2)
-	layout.Parent = banner
+	layout.Parent = bannerHandle.panel
 
 	local pad = Instance.new("UIPadding")
 	pad.PaddingTop = UDim.new(0, 6)
 	pad.PaddingBottom = UDim.new(0, 6)
-	pad.Parent = banner
+	pad.Parent = bannerHandle.panel
 
-	-- WINNER mini-label + the winner's name (shown only on Ended with a winner).
-	winnerTag = bannerLabel(banner, "WinnerTag", 0.16, 1)
-	winnerTag.Text = "WINNER" -- static label text; only its visibility is toggled in applyDisplay
-	winnerTag.TextColor3 = Color3.fromRGB(150, 170, 190)
+	-- WINNER pill (yellow, dark text) -- shown only on Ended with a winner.
+	winnerTag = Instance.new("TextLabel")
+	winnerTag.Name = "WinnerTag"
+	winnerTag.Size = UDim2.fromScale(0.42, 0.16)
+	winnerTag.BackgroundColor3 = HudTheme.Color.pill
+	winnerTag.TextColor3 = HudTheme.Color.pillText
+	winnerTag.Font = HudTheme.Font.heading
+	winnerTag.TextScaled = true
+	winnerTag.Text = "WINNER" -- static text; visibility toggled in applyDisplay
+	winnerTag.LayoutOrder = 1
+	winnerTag.Visible = false
+	local tagCorner = Instance.new("UICorner")
+	tagCorner.CornerRadius = UDim.new(1, 0)
+	tagCorner.Parent = winnerTag
+	local tagStroke = Instance.new("UIStroke")
+	tagStroke.Thickness = 2
+	tagStroke.Color = HudTheme.Color.panelStroke
+	tagStroke.Parent = winnerTag
+	winnerTag.Parent = bannerHandle.panel
 
-	winnerName = bannerLabel(banner, "WinnerName", 0.30, 2)
-	title = bannerLabel(banner, "Title", 0.36, 3)       -- Waiting.../Round starting.../Victory/Defeated
-	subtitle = bannerLabel(banner, "Subtitle", 0.18, 4) -- "X / N players" in lobby
+	winnerName = panelLabel(bannerHandle.panel, "WinnerName", 0.30, 2)
+	title = panelLabel(bannerHandle.panel, "Title", 0.40, 3)       -- Victory/Defeated/Round over/lobby lines
+	subtitle = panelLabel(bannerHandle.panel, "Subtitle", 0.18, 4) -- "X / N players" in lobby
+	subtitle.Font = HudTheme.Font.body
 
-	-- Bottom line: "Next round in N" on the Results screen.
-	bottomLabel = Instance.new("TextLabel")
-	bottomLabel.Name = "BottomLine"
-	bottomLabel.AnchorPoint = Vector2.new(0.5, 1)
-	bottomLabel.Position = UDim2.fromScale(0.5, 0.97)
-	bottomLabel.Size = UDim2.fromScale(0.5, 0.05)
-	bottomLabel.BackgroundColor3 = Color3.fromRGB(17, 22, 31)
-	bottomLabel.BackgroundTransparency = 0.4
-	bottomLabel.Font = Enum.Font.GothamMedium
-	bottomLabel.TextScaled = true
-	bottomLabel.TextColor3 = Color3.fromRGB(223, 238, 238)
-	bottomLabel.TextStrokeTransparency = 0.5
-	bottomLabel.Text = ""
-	bottomLabel.Visible = false
-	bottomLabel.Parent = gui
+	-- Bottom line: fixed dark pill in the BOTTOM zone ("Next round in N").
+	bottomHandle = HudTheme.makePanel(gui, UDim2.fromScale(0.34, 0.06), "bottom", "bottomLine")
+	HudTheme.setPanelFlat(bottomHandle, HudTheme.Color.panelDark)
+	bottomHandle.root.Visible = false
 
-	-- Active-only transient notice when THIS client is eliminated.
+	bottomText = Instance.new("TextLabel")
+	bottomText.Name = "BottomText"
+	bottomText.Size = UDim2.fromScale(0.9, 0.7)
+	bottomText.AnchorPoint = Vector2.new(0.5, 0.5)
+	bottomText.Position = UDim2.fromScale(0.5, 0.5)
+	bottomText.BackgroundTransparency = 1
+	bottomText.Text = ""
+	HudTheme.styleText(bottomText, "body")
+	bottomText.Parent = bottomHandle.panel
+
+	-- Active-only transient notice (red text, no panel) in the NOTICE zone.
 	elim = Instance.new("TextLabel")
 	elim.Name = "EliminatedNotice"
-	elim.AnchorPoint = Vector2.new(0.5, 0.5)
-	elim.Position = UDim2.fromScale(0.5, 0.5)
 	elim.Size = UDim2.fromScale(0.6, 0.08)
 	elim.BackgroundTransparency = 1
-	elim.Font = Enum.Font.GothamBold
-	elim.TextScaled = true
-	elim.TextColor3 = Color3.fromRGB(220, 90, 90)
-	elim.TextStrokeTransparency = 0.3
 	elim.Text = ""
 	elim.Visible = false
+	HudTheme.placeInZone(elim, "notice")
+	HudTheme.applyMaxSize(elim, "notice")
+	HudTheme.styleText(elim, "heading")
+	elim.TextColor3 = HudTheme.Accent.lose.top -- red callout
 	elim.Parent = gui
 end
 
 local function applyDisplay(d)
-	banner.Visible = d.visible
-	bottomLabel.Visible = d.visible and d.bottomText ~= nil
-	bottomLabel.Text = d.bottomText or ""
+	-- Banner visibility + pop-in on the rising edge (hidden -> visible).
+	if d.visible and not bannerShown then
+		HudTheme.popIn(bannerHandle.root)
+	end
+	bannerShown = d.visible
+	bannerHandle.root.Visible = d.visible
 
-	local accent = ACCENT[d.accent] or ACCENT.neutral
-	stroke.Color = accent
+	-- Bottom pill visibility + pop-in on its rising edge.
+	local bottomVisible = d.visible and d.bottomText ~= nil
+	if bottomVisible and not bottomShown then
+		HudTheme.popIn(bottomHandle.root)
+	end
+	bottomShown = bottomVisible
+	bottomHandle.root.Visible = bottomVisible
+	bottomText.Text = d.bottomText or ""
+
+	-- When a banner takes the screen (Lobby/Ended), the notice is hidden via the
+	-- phase check in the RoundStateChanged handler; nothing to do here.
+
+	-- Panel fill color follows state (green win / red lose / blue neutral).
+	HudTheme.setPanelAccent(bannerHandle, d.accent)
 
 	winnerTag.Visible = d.winnerName ~= nil
+
 	winnerName.Visible = d.winnerName ~= nil
 	winnerName.Text = d.winnerName or ""
-	winnerName.TextColor3 = accent
 
 	title.Visible = d.titleText ~= nil
 	title.Text = d.titleText or ""
-	title.TextColor3 = (d.accent == "neutral") and Color3.new(1, 1, 1) or accent
 
 	subtitle.Visible = d.subtitleText ~= nil
 	subtitle.Text = d.subtitleText or ""
@@ -177,7 +183,7 @@ function ClientRoundHud.start()
 		-- Only while the banner is hidden (Active). Guards a cross-remote race:
 		-- if the Ended broadcast lands before this event, the banner is up and
 		-- the notice must not cover it.
-		if playerName == player.Name and not banner.Visible then
+		if playerName == player.Name and not bannerHandle.root.Visible then
 			elim.Text = "You were eliminated"
 			elim.Visible = true
 		end
