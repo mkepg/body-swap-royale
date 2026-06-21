@@ -11,10 +11,12 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.Config)
+local SpawnLayout = require(ReplicatedStorage.Shared.SpawnLayout)
 
 local BodyManager = {}
 BodyManager.bodyByOwner = {} -- [player] = body wearing that player's avatar
-BodyManager.spawnByOwner = {} -- [player] = CFrame the body spawned at (for round-start reposition)
+BodyManager.arenaSlotByOwner = {} -- [player] = arena spawn CFrame (round-start reposition)
+BodyManager.lobbySlotByOwner = {} -- [player] = balcony slot CFrame (join + between-rounds)
 BodyManager.folder = nil
 BodyManager._index = 0
 
@@ -45,6 +47,26 @@ local function buildAvatarBody(player)
 	return body
 end
 
+-- Arena spawn CFrame for a 1-based body index (today's single-row layout).
+local function arenaCFrame(index)
+	local o = Config.SPAWN_ORIGIN
+	local x, y, z = SpawnLayout.arenaSlot(index, o.X, o.Y, o.Z, Config.SPAWN_SPACING)
+	return CFrame.new(x, y, z)
+end
+
+-- Balcony slot CFrame for a 1-based body index. Grid offset (pure SpawnLayout)
+-- + the balcony origin + a small drop, oriented (yaw only) to face the arena so
+-- the avatar -- and its third-person camera -- point at the pit below.
+local function lobbyCFrame(index)
+	local rows = math.ceil(Config.LOBBY_CAPACITY / Config.LOBBY_PER_ROW)
+	local dx, dz = SpawnLayout.lobbySlot(index, Config.LOBBY_PER_ROW, rows, Config.LOBBY_SPACING)
+	local pos = Config.LOBBY_ORIGIN + Vector3.new(dx, Config.LOBBY_SPAWN_DROP, dz)
+	-- Look at the arena center, kept level with `pos` so the body stands upright
+	-- (yaw-only facing; the player tilts the camera to look down).
+	local target = Vector3.new(Config.LOBBY_FACE_TARGET.X, pos.Y, Config.LOBBY_FACE_TARGET.Z)
+	return CFrame.lookAt(pos, target)
+end
+
 function BodyManager.createBody(player)
 	local body = buildAvatarBody(player)
 	body.Name = "Body_" .. player.UserId
@@ -58,10 +80,13 @@ function BodyManager.createBody(player)
 	end
 
 	BodyManager._index += 1
-	local pos = Config.SPAWN_ORIGIN + Vector3.new((BodyManager._index - 1) * Config.SPAWN_SPACING, 0, 0)
-	local spawnCFrame = CFrame.new(pos)
-	body:PivotTo(spawnCFrame)
-	BodyManager.spawnByOwner[player] = spawnCFrame
+	local index = BodyManager._index
+	-- A joining player starts in the waiting state, so spawn on the balcony.
+	-- Both slots are stored so resetBody (arena) and returnToLobby (balcony) can
+	-- reposition the body for the rest of its life without recomputing.
+	BodyManager.arenaSlotByOwner[player] = arenaCFrame(index)
+	BodyManager.lobbySlotByOwner[player] = lobbyCFrame(index)
+	body:PivotTo(BodyManager.lobbySlotByOwner[player])
 	body:SetAttribute("OwnerUserId", player.UserId)
 	body.Parent = ensureFolder()
 
@@ -89,7 +114,8 @@ function BodyManager.removeBody(player)
 		body:Destroy()
 	end
 	BodyManager.bodyByOwner[player] = nil
-	BodyManager.spawnByOwner[player] = nil
+	BodyManager.arenaSlotByOwner[player] = nil
+	BodyManager.lobbySlotByOwner[player] = nil
 end
 
 -- Round start: reposition a player's OWN body to its spawn slot and re-enable
@@ -97,13 +123,32 @@ end
 -- needed -- just unanchor, zero velocity, and pivot back to the spawn CFrame.
 function BodyManager.resetBody(player)
 	local body = BodyManager.bodyByOwner[player]
-	local cf = BodyManager.spawnByOwner[player]
+	local cf = BodyManager.arenaSlotByOwner[player]
 	if not body or not cf then
 		return
 	end
 	local root = body:FindFirstChild("HumanoidRootPart")
 	if not root then
 		return -- can't safely reset (and reposition) without a root
+	end
+	root.Anchored = false
+	root.AssemblyLinearVelocity = Vector3.zero
+	root.AssemblyAngularVelocity = Vector3.zero
+	body:PivotTo(cf)
+end
+
+-- Between rounds (and the Lobby phase): reposition a player's OWN body to its
+-- balcony slot and re-enable physics. The mirror of resetBody; unanchors so the
+-- subsequent ControlManager.resetControl can SetNetworkOwner (errors if anchored).
+function BodyManager.returnToLobby(player)
+	local body = BodyManager.bodyByOwner[player]
+	local cf = BodyManager.lobbySlotByOwner[player]
+	if not body or not cf then
+		return
+	end
+	local root = body:FindFirstChild("HumanoidRootPart")
+	if not root then
+		return
 	end
 	root.Anchored = false
 	root.AssemblyLinearVelocity = Vector3.zero
