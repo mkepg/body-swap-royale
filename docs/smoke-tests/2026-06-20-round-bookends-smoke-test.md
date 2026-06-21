@@ -42,4 +42,7 @@ which lune can't cover. The pure decision is unit-tested in
 ## Pass criteria
 All six checks behave as described; text is readable (TextScaled) and the banner
 clears the top inset. Note any pixel/spacing tweaks and adjust sizes in
-`ClientRoundHud.build()`.
+`ClientRoundHud.build()`. Also confirm the big headline does not jump
+distractingly in vertical position between the Lobby and Results banners; if it
+does, tune the banner layout (e.g. label LayoutOrder / VerticalAlignment) in
+`build()`.

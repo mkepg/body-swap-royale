@@ -347,11 +347,13 @@ local function endRound()
 	-- countdown uses, so the client stays clock-free (server owns clocks).
 	-- broadcastState already carries winnerName during Ended.
 	local remaining = Config.ROUND_END_SECONDS
-	while remaining > 0 do
-		broadcastState(remaining) -- phase Ended (+ winnerName) + secondsRemaining
+	broadcastState(remaining) -- always show the Results banner at least once (Ended)
+	while remaining > 1 do
 		task.wait(1)
 		remaining -= 1
+		broadcastState(remaining) -- tick N-1 .. 1
 	end
+	task.wait(remaining > 0 and 1 or 0) -- wait out the final second (skip if N == 0)
 	RoundState.reset(model) -- Ended -> Lobby
 	broadcastState() -- phase Lobby
 end
