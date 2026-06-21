@@ -36,6 +36,8 @@ function ClientSwapHud.start()
 	gui.Name = "SwapHud"
 	gui.ResetOnSpawn = false
 	gui.IgnoreGuiInset = true
+	-- Sibling render order (consistent with RoundHud; nested children draw in front).
+	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 	gui.DisplayOrder = HudTheme.DisplayOrder.swap
 	gui.Parent = player:WaitForChild("PlayerGui")
 
