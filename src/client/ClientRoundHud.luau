@@ -64,6 +64,9 @@ local function build()
 	gui.Name = "RoundHud"
 	gui.ResetOnSpawn = false
 	gui.IgnoreGuiInset = true
+	-- Sibling so nested labels draw in front of the opaque Panel they live in
+	-- (Global would render them behind it by ZIndex, hiding the text).
+	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 	gui.DisplayOrder = HudTheme.DisplayOrder.bookend
 	gui.Parent = player:WaitForChild("PlayerGui")
 
