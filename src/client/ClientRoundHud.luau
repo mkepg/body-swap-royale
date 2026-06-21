@@ -32,7 +32,7 @@ local player = Players.LocalPlayer
 local camera = workspace.CurrentCamera
 
 -- A stacked text line inside a panel. scaleY is its share of the panel height.
-local function panelLabel(parent, name, scaleY, order)
+local function panelLabel(parent, name, scaleY, order, fontKey)
 	local l = Instance.new("TextLabel")
 	l.Name = name
 	l.BackgroundTransparency = 1
@@ -40,7 +40,7 @@ local function panelLabel(parent, name, scaleY, order)
 	l.LayoutOrder = order
 	l.Text = ""
 	l.Visible = false
-	HudTheme.styleText(l, "title")
+	HudTheme.styleText(l, fontKey)
 	l.Parent = parent
 	return l
 end
@@ -48,7 +48,16 @@ end
 -- Built once in start(); held here so the update closure can reach them.
 local bannerHandle, winnerTag, winnerName, title, subtitle
 local bottomHandle, bottomText, elim
-local bannerShown, bottomShown = false, false
+
+-- Set a panel's visibility and pop it in only on the hidden->visible edge.
+-- (popIn sets UIScale.Scale=0 then we flip Visible in the same frame, so the
+-- scale-up renders from 0.)
+local function setVisible(root, visible)
+	if visible and not root.Visible then
+		HudTheme.popIn(root)
+	end
+	root.Visible = visible
+end
 
 local function build()
 	local gui = Instance.new("ScreenGui")
@@ -78,7 +87,7 @@ local function build()
 	-- WINNER pill (yellow, dark text) -- shown only on Ended with a winner.
 	winnerTag = Instance.new("TextLabel")
 	winnerTag.Name = "WinnerTag"
-	winnerTag.Size = UDim2.fromScale(0.42, 0.16)
+	winnerTag.Size = UDim2.fromScale(0.42, 0.14)
 	winnerTag.BackgroundColor3 = HudTheme.Color.pill
 	winnerTag.TextColor3 = HudTheme.Color.pillText
 	winnerTag.Font = HudTheme.Font.heading
@@ -89,16 +98,17 @@ local function build()
 	local tagCorner = Instance.new("UICorner")
 	tagCorner.CornerRadius = UDim.new(1, 0)
 	tagCorner.Parent = winnerTag
+	-- White outline reads better on the dark-text/yellow pill (the dark text
+	-- stroke from styleText is used on the white-text labels elsewhere).
 	local tagStroke = Instance.new("UIStroke")
 	tagStroke.Thickness = 2
 	tagStroke.Color = HudTheme.Color.panelStroke
 	tagStroke.Parent = winnerTag
 	winnerTag.Parent = bannerHandle.panel
 
-	winnerName = panelLabel(bannerHandle.panel, "WinnerName", 0.30, 2)
-	title = panelLabel(bannerHandle.panel, "Title", 0.40, 3)       -- Victory/Defeated/Round over/lobby lines
-	subtitle = panelLabel(bannerHandle.panel, "Subtitle", 0.18, 4) -- "X / N players" in lobby
-	subtitle.Font = HudTheme.Font.body
+	winnerName = panelLabel(bannerHandle.panel, "WinnerName", 0.26, 2, "title")
+	title = panelLabel(bannerHandle.panel, "Title", 0.34, 3, "title")       -- Victory/Defeated/Round over/lobby lines
+	subtitle = panelLabel(bannerHandle.panel, "Subtitle", 0.16, 4, "body")  -- "X / N players" in lobby
 
 	-- Bottom line: fixed dark pill in the BOTTOM zone ("Next round in N").
 	bottomHandle = HudTheme.makePanel(gui, UDim2.fromScale(0.34, 0.06), "bottom", "bottomLine")
@@ -130,20 +140,10 @@ local function build()
 end
 
 local function applyDisplay(d)
-	-- Banner visibility + pop-in on the rising edge (hidden -> visible).
-	if d.visible and not bannerShown then
-		HudTheme.popIn(bannerHandle.root)
-	end
-	bannerShown = d.visible
-	bannerHandle.root.Visible = d.visible
-
-	-- Bottom pill visibility + pop-in on its rising edge.
+	-- Banner + bottom pill: set visibility, pop in on the hidden->visible edge.
+	setVisible(bannerHandle.root, d.visible)
 	local bottomVisible = d.visible and d.bottomText ~= nil
-	if bottomVisible and not bottomShown then
-		HudTheme.popIn(bottomHandle.root)
-	end
-	bottomShown = bottomVisible
-	bottomHandle.root.Visible = bottomVisible
+	setVisible(bottomHandle.root, bottomVisible)
 	bottomText.Text = d.bottomText or ""
 
 	-- When a banner takes the screen (Lobby/Ended), the notice is hidden via the
