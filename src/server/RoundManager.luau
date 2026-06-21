@@ -27,6 +27,7 @@ local BodyManager = require(script.Parent.BodyManager)
 local ControlManager = require(script.Parent.ControlManager)
 local SwapController = require(script.Parent.SwapController)
 local HazardSystem = require(script.Parent.HazardSystem)
+local LobbyArea = require(script.Parent.LobbyArea)
 
 local RoundStateChanged = Remotes.get("RoundStateChanged")
 local EliminationEvent = Remotes.get("EliminationEvent")
@@ -342,18 +343,36 @@ local function endRound()
 	HazardSystem.stop() -- freeze tiles solid for the Ended/Lobby floor
 	local winner = RoundState.getWinner(model)
 	print("[BSR] round ended; winner:", winner and winner.Name or "(none)")
-	-- Tick the post-round countdown so the Results banner shows a truthful
-	-- "Next round in N" -- reusing the same secondsRemaining channel the Lobby
-	-- countdown uses, so the client stays clock-free (server owns clocks).
-	-- broadcastState already carries winnerName during Ended.
+	-- Victory cam: while the Results banner is up, point EVERY present player's
+	-- camera at the winner standing in the arena below. Bodies are NOT relocated
+	-- yet, so the winner stays put as the cam subject. Reuses SpectateBody (the
+	-- client sets CameraSubject unconditionally). Skipped if there is no winner
+	-- (disconnect-decided round) -- nothing to frame.
 	local remaining = Config.ROUND_END_SECONDS
 	broadcastState(remaining) -- always show the Results banner at least once (Ended)
+	if winner then
+		local winnerBody = ControlManager.getControlledBody(winner)
+		if winnerBody then
+			for _, p in ipairs(Players:GetPlayers()) do
+				SpectateBody:FireClient(p, winnerBody)
+			end
+		end
+	end
 	while remaining > 1 do
 		task.wait(1)
 		remaining -= 1
 		broadcastState(remaining) -- tick N-1 .. 1
 	end
 	task.wait(remaining > 0 and 1 or 0) -- wait out the final second (skip if N == 0)
+	-- Relocate everyone to the balcony for the Lobby wait. Order mirrors
+	-- beginRound: unanchor + pivot (returnToLobby) BEFORE resetControl, which
+	-- SetNetworkOwners (errors on an anchored part) and fires SetControlledBody --
+	-- pulling each camera off the victory-cam subject back onto its own body,
+	-- now standing on the balcony.
+	for _, p in ipairs(Players:GetPlayers()) do
+		BodyManager.returnToLobby(p)
+	end
+	ControlManager.resetControl()
 	RoundState.reset(model) -- Ended -> Lobby
 	broadcastState() -- phase Lobby
 end
@@ -387,6 +406,7 @@ end
 
 function RoundManager.start()
 	HazardSystem.build() -- construct the tile-field arena once (replaces the baseplate)
+	LobbyArea.build() -- construct the elevated lobby balcony once
 	task.spawn(function()
 		while true do
 			broadcastState() -- Lobby
