@@ -123,7 +123,7 @@ function HudTheme.makePanel(parent, size, zoneKey, capKey)
 	local panel = Instance.new("Frame")
 	panel.Name = "Panel"
 	panel.Size = UDim2.fromScale(1, 1)
-	panel.BackgroundColor3 = HudTheme.Color.textPrimary -- white; the gradient tints it
+	panel.BackgroundColor3 = Color3.new(1, 1, 1) -- white base; the UIGradient tints it
 	panel.BorderSizePixel = 0
 	panel.ZIndex = 2
 	local pc = Instance.new("UICorner")
