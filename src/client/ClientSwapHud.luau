@@ -84,6 +84,8 @@ function ClientSwapHud.start()
 		if phase ~= "Active" then
 			swapAtServerTime = nil
 			lastBigInt = nil
+			timer.Text = "" -- clear now so the banner's top zone isn't shared for a frame
+			big.Text = ""
 		end
 	end)
 

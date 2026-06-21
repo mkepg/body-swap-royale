@@ -58,6 +58,7 @@ HudTheme.Zone = {
 }
 
 HudTheme.Radius = UDim.new(0, 18)
+HudTheme.PillRadius = UDim.new(1, 0) -- full-capsule corner for pills
 HudTheme.PanelStrokeThickness = 4
 HudTheme.TextStrokeThickness = 2
 HudTheme.ShadowOffset = 6
@@ -85,7 +86,7 @@ function HudTheme.styleText(label, fontKey)
 	label.TextColor3 = HudTheme.Color.textPrimary
 	label.TextScaled = true
 	label.TextStrokeTransparency = 1 -- the UIStroke below replaces the built-in stroke
-	local s = Instance.new("UIStroke")
+	local s = label:FindFirstChildOfClass("UIStroke") or Instance.new("UIStroke")
 	s.Thickness = HudTheme.TextStrokeThickness
 	s.Color = HudTheme.Color.textStroke
 	s.Parent = label
@@ -138,6 +139,8 @@ function HudTheme.makePanel(parent, size, zoneKey, capKey)
 	gradient.Parent = panel
 	panel.Parent = root
 
+	-- The gradient starts white-on-white; the caller MUST call setPanelAccent or
+	-- setPanelFlat before making root visible, or the panel renders plain white.
 	return { root = root, panel = panel, gradient = gradient }
 end
 
