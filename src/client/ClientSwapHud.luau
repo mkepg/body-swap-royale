@@ -6,6 +6,8 @@
 	SwapTelegraphModel: a small top-center timer always during Active, and during
 	the last PREVIEW_SECONDS a ramping orange->red flash + a big centered 3/2/1 +
 	a one-shot audio cue (Config.SWAP_WARNING_SOUND_ID; silent if "").
+
+	Look (zones/caps/fonts) comes from the shared HudTheme; behavior is unchanged.
 --]]
 
 local Players = game:GetService("Players")
@@ -18,6 +20,8 @@ local Config = require(Shared:WaitForChild("Config"))
 local SwapTelegraphModel = require(Shared:WaitForChild("SwapTelegraphModel"))
 local Remotes = require(Shared:WaitForChild("Remotes"))
 local RoundStateChanged = Remotes.get("RoundStateChanged")
+
+local HudTheme = require(script.Parent:WaitForChild("HudTheme"))
 
 local ClientSwapHud = {}
 local player = Players.LocalPlayer
@@ -32,6 +36,9 @@ function ClientSwapHud.start()
 	gui.Name = "SwapHud"
 	gui.ResetOnSpawn = false
 	gui.IgnoreGuiInset = true
+	-- Sibling render order (consistent with RoundHud; nested children draw in front).
+	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+	gui.DisplayOrder = HudTheme.DisplayOrder.swap
 	gui.Parent = player:WaitForChild("PlayerGui")
 
 	local flash = Instance.new("Frame")
@@ -45,30 +52,23 @@ function ClientSwapHud.start()
 
 	local timer = Instance.new("TextLabel")
 	timer.Name = "Timer"
-	timer.AnchorPoint = Vector2.new(0.5, 0)
-	timer.Position = UDim2.fromScale(0.5, 0.03)
 	timer.Size = UDim2.fromScale(0.16, 0.08)
 	timer.BackgroundTransparency = 1
-	timer.TextScaled = true
-	timer.Font = Enum.Font.GothamBold
-	timer.TextColor3 = Color3.new(1, 1, 1)
-	timer.TextStrokeTransparency = 0.4
 	timer.Text = ""
 	timer.ZIndex = 2
+	HudTheme.placeInZone(timer, "topTimer")
+	HudTheme.applyMaxSize(timer, "timer")
+	HudTheme.styleText(timer, "heading")
 	timer.Parent = gui
 
 	local big = Instance.new("TextLabel")
 	big.Name = "BigCountdown"
-	big.AnchorPoint = Vector2.new(0.5, 0.5)
-	big.Position = UDim2.fromScale(0.5, 0.4)
 	big.Size = UDim2.fromScale(0.3, 0.3)
 	big.BackgroundTransparency = 1
-	big.TextScaled = true
-	big.Font = Enum.Font.GothamBlack
-	big.TextColor3 = Color3.new(1, 1, 1)
-	big.TextStrokeTransparency = 0.2
 	big.Text = ""
 	big.ZIndex = 2
+	HudTheme.placeInZone(big, "center")
+	HudTheme.styleText(big, "title")
 	big.Parent = gui
 
 	if Config.SWAP_WARNING_SOUND_ID ~= "" then
@@ -86,6 +86,8 @@ function ClientSwapHud.start()
 		if phase ~= "Active" then
 			swapAtServerTime = nil
 			lastBigInt = nil
+			timer.Text = "" -- clear now so the banner's top zone isn't shared for a frame
+			big.Text = ""
 		end
 	end)
 
