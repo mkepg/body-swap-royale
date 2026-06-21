@@ -174,7 +174,10 @@ function ClientRoundHud.start()
 	end)
 
 	EliminationEvent.OnClientEvent:Connect(function(playerName)
-		if playerName == player.Name then
+		-- Only while the banner is hidden (Active). Guards a cross-remote race:
+		-- if the Ended broadcast lands before this event, the banner is up and
+		-- the notice must not cover it.
+		if playerName == player.Name and not banner.Visible then
 			elim.Text = "You were eliminated"
 			elim.Visible = true
 		end
