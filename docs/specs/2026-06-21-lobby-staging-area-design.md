@@ -1,0 +1,149 @@
+# Lobby Staging Area (Elevated Balcony) — Design
+
+**Date:** 2026-06-21
+**Status:** Approved — ready for implementation plan
+**Related:** GDD §4 (Core Gameplay — round flow), §6 (UX); TDD §4 (Multiplayer / Lobby Structure & Match Lifecycle), §10 MVP scope ("Lobby matchmaking (basic, no skill tiers)"). Builds on the existing `RoundManager` round loop and the round-flow bookends (`RoundScreenModel` / `ClientRoundHud`).
+
+## Problem
+
+The round loop reads as a real session now (Lobby → Active → Ended → reset, with framed banners), but there is **no physical waiting space**. Between rounds, bodies just sit scattered across the arena exactly where the round left them — survivors standing on the spot, eliminated bodies parked (anchored) where they died — on a frozen-solid tile floor. The inter-round wait is "standing around in the dead arena."
+
+This piece adds a real **lobby staging area**: an *elevated balcony* overlooking the arena where players gather between rounds and watch from above, turning the wait into anticipation. It is deliberately scoped to the physical space + the body lifecycle that moves players to/from it; it is **not** matchmaking, ready-up, or any HUD change.
+
+## Scope
+
+**In scope**
+- An elevated balcony platform overlooking the arena, with full fall protection (a glass railing on the arena-facing side).
+- A pure, lune-tested `SpawnLayout` module that computes both the arena spawn slots (reproducing today's math exactly) and the balcony grid slots.
+- A `LobbyArea` server module that builds the balcony geometry once.
+- The body lifecycle that places players on the balcony on join and between rounds, and teleports them into the arena at round start.
+- A **victory cam**: during the Ended results window, every present player's camera frames the winner standing in the arena below (reuses the existing `SpectateBody` remote).
+
+**Explicitly out of scope (deferred / YAGNI)**
+- Matchmaking, skill tiers, ready-up buttons, lobby player list, map/modifier selection.
+- Any change to the lobby countdown, the bookend banners, or `RoundScreenModel`.
+- A true free-fly **overview** camera (the project has no free-cam code; the `CameraSubject`-on-winner victory cam is the chosen "look at the arena" treatment).
+- Reworking *mid-round* eliminated spectating to "watch from the balcony" — the current close-up `SpectateBody` (camera on a living body) stays as-is during Active play.
+- Decorations / podium / signage (the existing bookend banners carry all messaging).
+- Fixing the arena's pre-existing >5-body single-row spawn limitation (noted in `Config.SPAWN_ORIGIN`); arena slots are reproduced unchanged.
+
+## Design decisions (from brainstorm)
+
+- **Approach B — elevated balcony** over a side pad (A) or an in-place zone (C): the elevation gives "look down on the arena" anticipation passively (the third-person own-body camera looks past the body into the pit) and lets the Ended victory cam frame the champion below.
+- **Pure `SpawnLayout`** mirrors the project's pure-module pattern (`TileFieldModel`, `GraceModel`, `RoundState`): Roblox-free, number-in/number-out, lune-tested. The current inline arena-slot math in `BodyManager` moves here.
+- **Relocation happens at the Lobby transition, not at `endRound` start**, so the Ended beat keeps the winner in the arena for the victory cam; everyone teleports up together afterward.
+- **Victory cam reuses `SpectateBody`** — both `SpectateBody` (`ClientRoundHud`) and `SetControlledBody` (`ClientControl`) already set `camera.CameraSubject`, so firing `SpectateBody(winnerBody)` to all present locks every camera on the champion, and the subsequent `resetControl` (`SetControlledBody`) naturally pulls each camera back to the player's own body. No new camera code.
+- **No HUD work**: the existing Lobby/Results banners simply play over the gathered balcony instead of the dead arena.
+
+## Architecture
+
+```
+RoundManager.start
+   ├─ HazardSystem.build()            (existing — builds the arena floor)
+   └─ LobbyArea.build()               (new — builds the elevated balcony once)
+
+BodyManager  (uses SpawnLayout for BOTH slot kinds)
+   ├─ arenaSlotByOwner[player]        (CFrame — today's spawn slot, unchanged math)
+   ├─ lobbySlotByOwner[player]        (CFrame — a balcony grid slot, facing the arena)
+   ├─ createBody       → spawns onto the BALCONY slot
+   ├─ resetBody        → pivots to the ARENA slot   (round start, unchanged callers)
+   └─ returnToLobby    → pivots to the BALCONY slot  (new — mirror of resetBody)
+
+RoundManager lifecycle
+   ├─ beginRound : resetBody → arena, resetControl, hazards start   (unchanged)
+   ├─ endRound (Ended window) : SpectateBody(winnerBody) → all present   (victory cam)
+   └─ endRound (→ Lobby reset): returnToLobby(all present), then resetControl
+```
+
+### Component 1 — `src/shared/SpawnLayout.luau` (new, pure)
+
+Roblox-free (no `Vector3` / `CFrame` / Roblox globals), no clocks, no RNG. Number-in / number-out; the server glue converts the returned offsets into `CFrame`s. Lune-tested.
+
+Proposed surface (final names may be refined in the plan, but the contract is):
+
+```
+-- Arena: reproduce today's exact row math. Body index is 1-based.
+-- Returns the world position components for body `index`.
+SpawnLayout.arenaSlot(index, originX, originY, originZ, spacing) -> x, y, z
+
+-- Balcony: a centered grid. `index` 1-based; `perRow` columns; `spacing` studs.
+-- Returns offsets from the balcony origin (server adds origin + facing).
+SpawnLayout.lobbySlot(index, perRow, spacing) -> dx, dz
+```
+
+**`arenaSlot` contract (must not regress):** with `originX,originY,originZ = SPAWN_ORIGIN.X/Y/Z` and `spacing = SPAWN_SPACING`, body `index` lands at `x = originX + (index-1)*spacing`, `y = originY`, `z = originZ`. This reproduces today's positions exactly (X = −4, 4, 12, 20, 28 …; tile-center invariant preserved). It is a pure extraction of the inline math now in `BodyManager.createBody`.
+
+**`lobbySlot` contract:** lays body `index` into a `perRow`-wide grid centered on (0,0): rows fill front-to-back, columns left-to-right, centered so the grid straddles the origin. Slots are distinct, non-overlapping (spacing > body width), and for `index ∈ [1, perRow*maxRows]` stay within the balcony footprint. The server adds `LOBBY_ORIGIN` and orients each slot to face the arena.
+
+### Component 2 — `src/server/LobbyArea.luau` (new, server)
+
+Mirrors `HazardSystem.build()`: constructs the balcony geometry **once**, parented under a named folder in `workspace` (e.g. `workspace.LobbyArea`). Idempotent (rebuild guard like `BodyManager.ensureFolder`).
+
+Geometry (all values are `Config` tunables; representative numbers):
+- **Platform:** an anchored, `CanCollide` `Part`, top surface at the balcony floor height, sized to comfortably hold the balcony grid (≈ `48 × 24` studs). Friendly soft-blue to echo the lobby banner.
+- **Placement:** `LOBBY_ORIGIN ≈ (0, 45, −60)` — raised ~45 studs and set back behind the arena's −Z edge (arena spans X,Z ∈ [−32, 32], surface Y = 0), so standing bodies that face +Z look down and across into the pit.
+- **Fall protection (load-bearing — it floats over the void):** full-perimeter barriers. Three solid short walls; the **arena-facing side** is a **transparent but `CanCollide`** glass railing so the downward view is unobstructed but no body can walk off.
+- `LobbyArea` exposes only `build()`. Slot *positions* are owned by `BodyManager` (via `SpawnLayout` + `Config`), keeping all body-positioning logic in one place; `LobbyArea` is geometry-only.
+
+### Component 3 — `src/server/BodyManager.luau` (changed)
+
+- Replace the inline arena-slot math in `createBody` with `SpawnLayout.arenaSlot(...)` (positions unchanged).
+- Compute and store **both** slots per player from a stable per-body index:
+  - `arenaSlotByOwner[player]` — the existing arena spawn `CFrame` (currently `spawnByOwner`; keep or rename, the plan decides).
+  - `lobbySlotByOwner[player]` — a balcony grid `CFrame` built from `SpawnLayout.lobbySlot(...)` + `LOBBY_ORIGIN`, oriented to face the arena (`CFrame.lookAt` toward arena center) so the avatar and its camera point at the pit.
+- **`createBody` spawns onto the balcony slot** (not the arena), since a joining player starts in the waiting/lobby state. A few studs above the balcony surface so the body settles, mirroring the arena drop.
+- **New `returnToLobby(player)`** — the mirror of `resetBody`: guard on a missing root, `Anchored = false`, zero linear/angular velocity, `PivotTo(lobbySlotByOwner[player])`. Used by `RoundManager` when entering the Lobby phase.
+- `resetBody` (arena slot) and `parkBody` (anchor in place) are unchanged.
+- `removeBody` clears both slot tables.
+
+### Component 4 — `src/server/RoundManager.luau` (changed)
+
+- **`start`:** call `LobbyArea.build()` alongside the existing `HazardSystem.build()`.
+- **`endRound`, Ended window (victory cam):** at the start of the Ended results beat, fire `SpectateBody:FireClient(p, winnerBody)` to **every present player** so all cameras frame the winner standing in the arena. Bodies are *not* relocated yet (winner stays put so the cam has a subject; eliminated bodies remain parked where they died, which is off-camera). If there is no winner (disconnect-decided round, `winnerName == nil`), skip the victory cam (fall back to the current behavior — no spectate retarget). The existing per-second `broadcastState(remaining)` countdown tick is unchanged.
+- **`endRound`, → Lobby reset:** after the Ended countdown, before/at `RoundState.reset`, relocate everyone to the balcony: for each present player `BodyManager.returnToLobby(player)`, **then** `ControlManager.resetControl()`. Ordering mirrors `beginRound` (unanchor + pivot **before** `SetNetworkOwner`, which errors on an anchored part). `resetControl` fires `SetControlledBody(ownBody)`, which pulls each camera off the victory-cam subject and back onto the player's own body — now standing on the balcony. The subsequent `broadcastState()` → Lobby is unchanged.
+- **`addPlayer`:** unchanged call shape — `createBody` now places the body on the balcony, so a mid-round joiner (added to `present`, not `alive`) waits on the balcony instead of loose in the live arena. No new logic in `addPlayer`.
+
+### Component 5 — `src/shared/Config.luau` (new tunables)
+
+Add a documented block (final names per the plan), e.g.:
+- `LOBBY_ORIGIN = Vector3.new(0, 45, -60)` — balcony surface-center origin (bodies spawn a few studs above).
+- `LOBBY_PAD_SIZE` / wall height / railing thickness — balcony geometry.
+- `LOBBY_PER_ROW = 4`, `LOBBY_SPACING ≈ 10` — balcony grid.
+- `LOBBY_FACE_TARGET = Vector3.new(0, 0, 0)` — the point bodies/cameras face (arena center).
+- Colors (soft-blue platform; glass-railing transparency).
+
+Each value carries a comment explaining the geometric reasoning (matching the existing `Config` house style, e.g. the tile-center note).
+
+## Testing
+
+- **Lune unit test** — `tests/spawn_layout.spec.luau`:
+  - `arenaSlot` reproduces today's documented positions exactly (assert X = −4, 4, 12, 20, 28 for index 1..5 at the real `SPAWN_ORIGIN`/`SPAWN_SPACING` numbers; assert `y == originY`, `z == originZ`).
+  - `lobbySlot` grid: slots for index 1..N are pairwise distinct, spaced ≥ `spacing`, wrap into rows at `perRow`, and stay within the documented balcony footprint; grid is centered on the origin.
+  - Run: `export PATH="$HOME/.rokit/bin:$PATH"; lune run tests/spawn_layout.spec`.
+- **Studio smoke test** — new `docs/smoke-tests/2026-06-21-lobby-staging-area-smoke-test.md`, a 2-client procedure (keep `Config.HAZARDS_ENABLED = false` so the floor stays safe while observing the loop):
+  1. **Join:** both clients spawn on the **balcony**, can walk around behind the railing, and looking forward see the arena below. Cannot walk off (railing blocks).
+  2. **Round start:** at `beginRound`, both bodies teleport down into the **arena** spawn slots; camera retargets to the own body in the arena; hazards (if enabled) start.
+  3. **Round end (victory cam):** force a finish (eliminate one body, or use the `RoundManager.forceSwap()` harness then drop a body into the void). During the Ended "Next round in N" window, **both** clients' cameras frame the **winner** standing in the arena.
+  4. **Lobby reset:** after the countdown, both bodies teleport up to the **balcony** in their **own** body, cameras pulled back onto themselves; the Lobby banner shows over the balcony.
+  5. **Mid-round join:** a client joining during Active appears on the **balcony** (not loose in the arena) and is folded into the arena at the next `beginRound`.
+
+## Edge cases & robustness
+
+- **No winner (disconnect-decided round):** `winnerName == nil` → skip the victory cam; the → Lobby relocation still runs (everyone goes to the balcony). No stale spectate target.
+- **`SetNetworkOwner` on an anchored part:** avoided by `returnToLobby` unanchoring before `resetControl` runs (same ordering invariant as `beginRound`).
+- **Eliminated bodies during Ended:** remain parked (anchored) where they died; they are off the victory cam and get unanchored + relocated by `returnToLobby` at the Lobby reset.
+- **Body with no `HumanoidRootPart`:** `returnToLobby` guards and no-ops (same guard as `resetBody`).
+- **Fall protection is load-bearing:** the balcony floats over the void; the perimeter barriers (incl. the `CanCollide` glass railing) must fully enclose the walkable area, or a player could walk a controlled body off and trigger a void death between rounds. The smoke test explicitly checks this.
+- **Arena spawn math unchanged:** `SpawnLayout.arenaSlot` is asserted to reproduce the current positions, so the disappearing-tile interaction (tile-center spawns) is not regressed.
+
+## Files touched
+
+| File | Change |
+|------|--------|
+| `src/shared/SpawnLayout.luau` | **new** — pure arena + balcony slot math |
+| `src/server/LobbyArea.luau` | **new** — builds the elevated balcony geometry once |
+| `src/server/BodyManager.luau` | use `SpawnLayout`; store arena + balcony slots; `createBody` → balcony; new `returnToLobby` |
+| `src/server/RoundManager.luau` | `start` builds the balcony; `endRound` victory cam + relocate-to-balcony at Lobby reset |
+| `src/shared/Config.luau` | new balcony geometry / grid / color tunables |
+| `tests/spawn_layout.spec.luau` | **new** — lune unit test for `SpawnLayout` |
+| `docs/smoke-tests/2026-06-21-lobby-staging-area-smoke-test.md` | **new** — 2-client runtime check |
