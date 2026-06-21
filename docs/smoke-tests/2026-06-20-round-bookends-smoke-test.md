@@ -46,3 +46,32 @@ clears the top inset. Note any pixel/spacing tweaks and adjust sizes in
 distractingly in vertical position between the Lobby and Results banners; if it
 does, tune the banner layout (e.g. label LayoutOrder / VerticalAlignment) in
 `build()`.
+
+## HUD consistency & kid-friendly skin (added 2026-06-21)
+
+Run these on TWO window shapes: a wide desktop window AND a narrow phone-sized
+window (Studio device emulator or just drag the client window narrow).
+
+7. **Nothing balloons.** Banner, bottom "Next round in N" pill, and the swap timer
+   number are all capped and centered on desktop (no full-width slab). The bottom
+   pill is no wider than the banner.
+
+8. **Kid-friendly skin.** Banner is a chunky rounded panel with a thick white
+   outline and an offset drop shadow; the panel FILL color matches state -- blue in
+   Lobby, green on Victory, red on Defeated. Title text (VICTORY/DEFEATED) is white
+   with a dark outline in the rounded FredokaOne font. The WINNER pill is yellow.
+
+9. **Pop-in.** The banner and bottom pill bounce in (scale up) when they appear,
+   rather than snapping.
+
+10. **No zone collisions.** The "You were eliminated" notice appears BELOW the big
+    swap countdown (never overlapping it), as red text. The swap timer (top) and the
+    bookend banner (top) never show at the same time.
+
+11. **Mobile pass.** On the narrow window everything stays readable and on-screen:
+    panels shrink via scale but text remains legible; nothing clips off the edges.
+
+## Pass criteria (HUD)
+All five checks hold on both window shapes. Note any spacing/size tweaks -- adjust the
+values in `src/client/HudTheme.luau` (`Cap`, `Zone`, `Radius`, etc.), NOT in the
+individual HUD modules (that is the whole point of the shared theme).
