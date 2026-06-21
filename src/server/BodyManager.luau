@@ -20,6 +20,9 @@ BodyManager.lobbySlotByOwner = {} -- [player] = balcony slot CFrame (join + betw
 BodyManager.folder = nil
 BodyManager._index = 0
 
+-- Balcony grid row count, derived once from Config (read-only at runtime).
+local LOBBY_ROWS = math.ceil(Config.LOBBY_CAPACITY / Config.LOBBY_PER_ROW)
+
 local function ensureFolder()
 	if not BodyManager.folder or not BodyManager.folder.Parent then
 		local f = workspace:FindFirstChild("Bodies") or Instance.new("Folder")
@@ -58,8 +61,7 @@ end
 -- + the balcony origin + a small drop, oriented (yaw only) to face the arena so
 -- the avatar -- and its third-person camera -- point at the pit below.
 local function lobbyCFrame(index)
-	local rows = math.ceil(Config.LOBBY_CAPACITY / Config.LOBBY_PER_ROW)
-	local dx, dz = SpawnLayout.lobbySlot(index, Config.LOBBY_PER_ROW, rows, Config.LOBBY_SPACING)
+	local dx, dz = SpawnLayout.lobbySlot(index, Config.LOBBY_PER_ROW, LOBBY_ROWS, Config.LOBBY_SPACING)
 	local pos = Config.LOBBY_ORIGIN + Vector3.new(dx, Config.LOBBY_SPAWN_DROP, dz)
 	-- Look at the arena center, kept level with `pos` so the body stands upright
 	-- (yaw-only facing; the player tilts the camera to look down).
@@ -148,7 +150,7 @@ function BodyManager.returnToLobby(player)
 	end
 	local root = body:FindFirstChild("HumanoidRootPart")
 	if not root then
-		return
+		return -- can't safely reposition without a root
 	end
 	root.Anchored = false
 	root.AssemblyLinearVelocity = Vector3.zero
