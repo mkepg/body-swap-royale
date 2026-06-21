@@ -96,12 +96,12 @@ local function build()
 	winnerTag.LayoutOrder = 1
 	winnerTag.Visible = false
 	local tagCorner = Instance.new("UICorner")
-	tagCorner.CornerRadius = UDim.new(1, 0)
+	tagCorner.CornerRadius = HudTheme.PillRadius
 	tagCorner.Parent = winnerTag
 	-- White outline reads better on the dark-text/yellow pill (the dark text
 	-- stroke from styleText is used on the white-text labels elsewhere).
 	local tagStroke = Instance.new("UIStroke")
-	tagStroke.Thickness = 2
+	tagStroke.Thickness = HudTheme.TextStrokeThickness
 	tagStroke.Color = HudTheme.Color.panelStroke
 	tagStroke.Parent = winnerTag
 	winnerTag.Parent = bannerHandle.panel
@@ -146,8 +146,11 @@ local function applyDisplay(d)
 	setVisible(bottomHandle.root, bottomVisible)
 	bottomText.Text = d.bottomText or ""
 
-	-- When a banner takes the screen (Lobby/Ended), the notice is hidden via the
-	-- phase check in the RoundStateChanged handler; nothing to do here.
+	-- A visible banner (Lobby/Ended) owns the screen, so clear the Active-only
+	-- eliminated notice here (keeps applyDisplay self-contained).
+	if d.visible then
+		elim.Visible = false
+	end
 
 	-- Panel fill color follows state (green win / red lose / blue neutral).
 	HudTheme.setPanelAccent(bannerHandle, d.accent)
@@ -173,10 +176,7 @@ function ClientRoundHud.start()
 			connectedCount = #Players:GetPlayers(),
 			minPlayers = Config.MIN_PLAYERS_TO_START,
 		})
-		if state.phase ~= "Active" then
-			elim.Visible = false -- the eliminated notice is Active-phase only
-		end
-		applyDisplay(d)
+		applyDisplay(d) -- clears the Active-only eliminated notice when a banner shows
 	end)
 
 	EliminationEvent.OnClientEvent:Connect(function(playerName)
