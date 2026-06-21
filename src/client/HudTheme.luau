@@ -41,7 +41,7 @@ HudTheme.Accent = {
 -- pixel max sizes (the bottom pill never exceeds the banner)
 HudTheme.Cap = {
 	banner = Vector2.new(350, 168),
-	bottomLine = Vector2.new(240, 66),
+	bottomLine = Vector2.new(210, 50),
 	notice = Vector2.new(320, 80),
 	timer = Vector2.new(120, 76),
 }

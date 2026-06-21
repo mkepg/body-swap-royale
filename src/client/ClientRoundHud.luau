@@ -89,17 +89,20 @@ local function build()
 
 	-- Two stacked lines only -> roomy and consistent with the lobby look.
 	-- Results: outcome word (hero) over a name line. Lobby: status over count.
-	title = panelLabel(bannerHandle.panel, "Title", 0.42, 1, "title")      -- VICTORY/DEFEATED/Round over, or lobby status
-	subtitle = panelLabel(bannerHandle.panel, "Subtitle", 0.24, 2, "body") -- winner/loser name line, or "X / N players"
+	-- Title is the hero. FredokaOne sits small inside its box, so give it a big
+	-- share of the panel height (and keep the bottom pill smaller) so the outcome
+	-- word clearly dominates "Next round in N".
+	title = panelLabel(bannerHandle.panel, "Title", 0.54, 1, "title")      -- VICTORY/DEFEATED/Round over, or lobby status
+	subtitle = panelLabel(bannerHandle.panel, "Subtitle", 0.20, 2, "body") -- winner/loser name line, or "X / N players"
 
 	-- Bottom line: fixed dark pill in the BOTTOM zone ("Next round in N").
-	bottomHandle = HudTheme.makePanel(gui, UDim2.fromScale(0.34, 0.06), "bottom", "bottomLine")
+	bottomHandle = HudTheme.makePanel(gui, UDim2.fromScale(0.3, 0.055), "bottom", "bottomLine")
 	HudTheme.setPanelFlat(bottomHandle, HudTheme.Color.panelDark)
 	bottomHandle.root.Visible = false
 
 	bottomText = Instance.new("TextLabel")
 	bottomText.Name = "BottomText"
-	bottomText.Size = UDim2.fromScale(0.9, 0.7)
+	bottomText.Size = UDim2.fromScale(0.84, 0.58)
 	bottomText.AnchorPoint = Vector2.new(0.5, 0.5)
 	bottomText.Position = UDim2.fromScale(0.5, 0.5)
 	bottomText.BackgroundTransparency = 1
