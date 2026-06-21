@@ -28,8 +28,6 @@ HudTheme.Color = {
 	textStroke = Color3.fromRGB(20, 24, 31),
 	panelStroke = Color3.fromRGB(255, 255, 255),
 	shadow = Color3.fromRGB(0, 0, 0),
-	pill = Color3.fromRGB(255, 210, 63),
-	pillText = Color3.fromRGB(90, 61, 0),
 	panelDark = Color3.fromRGB(17, 22, 31),
 }
 
@@ -42,7 +40,7 @@ HudTheme.Accent = {
 
 -- pixel max sizes (the bottom pill never exceeds the banner)
 HudTheme.Cap = {
-	banner = Vector2.new(340, 150),
+	banner = Vector2.new(350, 168),
 	bottomLine = Vector2.new(240, 66),
 	notice = Vector2.new(320, 80),
 	timer = Vector2.new(120, 76),
@@ -58,7 +56,6 @@ HudTheme.Zone = {
 }
 
 HudTheme.Radius = UDim.new(0, 18)
-HudTheme.PillRadius = UDim.new(1, 0) -- full-capsule corner for pills
 HudTheme.PanelStrokeThickness = 4
 HudTheme.TextStrokeThickness = 2
 HudTheme.ShadowOffset = 6

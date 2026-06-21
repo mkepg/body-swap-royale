@@ -46,7 +46,7 @@ local function panelLabel(parent, name, scaleY, order, fontKey)
 end
 
 -- Built once in start(); held here so the update closure can reach them.
-local bannerHandle, winnerTag, winnerName, title, subtitle
+local bannerHandle, title, subtitle
 local bottomHandle, bottomText, elim
 
 -- Set a panel's visibility and pop it in only on the hidden->visible edge.
@@ -79,39 +79,18 @@ local function build()
 	layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 	layout.VerticalAlignment = Enum.VerticalAlignment.Center
 	layout.SortOrder = Enum.SortOrder.LayoutOrder
-	layout.Padding = UDim.new(0, 2)
+	layout.Padding = UDim.new(0, 6) -- breathing room between the two lines
 	layout.Parent = bannerHandle.panel
 
 	local pad = Instance.new("UIPadding")
-	pad.PaddingTop = UDim.new(0, 6)
-	pad.PaddingBottom = UDim.new(0, 6)
+	pad.PaddingTop = UDim.new(0, 12)
+	pad.PaddingBottom = UDim.new(0, 12)
 	pad.Parent = bannerHandle.panel
 
-	-- WINNER pill (yellow, dark text) -- shown only on Ended with a winner.
-	winnerTag = Instance.new("TextLabel")
-	winnerTag.Name = "WinnerTag"
-	winnerTag.Size = UDim2.fromScale(0.42, 0.14)
-	winnerTag.BackgroundColor3 = HudTheme.Color.pill
-	winnerTag.TextColor3 = HudTheme.Color.pillText
-	winnerTag.Font = HudTheme.Font.heading
-	winnerTag.TextScaled = true
-	winnerTag.Text = "WINNER" -- static text; visibility toggled in applyDisplay
-	winnerTag.LayoutOrder = 1
-	winnerTag.Visible = false
-	local tagCorner = Instance.new("UICorner")
-	tagCorner.CornerRadius = HudTheme.PillRadius
-	tagCorner.Parent = winnerTag
-	-- White outline reads better on the dark-text/yellow pill (the dark text
-	-- stroke from styleText is used on the white-text labels elsewhere).
-	local tagStroke = Instance.new("UIStroke")
-	tagStroke.Thickness = HudTheme.TextStrokeThickness
-	tagStroke.Color = HudTheme.Color.panelStroke
-	tagStroke.Parent = winnerTag
-	winnerTag.Parent = bannerHandle.panel
-
-	winnerName = panelLabel(bannerHandle.panel, "WinnerName", 0.26, 2, "title")
-	title = panelLabel(bannerHandle.panel, "Title", 0.34, 3, "title")       -- Victory/Defeated/Round over/lobby lines
-	subtitle = panelLabel(bannerHandle.panel, "Subtitle", 0.16, 4, "body")  -- "X / N players" in lobby
+	-- Two stacked lines only -> roomy and consistent with the lobby look.
+	-- Results: outcome word (hero) over a name line. Lobby: status over count.
+	title = panelLabel(bannerHandle.panel, "Title", 0.42, 1, "title")      -- VICTORY/DEFEATED/Round over, or lobby status
+	subtitle = panelLabel(bannerHandle.panel, "Subtitle", 0.24, 2, "body") -- winner/loser name line, or "X / N players"
 
 	-- Bottom line: fixed dark pill in the BOTTOM zone ("Next round in N").
 	bottomHandle = HudTheme.makePanel(gui, UDim2.fromScale(0.34, 0.06), "bottom", "bottomLine")
@@ -158,16 +137,18 @@ local function applyDisplay(d)
 	-- Panel fill color follows state (green win / red lose / blue neutral).
 	HudTheme.setPanelAccent(bannerHandle, d.accent)
 
-	winnerTag.Visible = d.winnerName ~= nil
-
-	winnerName.Visible = d.winnerName ~= nil
-	winnerName.Text = d.winnerName or ""
-
+	-- Hero line: the outcome word (Victory/Defeated/Round over) or lobby status.
 	title.Visible = d.titleText ~= nil
 	title.Text = d.titleText or ""
 
-	subtitle.Visible = d.subtitleText ~= nil
-	subtitle.Text = d.subtitleText or ""
+	-- Sub line: on a results banner, the name -- your own name on a win,
+	-- "Winner: X" on a loss; otherwise the lobby's player count.
+	local subText = d.subtitleText
+	if d.winnerName then
+		subText = (d.accent == "win") and d.winnerName or ("Winner: " .. d.winnerName)
+	end
+	subtitle.Visible = subText ~= nil
+	subtitle.Text = subText or ""
 end
 
 function ClientRoundHud.start()
