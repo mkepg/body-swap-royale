@@ -12,18 +12,50 @@ local function approx(a, b)
 	return math.abs(a - b) < 1e-9
 end
 
--- arenaSlot reproduces today's documented positions exactly.
--- Real values: SPAWN_ORIGIN = (-4, 5, 4), SPAWN_SPACING = 8 -> X = -4,4,12,20,28.
+-- arenaSlot lays a centered grid on tile CENTERS within the field (no longer a
+-- single unbounded row -- that row put body 6+ at X>=36, off the [-32,32] field).
+-- With spacing = TILE_SIZE (8) and an even perRow/rows, every offset is a multiple
+-- of 4 but NOT a multiple of 8, i.e. a tile center, never a seam.
 do
-	local ox, oy, oz, spacing = -4, 5, 4, 8
-	local expectedX = { -4, 4, 12, 20, 28 }
-	for i = 1, 5 do
-		local x, y, z = SpawnLayout.arenaSlot(i, ox, oy, oz, spacing)
-		expect(x == expectedX[i], "arenaSlot X wrong at index " .. i)
-		expect(y == oy, "arenaSlot Y must equal originY at index " .. i)
-		expect(z == oz, "arenaSlot Z must equal originZ at index " .. i)
+	local perRow, rows, spacing = 4, 4, 8
+	local slots = {}
+	for i = 1, 16 do
+		local dx, dz = SpawnLayout.arenaSlot(i, perRow, rows, spacing)
+		slots[i] = { dx = dx, dz = dz }
 	end
-	print("spawn: arenaSlot reproduces documented positions OK")
+
+	-- pairwise distinct
+	for i = 1, 16 do
+		for j = i + 1, 16 do
+			expect(not (slots[i].dx == slots[j].dx and slots[i].dz == slots[j].dz),
+				"arenaSlot slots " .. i .. " and " .. j .. " overlap")
+		end
+	end
+
+	-- tile-center invariant: each offset is a multiple of 4 but not of 8 (seams sit
+	-- on multiples of 8; a body straddling a seam is held up by all adjacent tiles).
+	for i = 1, 16 do
+		for _, d in ipairs({ slots[i].dx, slots[i].dz }) do
+			expect(d % 4 == 0, "arenaSlot offset must be a multiple of 4 (tile grid) at " .. i)
+			expect(d % 8 ~= 0, "arenaSlot offset must avoid seams (multiples of 8) at " .. i)
+		end
+	end
+
+	-- centered on 0 and within the field footprint (half-span = (n-1)/2*spacing = 12).
+	local half = (perRow - 1) / 2 * spacing
+	local sumX, sumZ = 0, 0
+	for i = 1, 16 do
+		sumX += slots[i].dx
+		sumZ += slots[i].dz
+		expect(math.abs(slots[i].dx) <= half + 1e-9, "arenaSlot dx out of footprint at " .. i)
+		expect(math.abs(slots[i].dz) <= half + 1e-9, "arenaSlot dz out of footprint at " .. i)
+	end
+	expect(approx(sumX, 0) and approx(sumZ, 0), "arenaSlot grid must be centered on 0")
+
+	-- wrap at perRow: index 1 and 5 share a column (same dx), advance a row (differ dz).
+	expect(slots[1].dx == slots[5].dx, "arenaSlot must wrap columns at perRow")
+	expect(slots[1].dz ~= slots[5].dz, "arenaSlot must advance the row after perRow")
+	print("spawn: arenaSlot centered tile-center grid OK")
 end
 
 -- lobbySlot lays a centered grid: distinct, spaced, wrapping at perRow.

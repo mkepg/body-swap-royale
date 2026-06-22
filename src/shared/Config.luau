@@ -82,21 +82,22 @@ Config.NORMALIZED_SCALES = {
 	ProportionScale = 0,
 }
 
--- Spawn spreading for the persistent bodies. Bodies spawn along +X at
--- SPAWN_ORIGIN + index*SPAWN_SPACING, dropping onto the solid tile floor.
--- IMPORTANT: spawn positions MUST land on tile CENTERS, not seams. Tile centers
--- sit at multiples of TILE_SIZE offset by TILE_SIZE/2 (here X,Z in {..-4,4,12..});
--- the seams (multiples of TILE_SIZE: ..0,8,16..) are where 2-4 tiles meet. A body
--- standing on a seam/corner is held up by every tile it touches and only falls
--- when they ALL vanish at once -- so it looks invincible. So the origin is a tile
--- center (X=-4, Z=4) and spacing equals TILE_SIZE: each body lands centered on its
--- own tile and drops the instant that tile goes `gone`.
--- NOTE: the field spans X,Z in [-32, +32] (8x8 @ 8 studs). With origin X=-4 and
--- spacing 8, bodies occupy X = -4,4,12,20,28 (tile centers); a 6th body (X=36)
--- would spawn past the field. Fine for the 2-player MVP -- when raising player
--- count, spread across rows (Z) or enlarge the grid.
-Config.SPAWN_ORIGIN = Vector3.new(-4, 5, 4)
-Config.SPAWN_SPACING = 8
+-- Spawn placement for the persistent bodies: a centered GRID (pure SpawnLayout),
+-- dropping onto the solid tile floor from SPAWN_ORIGIN.Y. SPAWN_ORIGIN is the grid
+-- CENTER (X/Z) and the spawn height (Y).
+-- IMPORTANT: spawn positions MUST land on tile CENTERS, not seams. Tile centers sit
+-- at odd multiples of TILE_SIZE/2 (X,Z in {..-12,-4,4,12..}); seams (multiples of
+-- TILE_SIZE: ..0,8,16..) are where 2-4 tiles meet, and a body straddling one is held
+-- up by every tile it touches -- so it only falls when they ALL vanish and looks
+-- invincible. With ARENA_SPACING = TILE_SIZE, an even ARENA_PER_ROW, and the grid
+-- centered on the field origin (0,0), every slot is a tile center.
+-- The grid is sized to LOBBY_CAPACITY (the player cap) and stays within the field
+-- [-32,+32]: ARENA_PER_ROW = 4 over 4 rows = 16 slots at X,Z in {-12,-4,4,12} --
+-- so no body spawns off the floor (fixes the old single-row layout that put body 6+
+-- at X>=36). BodyManager reclaims slot indices on leave, so churn never overflows.
+Config.SPAWN_ORIGIN = Vector3.new(0, 5, 0) -- grid CENTER (X,Z) + spawn height (Y)
+Config.ARENA_PER_ROW = 4                   -- grid columns (rows = ceil(LOBBY_CAPACITY/this))
+Config.ARENA_SPACING = 8                   -- studs between slots; = TILE_SIZE so slots hit tile centers
 
 -- Lobby staging area: an elevated balcony overlooking the arena. Players wait
 -- here between rounds and on join; LobbyArea builds the geometry and BodyManager
