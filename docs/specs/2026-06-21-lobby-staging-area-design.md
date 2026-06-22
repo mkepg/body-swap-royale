@@ -18,12 +18,12 @@ This piece adds a real **lobby staging area**: an *elevated balcony* overlooking
 - A `LobbyArea` server module that builds the balcony geometry once.
 - The body lifecycle that places players on the balcony on join and between rounds, and teleports them into the arena at round start.
 - A **victory cam**: during the Ended results window, every present player's camera frames the winner standing in the arena below (reuses the existing `SpectateBody` remote).
+- **Eliminated players return to the lobby (added 2026-06-21):** on elimination, the body the player was controlling (now out of the round) is sent up to their balcony slot, still under their control — so they walk the balcony and watch the rest of the round from above, rather than leaving a parked corpse in the arena. This replaces the old close-up spectate (camera on a living body).
 
 **Explicitly out of scope (deferred / YAGNI)**
 - Matchmaking, skill tiers, ready-up buttons, lobby player list, map/modifier selection.
 - Any change to the lobby countdown, the bookend banners, or `RoundScreenModel`.
 - A true free-fly **overview** camera (the project has no free-cam code; the `CameraSubject`-on-winner victory cam is the chosen "look at the arena" treatment).
-- Reworking *mid-round* eliminated spectating to "watch from the balcony" — the current close-up `SpectateBody` (camera on a living body) stays as-is during Active play.
 - Decorations / podium / signage (the existing bookend banners carry all messaging).
 - Fixing the arena's pre-existing >5-body single-row spawn limitation (noted in `Config.SPAWN_ORIGIN`); arena slots are reproduced unchanged.
 
@@ -33,6 +33,7 @@ This piece adds a real **lobby staging area**: an *elevated balcony* overlooking
 - **Pure `SpawnLayout`** mirrors the project's pure-module pattern (`TileFieldModel`, `GraceModel`, `RoundState`): Roblox-free, number-in/number-out, lune-tested. The current inline arena-slot math in `BodyManager` moves here.
 - **Relocation happens at the Lobby transition, not at `endRound` start**, so the Ended beat keeps the winner in the arena for the victory cam; everyone teleports up together afterward.
 - **Victory cam reuses `SpectateBody`** — both `SpectateBody` (`ClientRoundHud`) and `SetControlledBody` (`ClientControl`) already set `camera.CameraSubject`, so firing `SpectateBody(winnerBody)` to all present locks every camera on the champion, and the subsequent `resetControl` (`SetControlledBody`) naturally pulls each camera back to the player's own body. No new camera code.
+- **Eliminated → lobby relocates the *controlled* body, not the own body (added 2026-06-21).** In the ownership model the player's own avatar is usually driven by a live opponent mid-round, so it can't be moved; the body that *is* free is the one they were controlling (the one that just died, now excluded from `aliveRoster`). Sending that body to the balcony keeps the control map untouched — it's never swapped or void-killed (both gate on aliveness), and round-end `resetControl` reshuffles everyone to own bodies as before. Teleporting it up also catches the fall, so the old anchor-in-place `parkBody` is no longer needed. The close-up spectate (`resendSpectate`/`firstAliveBody`) is removed; `SpectateBody` remains only for the victory cam.
 - **No HUD work**: the existing Lobby/Results banners simply play over the gathered balcony instead of the dead arena.
 
 ## Architecture
@@ -46,11 +47,13 @@ BodyManager  (uses SpawnLayout for BOTH slot kinds)
    ├─ arenaSlotByOwner[player]        (CFrame — today's spawn slot, unchanged math)
    ├─ lobbySlotByOwner[player]        (CFrame — a balcony grid slot, facing the arena)
    ├─ createBody       → spawns onto the BALCONY slot
-   ├─ resetBody        → pivots to the ARENA slot   (round start, unchanged callers)
-   └─ returnToLobby    → pivots to the BALCONY slot  (new — mirror of resetBody)
+   ├─ resetBody        → pivots OWN body to the ARENA slot   (round start)
+   ├─ returnToLobby    → pivots OWN body to the BALCONY slot  (round end)
+   └─ sendToLobby      → pivots a GIVEN body to the BALCONY slot (elimination)
 
 RoundManager lifecycle
    ├─ beginRound : resetBody → arena, resetControl, hazards start   (unchanged)
+   ├─ eliminate  : sendToLobby(controlled body) → balcony, still controlled  (new)
    ├─ endRound (Ended window) : SpectateBody(winnerBody) → all present   (victory cam)
    └─ endRound (→ Lobby reset): returnToLobby(all present), then resetControl
 ```
@@ -92,14 +95,17 @@ Geometry (all values are `Config` tunables; representative numbers):
   - `arenaSlotByOwner[player]` — the existing arena spawn `CFrame` (currently `spawnByOwner`; keep or rename, the plan decides).
   - `lobbySlotByOwner[player]` — a balcony grid `CFrame` built from `SpawnLayout.lobbySlot(...)` + `LOBBY_ORIGIN`, oriented to face the arena (`CFrame.lookAt` toward arena center) so the avatar and its camera point at the pit.
 - **`createBody` spawns onto the balcony slot** (not the arena), since a joining player starts in the waiting/lobby state. A few studs above the balcony surface so the body settles, mirroring the arena drop.
-- **New `returnToLobby(player)`** — the mirror of `resetBody`: guard on a missing root, `Anchored = false`, zero linear/angular velocity, `PivotTo(lobbySlotByOwner[player])`. Used by `RoundManager` when entering the Lobby phase.
-- `resetBody` (arena slot) and `parkBody` (anchor in place) are unchanged.
+- A shared local `placeOnLobbySlot(player, body)` does the work (guard on missing slot/root, `Anchored = false`, zero linear/angular velocity, `PivotTo(lobbySlotByOwner[player])`). Two public wrappers use it:
+  - **`returnToLobby(player)`** — places the player's **own** body (`bodyByOwner[player]`). Used by `RoundManager` at the Lobby reset.
+  - **`sendToLobby(player, body)`** — places an **arbitrary given** body on the player's slot. Used on elimination to relocate the body the player was controlling.
+- `resetBody` (arena slot) is unchanged. **`parkBody` is removed** — nothing anchors a body anymore; elimination now teleports the dead body up to the balcony (which catches the fall), and round transitions always unanchor + pivot.
 - `removeBody` clears both slot tables.
 
 ### Component 4 — `src/server/RoundManager.luau` (changed)
 
 - **`start`:** call `LobbyArea.build()` alongside the existing `HazardSystem.build()`.
-- **`endRound`, Ended window (victory cam):** at the start of the Ended results beat, fire `SpectateBody:FireClient(p, winnerBody)` to **every present player** so all cameras frame the winner standing in the arena. Bodies are *not* relocated yet (winner stays put so the cam has a subject; eliminated bodies remain parked where they died, which is off-camera). If there is no winner (disconnect-decided round, `winnerName == nil`), skip the victory cam (fall back to the current behavior — no spectate retarget). The existing per-second `broadcastState(remaining)` countdown tick is unchanged.
+- **`eliminate` (added 2026-06-21):** replace `BodyManager.parkBody(body)` with `BodyManager.sendToLobby(player, body)` where `body = ControlManager.getControlledBody(player)` — the eliminated player's controlled body goes up to their balcony slot, still under their control. The old `resendSpectate()` call (and the now-dead `resendSpectate`/`firstAliveBody` helpers) are removed; eliminated players watch from the balcony, not via a close-up spectate camera.
+- **`endRound`, Ended window (victory cam):** at the start of the Ended results beat, fire `SpectateBody:FireClient(p, winnerBody)` to **every present player** so all cameras frame the winner standing in the arena. Bodies are *not* relocated here (winner stays put so the cam has a subject; already-eliminated players are up on the balcony, where the victory cam pulls their camera down to the winner). If there is no winner (disconnect-decided round, `winnerName == nil`), skip the victory cam. The existing per-second `broadcastState(remaining)` countdown tick is unchanged.
 - **`endRound`, → Lobby reset:** after the Ended countdown, before/at `RoundState.reset`, relocate everyone to the balcony: for each present player `BodyManager.returnToLobby(player)`, **then** `ControlManager.resetControl()`. Ordering mirrors `beginRound` (unanchor + pivot **before** `SetNetworkOwner`, which errors on an anchored part). `resetControl` fires `SetControlledBody(ownBody)`, which pulls each camera off the victory-cam subject and back onto the player's own body — now standing on the balcony. The subsequent `broadcastState()` → Lobby is unchanged.
 - **`addPlayer`:** unchanged call shape — `createBody` now places the body on the balcony, so a mid-round joiner (added to `present`, not `alive`) waits on the balcony instead of loose in the live arena. No new logic in `addPlayer`.
 
@@ -123,16 +129,18 @@ Each value carries a comment explaining the geometric reasoning (matching the ex
 - **Studio smoke test** — new `docs/smoke-tests/2026-06-21-lobby-staging-area-smoke-test.md`, a 2-client procedure (keep `Config.HAZARDS_ENABLED = false` so the floor stays safe while observing the loop):
   1. **Join:** both clients spawn on the **balcony**, can walk around behind the railing, and looking forward see the arena below. Cannot walk off (railing blocks).
   2. **Round start:** at `beginRound`, both bodies teleport down into the **arena** spawn slots; camera retargets to the own body in the arena; hazards (if enabled) start.
-  3. **Round end (victory cam):** force a finish (eliminate one body, or use the `RoundManager.forceSwap()` harness then drop a body into the void). During the Ended "Next round in N" window, **both** clients' cameras frame the **winner** standing in the arena.
-  4. **Lobby reset:** after the countdown, both bodies teleport up to the **balcony** in their **own** body, cameras pulled back onto themselves; the Lobby banner shows over the balcony.
-  5. **Mid-round join:** a client joining during Active appears on the **balcony** (not loose in the arena) and is folded into the arena at the next `beginRound`.
+  3. **Mid-round elimination (3+ players):** with a third client, drop one body into the void mid-round. That eliminated player's body teleports up to the **balcony** and they keep walking it around / watching the round below — no parked corpse in the arena.
+  4. **Round end (victory cam):** force a finish (drop a body into the void). During the Ended "Next round in N" window, **all** clients' cameras frame the **winner** standing in the arena.
+  5. **Lobby reset:** after the countdown, all bodies teleport up to the **balcony** in their **own** body, cameras pulled back onto themselves; the Lobby banner shows over the balcony.
+  6. **Mid-round join:** a client joining during Active appears on the **balcony** (not loose in the arena) and is folded into the arena at the next `beginRound`.
 
 ## Edge cases & robustness
 
 - **No winner (disconnect-decided round):** `winnerName == nil` → skip the victory cam; the → Lobby relocation still runs (everyone goes to the balcony). No stale spectate target.
 - **`SetNetworkOwner` on an anchored part:** avoided by `returnToLobby` unanchoring before `resetControl` runs (same ordering invariant as `beginRound`).
-- **Eliminated bodies during Ended:** remain parked (anchored) where they died; they are off the victory cam and get unanchored + relocated by `returnToLobby` at the Lobby reset.
-- **Body with no `HumanoidRootPart`:** `returnToLobby` guards and no-ops (same guard as `resetBody`).
+- **Eliminated player mid-round:** the body they were controlling is sent to their balcony slot the instant they die, still under their control, so they walk the balcony / watch from above. They're excluded from `aliveRoster`, so that body is never swapped (`SwapController.plan` only sees alive players) nor void-killed (the void monitor only checks alive players). At round end `resetControl` returns them to their own body like everyone else. Sattolo guarantees no fixed point, so the controlled body is never the player's own — moving it can't disturb a live opponent.
+- **Last elimination ends the round:** with `MIN_PLAYERS_TO_CONTINUE = 2`, eliminating the second-to-last player drops alive to 1 and ends the round, so the **winner is never eliminated** and always remains in the arena as the victory-cam subject; the just-eliminated loser is on the balcony and the victory cam pulls their camera to the winner.
+- **Body with no `HumanoidRootPart`:** the shared `placeOnLobbySlot` guard makes `returnToLobby` / `sendToLobby` no-op (same guard as `resetBody`).
 - **Fall protection is load-bearing:** the balcony floats over the void; the perimeter barriers (incl. the `CanCollide` glass railing) must fully enclose the walkable area, or a player could walk a controlled body off and trigger a void death between rounds. The smoke test explicitly checks this.
 - **Arena spawn math unchanged:** `SpawnLayout.arenaSlot` is asserted to reproduce the current positions, so the disappearing-tile interaction (tile-center spawns) is not regressed.
 
@@ -142,8 +150,8 @@ Each value carries a comment explaining the geometric reasoning (matching the ex
 |------|--------|
 | `src/shared/SpawnLayout.luau` | **new** — pure arena + balcony slot math |
 | `src/server/LobbyArea.luau` | **new** — builds the elevated balcony geometry once |
-| `src/server/BodyManager.luau` | use `SpawnLayout`; store arena + balcony slots; `createBody` → balcony; new `returnToLobby` |
-| `src/server/RoundManager.luau` | `start` builds the balcony; `endRound` victory cam + relocate-to-balcony at Lobby reset |
+| `src/server/BodyManager.luau` | use `SpawnLayout`; store arena + balcony slots; `createBody` → balcony; new `returnToLobby` + `sendToLobby` (shared `placeOnLobbySlot`); `parkBody` removed |
+| `src/server/RoundManager.luau` | `start` builds the balcony; `eliminate` sends the controlled body to the balcony (spectate helpers removed); `endRound` victory cam + relocate-to-balcony at Lobby reset |
 | `src/shared/Config.luau` | new balcony geometry / grid / color tunables |
 | `tests/spawn_layout.spec.luau` | **new** — lune unit test for `SpawnLayout` |
 | `docs/smoke-tests/2026-06-21-lobby-staging-area-smoke-test.md` | **new** — 2-client runtime check |

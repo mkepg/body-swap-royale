@@ -65,33 +65,6 @@ local function broadcastState(secondsRemaining, swapAtServerTime)
 	})
 end
 
--- The body of the first currently-alive player (used as a spectate target).
-local function firstAliveBody()
-	for _, p in ipairs(Players:GetPlayers()) do
-		if RoundState.isAlive(model, p) then
-			return ControlManager.getControlledBody(p)
-		end
-	end
-	return nil
-end
-
--- Point every eliminated-but-connected player's camera at a living body so they
--- spectate the action instead of a corpse. No-op in Lobby (nobody is alive yet).
-local function resendSpectate()
-	if RoundState.getPhase(model) == "Lobby" then
-		return
-	end
-	local target = firstAliveBody()
-	if not target then
-		return
-	end
-	for _, p in ipairs(Players:GetPlayers()) do
-		if not RoundState.isAlive(model, p) then
-			SpectateBody:FireClient(p, target)
-		end
-	end
-end
-
 -- ===== alive roster =====
 
 -- The ordered alive roster = connected players filtered by RoundState.isAlive.
@@ -182,17 +155,19 @@ end
 -- removePlayer. Idempotent: a no-op for a player who is not currently alive.
 function RoundManager.eliminate(player)
 	-- Idempotent: if the player isn't currently alive, RoundState.eliminate would
-	-- no-op, so skip the side effects (event/park/spectate) entirely.
+	-- no-op, so skip the side effects (event/relocate) entirely.
 	if not RoundState.isAlive(model, player) then
 		return { ended = false, winner = nil }
 	end
 	local result = RoundState.eliminate(model, player)
+	-- Send the body they were controlling (now out of the round) up to their
+	-- balcony slot, still under their control, so they watch the rest of the round
+	-- from the lobby instead of leaving a parked corpse in the arena.
 	local body = ControlManager.getControlledBody(player)
 	if body then
-		BodyManager.parkBody(body)
+		BodyManager.sendToLobby(player, body)
 	end
 	EliminationEvent:FireAllClients(player.Name)
-	resendSpectate()
 	GraceModel.clear(grace, player)
 	swapPos[player] = nil
 	return result
@@ -269,8 +244,8 @@ end
 local function beginRound()
 	RoundState.beginRound(model) -- Lobby -> Active; present snapshot into alive
 	-- Unanchor + reposition bodies BEFORE re-granting ownership: SetNetworkOwner
-	-- errors on an anchored part, and a body parked on elimination last round
-	-- stays anchored until resetBody runs.
+	-- errors on an anchored part. (Lobby bodies are already unanchored, so the
+	-- unanchor in resetBody is defensive.)
 	for _, p in ipairs(Players:GetPlayers()) do
 		BodyManager.resetBody(p) -- reposition own body to spawn + unanchor
 	end
@@ -391,9 +366,6 @@ function RoundManager.removePlayer(player)
 	ControlManager.removePlayer(player)    -- absorb + destroy the leaver's own body
 	GraceModel.clear(grace, player)
 	swapPos[player] = nil
-	if RoundState.getPhase(model) == "Active" then
-		resendSpectate() -- the alive set may have shrunk
-	end
 	-- If the disconnect ended the round, the Active loop observes phase Ended and
 	-- runs endRound; no special handling needed here.
 end

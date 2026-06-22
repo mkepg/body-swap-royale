@@ -22,24 +22,33 @@ across the round lifecycle, and the victory cam. Pairs with the unit test
    camera retargets to its own body in the arena. (With hazards enabled, tiles begin
    their cycle here.)
 
-3. **Round end → victory cam.** Force a finish: in the server command bar drop one
-   body into the void, or call `require(...ServerScriptService.Server.RoundManager).forceSwap()`
-   to churn, then push a body off. When one player remains, the Results banner shows
-   ("Victory" / "Defeated", "Next round in N"). During that window, **both** clients'
-   cameras frame the **winner's body** standing in the arena.
+3. **Mid-round elimination → balcony.** This needs **3+ players** (so the round
+   continues after one dies). With a round Active, drop one body into the void
+   (toggle `Config.HAZARDS_ENABLED = true` and let a tile vanish, or nudge a body off
+   an edge). The eliminated player's body **teleports up to the balcony** and they
+   **keep control of it** — they walk around the lobby and watch the round continue
+   below. No parked corpse is left in the arena; the eliminated body is never swapped
+   or void-killed again.
 
-4. **Lobby reset → balcony.** After the countdown, **both** bodies teleport **up to
+4. **Round end → victory cam.** Force a finish: drop bodies into the void (or call
+   `require(...ServerScriptService.Server.RoundManager).forceSwap()` to churn, then
+   push bodies off) until one player remains. The Results banner shows ("Victory" /
+   "Defeated", "Next round in N"). During that window, **all** clients' cameras frame
+   the **winner's body** standing in the arena.
+
+5. **Lobby reset → balcony.** After the countdown, **all** bodies teleport **up to
    the balcony**, each client's camera pulls back onto its **own** body, and the
-   Lobby banner shows over the gathered balcony. Both can walk around again, fenced
-   in by the railings.
+   Lobby banner shows over the gathered balcony. Everyone can walk around again,
+   fenced in by the railings.
 
-5. **Mid-round join.** Restart with 1 client; once a round is Active, start the 2nd
+6. **Mid-round join.** Restart with 1 client; once a round is Active, start a 2nd
    client. The joiner appears on the **balcony** (not loose in the live arena) and is
    folded into the arena at the **next** round start.
 
 ## Pass criteria
 - [ ] Bodies spawn on the balcony on join (step 1) and cannot walk off (railings hold).
 - [ ] Bodies move balcony → arena at round start (step 2).
-- [ ] Victory cam frames the winner for ALL clients during Ended (step 3).
-- [ ] Bodies move arena → balcony at the Lobby reset, on their own bodies (step 4).
-- [ ] A mid-round joiner waits on the balcony, not in the arena (step 5).
+- [ ] An eliminated player is sent to the balcony and keeps control of their body (step 3).
+- [ ] Victory cam frames the winner for ALL clients during Ended (step 4).
+- [ ] Bodies move arena → balcony at the Lobby reset, on their own bodies (step 5).
+- [ ] A mid-round joiner waits on the balcony, not in the arena (step 6).

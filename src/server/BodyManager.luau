@@ -139,11 +139,12 @@ function BodyManager.resetBody(player)
 	body:PivotTo(cf)
 end
 
--- Between rounds (and the Lobby phase): reposition a player's OWN body to its
--- balcony slot and re-enable physics. The mirror of resetBody; unanchors so the
--- subsequent ControlManager.resetControl can SetNetworkOwner (errors if anchored).
-function BodyManager.returnToLobby(player)
-	local body = BodyManager.bodyByOwner[player]
+-- Reposition `body` onto `player`'s balcony slot, unanchored + zeroed. Shared by
+-- returnToLobby (the player's OWN body, at round end) and sendToLobby (the body a
+-- player was controlling when they died -- not necessarily their own avatar).
+-- Unanchors so a later ControlManager.resetControl can SetNetworkOwner (errors on
+-- an anchored part).
+local function placeOnLobbySlot(player, body)
 	local cf = BodyManager.lobbySlotByOwner[player]
 	if not body or not cf then
 		return
@@ -158,16 +159,18 @@ function BodyManager.returnToLobby(player)
 	body:PivotTo(cf)
 end
 
--- Elimination: park a body in place so it stops falling and is never destroyed by
--- FallenPartsDestroyHeight. Anchoring the root halts physics; the next round's
--- resetBody unanchors and repositions it.
-function BodyManager.parkBody(body)
-	local root = body and body:FindFirstChild("HumanoidRootPart")
-	if root then
-		root.AssemblyLinearVelocity = Vector3.zero
-		root.AssemblyAngularVelocity = Vector3.zero
-		root.Anchored = true
-	end
+-- Between rounds (and the Lobby phase): reposition a player's OWN body to its
+-- balcony slot. The mirror of resetBody (which sends it to the arena slot).
+function BodyManager.returnToLobby(player)
+	placeOnLobbySlot(player, BodyManager.bodyByOwner[player])
+end
+
+-- Elimination: send the body the player was controlling (now out of the round) to
+-- their balcony slot, still under their control, so they watch the rest of the
+-- round from the lobby instead of leaving a corpse in the arena. Teleporting it
+-- up also catches the fall (no need to anchor against FallenPartsDestroyHeight).
+function BodyManager.sendToLobby(player, body)
+	placeOnLobbySlot(player, body)
 end
 
 return BodyManager
