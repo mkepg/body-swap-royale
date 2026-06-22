@@ -18,10 +18,38 @@ BodyManager.bodyByOwner = {} -- [player] = body wearing that player's avatar
 BodyManager.arenaSlotByOwner = {} -- [player] = arena spawn CFrame (round-start reposition)
 BodyManager.lobbySlotByOwner = {} -- [player] = balcony slot CFrame (join + between-rounds)
 BodyManager.folder = nil
-BodyManager._index = 0
 
--- Balcony grid row count, derived once from Config (read-only at runtime).
+-- Grid row counts, derived once from Config (read-only at runtime).
 local LOBBY_ROWS = math.ceil(Config.LOBBY_CAPACITY / Config.LOBBY_PER_ROW)
+local ARENA_ROWS = math.ceil(Config.LOBBY_CAPACITY / Config.ARENA_PER_ROW)
+
+-- Slot allocator: hand out a 1-based grid index in [1, LOBBY_CAPACITY] per body and
+-- RECLAIM it when the body is removed, so join/leave churn never pushes a body past
+-- the grid (the arena field / balcony pad). Both the arena and balcony slots use the
+-- same index, so reclaiming it keeps both layouts bounded. Replaces the old
+-- monotonic counter that grew forever and put the Nth-ever join off the grid.
+local usedSlots = {}              -- [index] = true while occupied
+BodyManager.slotByOwner = {}      -- [player] = index (released on removeBody)
+
+local function allocateSlot()
+	for i = 1, Config.LOBBY_CAPACITY do
+		if not usedSlots[i] then
+			usedSlots[i] = true
+			return i
+		end
+	end
+	-- Over capacity (more concurrent bodies than the cap): clamp to the last slot
+	-- rather than compute an off-grid position. Not expected within the 16-player cap.
+	return Config.LOBBY_CAPACITY
+end
+
+local function releaseSlot(player)
+	local index = BodyManager.slotByOwner[player]
+	if index then
+		usedSlots[index] = nil
+		BodyManager.slotByOwner[player] = nil
+	end
+end
 
 local function ensureFolder()
 	if not BodyManager.folder or not BodyManager.folder.Parent then
@@ -50,11 +78,13 @@ local function buildAvatarBody(player)
 	return body
 end
 
--- Arena spawn CFrame for a 1-based body index (today's single-row layout).
+-- Arena spawn CFrame for a 1-based body index: a centered grid (pure SpawnLayout)
+-- offset from the arena center, at the spawn height. Slots land on tile centers
+-- within the field, so no body spawns off the floor.
 local function arenaCFrame(index)
 	local o = Config.SPAWN_ORIGIN
-	local x, y, z = SpawnLayout.arenaSlot(index, o.X, o.Y, o.Z, Config.SPAWN_SPACING)
-	return CFrame.new(x, y, z)
+	local dx, dz = SpawnLayout.arenaSlot(index, Config.ARENA_PER_ROW, ARENA_ROWS, Config.ARENA_SPACING)
+	return CFrame.new(o.X + dx, o.Y, o.Z + dz)
 end
 
 -- Balcony slot CFrame for a 1-based body index. Grid offset (pure SpawnLayout)
@@ -81,8 +111,8 @@ function BodyManager.createBody(player)
 		hum.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
 	end
 
-	BodyManager._index += 1
-	local index = BodyManager._index
+	local index = allocateSlot()
+	BodyManager.slotByOwner[player] = index
 	-- A joining player starts in the waiting state, so spawn on the balcony.
 	-- Both slots are stored so resetBody (arena) and returnToLobby (balcony) can
 	-- reposition the body for the rest of its life without recomputing.
@@ -119,6 +149,7 @@ function BodyManager.removeBody(player)
 	BodyManager.bodyByOwner[player] = nil
 	BodyManager.arenaSlotByOwner[player] = nil
 	BodyManager.lobbySlotByOwner[player] = nil
+	releaseSlot(player) -- reclaim the grid index so a future join reuses it
 end
 
 -- Shared pivot primitive: unanchor root, zero both velocities, PivotTo cf.
