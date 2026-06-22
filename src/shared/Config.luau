@@ -7,8 +7,17 @@
 local Config = {}
 
 -- Round timing (used from step 5/6 onward)
-Config.CYCLE_SECONDS = 30
 Config.PREVIEW_SECONDS = 3
+
+-- Dynamic swap cadence. The swap interval is no longer fixed: the pure CadenceModel
+-- compresses it from CADENCE_MAX_INTERVAL (calm round-start) toward
+-- CADENCE_MIN_INTERVAL (frantic endgame), driven by alive-count + round progress.
+-- INVARIANT: CADENCE_MIN_INTERVAL MUST stay > PREVIEW_SECONDS so the 3s preview
+-- window always fits inside the shortest cycle.
+Config.CADENCE_MAX_INTERVAL = 20   -- round-start ceiling (seconds)
+Config.CADENCE_MIN_INTERVAL = 8    -- endgame floor (seconds)
+Config.CADENCE_SWAPS_TO_FLOOR = 8  -- swaps for the stall-breaker (progress term) to reach the floor
+Config.CADENCE_STALL_WEIGHT = 1.0  -- progress-term weight; 1.0 so the ramp still works at N=2
 Config.GRACE_SECONDS = 1.5
 Config.GRACE_FLOOR_SECONDS = 0.5
 -- Horizontal studs of displacement since the last swap that counts as the player
