@@ -330,7 +330,8 @@ local function runActivePhase()
 		-- Commit at T0.
 		if plan then
 			commitSwap(plan)
-			swapsSoFar += 1 -- advances the cadence progress term for the next cycle
+			swapsSoFar += 1 -- advances the cadence progress term (counts planned swaps; a
+			-- late roster-collapse abort inside commitSwap is benign -- the round is ending)
 		end
 	end
 end
