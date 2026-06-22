@@ -8,8 +8,9 @@
 	  RoundState  -- when a round can start / ends, who the winner is.
 	  ControlModel (via ControlManager) -- the controllers<->bodies bijection.
 
-	Elimination is LOGICAL: a body crossing VOID_Y is parked (anchored), never
-	killed, so the next round just repositions it (no Humanoid revive).
+	Elimination is LOGICAL: a body crossing VOID_Y is sent up to the lobby balcony
+	(still under its player's control), never killed, so the next round just
+	repositions it (no Humanoid revive).
 
 	Depends on:
 	  ReplicatedStorage.Shared.Config / RoundState / Remotes
@@ -27,6 +28,7 @@ local BodyManager = require(script.Parent.BodyManager)
 local ControlManager = require(script.Parent.ControlManager)
 local SwapController = require(script.Parent.SwapController)
 local HazardSystem = require(script.Parent.HazardSystem)
+local LobbyArea = require(script.Parent.LobbyArea)
 
 local RoundStateChanged = Remotes.get("RoundStateChanged")
 local EliminationEvent = Remotes.get("EliminationEvent")
@@ -62,33 +64,6 @@ local function broadcastState(secondsRemaining, swapAtServerTime)
 		secondsRemaining = secondsRemaining,
 		swapAtServerTime = swapAtServerTime,
 	})
-end
-
--- The body of the first currently-alive player (used as a spectate target).
-local function firstAliveBody()
-	for _, p in ipairs(Players:GetPlayers()) do
-		if RoundState.isAlive(model, p) then
-			return ControlManager.getControlledBody(p)
-		end
-	end
-	return nil
-end
-
--- Point every eliminated-but-connected player's camera at a living body so they
--- spectate the action instead of a corpse. No-op in Lobby (nobody is alive yet).
-local function resendSpectate()
-	if RoundState.getPhase(model) == "Lobby" then
-		return
-	end
-	local target = firstAliveBody()
-	if not target then
-		return
-	end
-	for _, p in ipairs(Players:GetPlayers()) do
-		if not RoundState.isAlive(model, p) then
-			SpectateBody:FireClient(p, target)
-		end
-	end
 end
 
 -- ===== alive roster =====
@@ -129,10 +104,10 @@ end
 -- A plan is current iff it still matches the live control map AND every player
 -- in it is still alive. planStillValid alone only sees control-map changes
 -- (disconnect / absorb) because ControlModel is unaware of death -- a hazard
--- death updates RoundState + parks the body but leaves bodyOf untouched. Without
--- the aliveness check, a death during the 3s preview would commit a stale plan:
--- a live player would be handed the dead player's parked (anchored) body, and the
--- dead player would keep a live body (orphaned next cycle).
+-- death updates RoundState + sends the body to the balcony but leaves bodyOf
+-- untouched. Without the aliveness check, a death during the 3s preview would
+-- commit a stale plan: a live player would be handed the dead player's balcony
+-- body, and the dead player would keep a live body (orphaned next cycle).
 local function planIsCurrent(plan)
 	if not SwapController.planStillValid(plan) then
 		return false
@@ -181,17 +156,19 @@ end
 -- removePlayer. Idempotent: a no-op for a player who is not currently alive.
 function RoundManager.eliminate(player)
 	-- Idempotent: if the player isn't currently alive, RoundState.eliminate would
-	-- no-op, so skip the side effects (event/park/spectate) entirely.
+	-- no-op, so skip the side effects (event/relocate) entirely.
 	if not RoundState.isAlive(model, player) then
 		return { ended = false, winner = nil }
 	end
 	local result = RoundState.eliminate(model, player)
+	-- Send the body they were controlling (now out of the round) up to their
+	-- balcony slot, still under their control, so they watch the rest of the round
+	-- from the lobby instead of leaving a parked corpse in the arena.
 	local body = ControlManager.getControlledBody(player)
 	if body then
-		BodyManager.parkBody(body)
+		BodyManager.sendToLobby(player, body)
 	end
 	EliminationEvent:FireAllClients(player.Name)
-	resendSpectate()
 	GraceModel.clear(grace, player)
 	swapPos[player] = nil
 	return result
@@ -268,8 +245,8 @@ end
 local function beginRound()
 	RoundState.beginRound(model) -- Lobby -> Active; present snapshot into alive
 	-- Unanchor + reposition bodies BEFORE re-granting ownership: SetNetworkOwner
-	-- errors on an anchored part, and a body parked on elimination last round
-	-- stays anchored until resetBody runs.
+	-- errors on an anchored part. (Lobby bodies are already unanchored, so the
+	-- unanchor in resetBody is defensive.)
 	for _, p in ipairs(Players:GetPlayers()) do
 		BodyManager.resetBody(p) -- reposition own body to spawn + unanchor
 	end
@@ -342,18 +319,34 @@ local function endRound()
 	HazardSystem.stop() -- freeze tiles solid for the Ended/Lobby floor
 	local winner = RoundState.getWinner(model)
 	print("[BSR] round ended; winner:", winner and winner.Name or "(none)")
-	-- Tick the post-round countdown so the Results banner shows a truthful
-	-- "Next round in N" -- reusing the same secondsRemaining channel the Lobby
-	-- countdown uses, so the client stays clock-free (server owns clocks).
-	-- broadcastState already carries winnerName during Ended.
+	-- Victory cam: while the Results banner is up, point EVERY present player's
+	-- camera at the winner standing in the arena below. Bodies are NOT relocated
+	-- yet, so the winner stays put as the cam subject. Reuses SpectateBody (the
+	-- client sets CameraSubject unconditionally). Skipped if there is no winner
+	-- (disconnect-decided round) -- nothing to frame.
 	local remaining = Config.ROUND_END_SECONDS
 	broadcastState(remaining) -- always show the Results banner at least once (Ended)
+	if winner then
+		local winnerBody = ControlManager.getControlledBody(winner)
+		if winnerBody then
+			SpectateBody:FireAllClients(winnerBody)
+		end
+	end
 	while remaining > 1 do
 		task.wait(1)
 		remaining -= 1
 		broadcastState(remaining) -- tick N-1 .. 1
 	end
 	task.wait(remaining > 0 and 1 or 0) -- wait out the final second (skip if N == 0)
+	-- Relocate everyone to the balcony for the Lobby wait. Order mirrors
+	-- beginRound: unanchor + pivot (returnToLobby) BEFORE resetControl, which
+	-- SetNetworkOwners (errors on an anchored part) and fires SetControlledBody --
+	-- pulling each camera off the victory-cam subject back onto its own body,
+	-- now standing on the balcony.
+	for _, p in ipairs(Players:GetPlayers()) do
+		BodyManager.returnToLobby(p)
+	end
+	ControlManager.resetControl()
 	RoundState.reset(model) -- Ended -> Lobby
 	broadcastState() -- phase Lobby
 end
@@ -372,9 +365,6 @@ function RoundManager.removePlayer(player)
 	ControlManager.removePlayer(player)    -- absorb + destroy the leaver's own body
 	GraceModel.clear(grace, player)
 	swapPos[player] = nil
-	if RoundState.getPhase(model) == "Active" then
-		resendSpectate() -- the alive set may have shrunk
-	end
 	-- If the disconnect ended the round, the Active loop observes phase Ended and
 	-- runs endRound; no special handling needed here.
 end
@@ -387,6 +377,7 @@ end
 
 function RoundManager.start()
 	HazardSystem.build() -- construct the tile-field arena once (replaces the baseplate)
+	LobbyArea.build() -- construct the elevated lobby balcony once
 	task.spawn(function()
 		while true do
 			broadcastState() -- Lobby

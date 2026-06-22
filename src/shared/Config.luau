@@ -89,6 +89,29 @@ Config.NORMALIZED_SCALES = {
 Config.SPAWN_ORIGIN = Vector3.new(-4, 5, 4)
 Config.SPAWN_SPACING = 8
 
+-- Lobby staging area: an elevated balcony overlooking the arena. Players wait
+-- here between rounds and on join; LobbyArea builds the geometry and BodyManager
+-- places bodies on the grid slots (pure SpawnLayout). The arena spans X,Z in
+-- [-32,32] at surface Y=0, so the balcony sits RAISED and SET BACK behind the
+-- -Z edge, facing +Z toward the arena center -- standing bodies look down into
+-- the pit. The perimeter barriers are LOAD-BEARING: the pad floats over the void,
+-- so a gap would let a controlled body walk off and die between rounds.
+Config.LOBBY_ORIGIN = Vector3.new(0, 45, -64) -- balcony surface center
+Config.LOBBY_PAD_SIZE = Vector3.new(48, 1, 48) -- platform X, thickness(Y), Z
+-- LOBBY_WALL_HEIGHT must comfortably exceed a jump so a body can't hop the railing
+-- into the void (JUMP_HEIGHT = 7.2; feet clear roughly that high). 12 leaves a safe
+-- margin -- the front railing is transparent, so a taller wall doesn't block the view.
+Config.LOBBY_WALL_HEIGHT = 12 -- perimeter barrier height (fall protection)
+Config.LOBBY_WALL_THICKNESS = 1
+Config.LOBBY_CAPACITY = 16 -- grid sized for up to this many bodies
+Config.LOBBY_PER_ROW = 4 -- balcony grid columns (rows = ceil(CAPACITY/PER_ROW))
+Config.LOBBY_SPACING = 10 -- studs between grid slots
+Config.LOBBY_SPAWN_DROP = 5 -- studs above the pad a body spawns at (settles down)
+Config.LOBBY_FACE_TARGET = Vector3.new(0, 0, 0) -- bodies face this (arena center)
+Config.LOBBY_COLOR_PAD = Color3.fromRGB(120, 170, 230) -- soft blue (echoes lobby banner)
+Config.LOBBY_COLOR_WALL = Color3.fromRGB(90, 130, 190) -- slightly darker walls
+Config.LOBBY_RAILING_TRANSPARENCY = 0.6 -- arena-facing glass railing (CanCollide, see-through)
+
 -- Default R15 animation asset IDs, consumed by the client animation driver.
 -- Bodies aren't player Characters, so the engine's Animate script can't drive
 -- them -- the ClientAnimator plays these per-body from velocity + floor state.
