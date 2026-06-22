@@ -24,10 +24,10 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local RoundState = require(ReplicatedStorage.Shared.RoundState)
 local GraceModel = require(ReplicatedStorage.Shared.GraceModel)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local CadenceModel = require(ReplicatedStorage.Shared.CadenceModel)
 local BodyManager = require(script.Parent.BodyManager)
 local ControlManager = require(script.Parent.ControlManager)
 local SwapController = require(script.Parent.SwapController)
-local CadenceModel = require(ReplicatedStorage.Shared.CadenceModel)
 local HazardSystem = require(script.Parent.HazardSystem)
 local LobbyArea = require(script.Parent.LobbyArea)
 
@@ -50,12 +50,6 @@ local swapPos = {} -- [player] = Vector3
 -- maps these -> the next swap interval (20s calm round-start -> 8s frantic endgame).
 local cadenceStartCount = 0
 local swapsSoFar = 0
-local cadenceOpts = {
-	maxInterval = Config.CADENCE_MAX_INTERVAL,
-	minInterval = Config.CADENCE_MIN_INTERVAL,
-	swapsToFloor = Config.CADENCE_SWAPS_TO_FLOOR,
-	stallWeight = Config.CADENCE_STALL_WEIGHT,
-}
 
 -- The single monotonic clock for grace. Pure GraceModel takes `now` injected.
 local function now()
@@ -283,14 +277,21 @@ local function waitActive(seconds)
 end
 
 -- Spin during Active. Each cycle: broadcast the swap deadline, free-play for
--- (CYCLE - PREVIEW), then run the PREVIEW window (plan + per-client preview,
+-- (interval - PREVIEW), then run the PREVIEW window (plan + per-client preview,
 -- re-planning if the roster churns), then commit the swap at T0.
 local function runActivePhase()
 	while RoundState.getPhase(model) == "Active" do
 		-- Dynamic cadence: the interval shrinks as players are eliminated and as the
 		-- round drags on (CadenceModel). The HUD counts down to this broadcast deadline.
+		-- Opts are read from Config each cycle so a smoke-test command-bar tweak of the
+		-- CADENCE_* tunables takes effect on the next swap.
 		local interval = CadenceModel.interval(
-			cadenceStartCount, RoundState.aliveCount(model), swapsSoFar, cadenceOpts)
+			cadenceStartCount, RoundState.aliveCount(model), swapsSoFar, {
+				maxInterval = Config.CADENCE_MAX_INTERVAL,
+				minInterval = Config.CADENCE_MIN_INTERVAL,
+				swapsToFloor = Config.CADENCE_SWAPS_TO_FLOOR,
+				stallWeight = Config.CADENCE_STALL_WEIGHT,
+			})
 		broadcastState(nil, workspace:GetServerTimeNow() + interval)
 
 		-- Free play.
