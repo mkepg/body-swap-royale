@@ -94,6 +94,18 @@ function ControlManager.removePlayer(player)
 	end
 	soulColor[player] = nil
 	ControlManager.broadcastSoulMap()
+	return decision -- absorb decision {destroyOwn, reassign} -- consumed by RoundManager's rescue
+end
+
+-- Re-assert a player's network ownership of the body they CURRENTLY control, with a
+-- clean (non-swap) retarget. Used after a server-side reposition so the teleport
+-- replicates onto the now client-owned body (same reposition-then-re-own ordering as
+-- beginRound's resetBody -> resetControl). No-op if the player controls no body.
+function ControlManager.regrantControl(player)
+	local body = ControlModel.controlledBody(model, player)
+	if body then
+		applyOwnership(player, body, false)
+	end
 end
 
 -- Reset every player to their own avatar body (round start). Applies the pure
