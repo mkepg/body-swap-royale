@@ -8,7 +8,7 @@
 
 	Two drivers, combined additively then clamped (dynamic-cadence design, Approach A):
 	  countT    -- elimination progress: 0 at round start, 1 at the final duel.
-	  progressT -- swapsSoFar / swapsToFloor, capped at 1 (the stall-breaker so a
+	  progressT -- swapsSoFar / swapsToFloor, clamped to [0,1] (the stall-breaker so a
 	               round where nobody dies still escalates; it also carries the N=2
 	               case, where countT is pinned at 0 because the round ends at 1
 	               survivor and nobody is eliminated mid-round).
