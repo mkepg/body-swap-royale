@@ -8,8 +8,9 @@
 	  RoundState  -- when a round can start / ends, who the winner is.
 	  ControlModel (via ControlManager) -- the controllers<->bodies bijection.
 
-	Elimination is LOGICAL: a body crossing VOID_Y is parked (anchored), never
-	killed, so the next round just repositions it (no Humanoid revive).
+	Elimination is LOGICAL: a body crossing VOID_Y is sent up to the lobby balcony
+	(still under its player's control), never killed, so the next round just
+	repositions it (no Humanoid revive).
 
 	Depends on:
 	  ReplicatedStorage.Shared.Config / RoundState / Remotes
@@ -103,10 +104,10 @@ end
 -- A plan is current iff it still matches the live control map AND every player
 -- in it is still alive. planStillValid alone only sees control-map changes
 -- (disconnect / absorb) because ControlModel is unaware of death -- a hazard
--- death updates RoundState + parks the body but leaves bodyOf untouched. Without
--- the aliveness check, a death during the 3s preview would commit a stale plan:
--- a live player would be handed the dead player's parked (anchored) body, and the
--- dead player would keep a live body (orphaned next cycle).
+-- death updates RoundState + sends the body to the balcony but leaves bodyOf
+-- untouched. Without the aliveness check, a death during the 3s preview would
+-- commit a stale plan: a live player would be handed the dead player's balcony
+-- body, and the dead player would keep a live body (orphaned next cycle).
 local function planIsCurrent(plan)
 	if not SwapController.planStillValid(plan) then
 		return false
@@ -328,9 +329,7 @@ local function endRound()
 	if winner then
 		local winnerBody = ControlManager.getControlledBody(winner)
 		if winnerBody then
-			for _, p in ipairs(Players:GetPlayers()) do
-				SpectateBody:FireClient(p, winnerBody)
-			end
+			SpectateBody:FireAllClients(winnerBody)
 		end
 	end
 	while remaining > 1 do

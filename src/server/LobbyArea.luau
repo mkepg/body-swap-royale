@@ -102,7 +102,8 @@ function LobbyArea.build()
 		folder
 	)
 	rail.Transparency = Config.LOBBY_RAILING_TRANSPARENCY
-	rail.CanCollide = true
+	-- CanCollide is already true from makePart; explicit here to document that
+	-- this railing is load-bearing fall protection (the pad floats over the void).
 end
 
 return LobbyArea
