@@ -39,7 +39,7 @@ function CadenceModel.interval(startCount, aliveCount, swapsSoFar, opts)
 	-- duel): countT then stays 0 and the progress term carries the whole ramp.
 	local denom = math.max(startCount - 2, 1)
 	local countT = clamp((startCount - aliveCount) / denom, 0, 1)
-	local progressT = math.min(swapsSoFar / opts.swapsToFloor, 1)
+	local progressT = clamp(swapsSoFar / opts.swapsToFloor, 0, 1)
 	local t = clamp(countT + opts.stallWeight * progressT, 0, 1)
 	return lerp(opts.maxInterval, opts.minInterval, t)
 end
