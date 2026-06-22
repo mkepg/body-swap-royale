@@ -16,6 +16,8 @@ across the round lifecycle, and the victory cam. Pairs with the unit test
    arena). Each can walk their body around the platform; looking forward/down they
    see the arena below. Walking into any edge is blocked — the perimeter walls and
    the (semi-transparent) front railing stop the body; nobody falls into the void.
+   **Also try jumping repeatedly against each wall (especially the front railing):**
+   the body must not clear it (walls are taller than a jump).
 
 2. **Round start → arena.** Once both are present, the lobby countdown runs and at
    round start both bodies **teleport down into the arena** spawn row; each client's
@@ -46,7 +48,7 @@ across the round lifecycle, and the victory cam. Pairs with the unit test
    folded into the arena at the **next** round start.
 
 ## Pass criteria
-- [ ] Bodies spawn on the balcony on join (step 1) and cannot walk off (railings hold).
+- [ ] Bodies spawn on the balcony on join (step 1), cannot walk off, and cannot JUMP over the railings.
 - [ ] Bodies move balcony → arena at round start (step 2).
 - [ ] An eliminated player is sent to the balcony and keeps control of their body (step 3).
 - [ ] Victory cam frames the winner for ALL clients during Ended (step 4).

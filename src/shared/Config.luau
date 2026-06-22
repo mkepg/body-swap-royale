@@ -98,7 +98,10 @@ Config.SPAWN_SPACING = 8
 -- so a gap would let a controlled body walk off and die between rounds.
 Config.LOBBY_ORIGIN = Vector3.new(0, 45, -64) -- balcony surface center
 Config.LOBBY_PAD_SIZE = Vector3.new(48, 1, 48) -- platform X, thickness(Y), Z
-Config.LOBBY_WALL_HEIGHT = 8 -- perimeter barrier height (fall protection)
+-- LOBBY_WALL_HEIGHT must comfortably exceed a jump so a body can't hop the railing
+-- into the void (JUMP_HEIGHT = 7.2; feet clear roughly that high). 12 leaves a safe
+-- margin -- the front railing is transparent, so a taller wall doesn't block the view.
+Config.LOBBY_WALL_HEIGHT = 12 -- perimeter barrier height (fall protection)
 Config.LOBBY_WALL_THICKNESS = 1
 Config.LOBBY_CAPACITY = 16 -- grid sized for up to this many bodies
 Config.LOBBY_PER_ROW = 4 -- balcony grid columns (rows = ceil(CAPACITY/PER_ROW))

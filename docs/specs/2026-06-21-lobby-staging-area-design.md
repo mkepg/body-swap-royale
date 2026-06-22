@@ -82,10 +82,10 @@ SpawnLayout.lobbySlot(index, perRow, spacing) -> dx, dz
 
 Mirrors `HazardSystem.build()`: constructs the balcony geometry **once**, parented under a named folder in `workspace` (e.g. `workspace.LobbyArea`). Idempotent (rebuild guard like `BodyManager.ensureFolder`).
 
-Geometry (all values are `Config` tunables; representative numbers):
-- **Platform:** an anchored, `CanCollide` `Part`, top surface at the balcony floor height, sized to comfortably hold the balcony grid (≈ `48 × 24` studs). Friendly soft-blue to echo the lobby banner.
-- **Placement:** `LOBBY_ORIGIN ≈ (0, 45, −60)` — raised ~45 studs and set back behind the arena's −Z edge (arena spans X,Z ∈ [−32, 32], surface Y = 0), so standing bodies that face +Z look down and across into the pit.
-- **Fall protection (load-bearing — it floats over the void):** full-perimeter barriers. Three solid short walls; the **arena-facing side** is a **transparent but `CanCollide`** glass railing so the downward view is unobstructed but no body can walk off.
+Geometry (all values are `Config` tunables; numbers below are the shipped values):
+- **Platform:** an anchored, `CanCollide` `Part`, top surface at the balcony floor height, sized to comfortably hold the balcony grid (`48 × 48` studs). Friendly soft-blue to echo the lobby banner.
+- **Placement:** `LOBBY_ORIGIN = (0, 45, −64)` — raised ~45 studs and set back behind the arena's −Z edge (arena spans X,Z ∈ [−32, 32], surface Y = 0), so standing bodies that face +Z look down and across into the pit.
+- **Fall protection (load-bearing — it floats over the void):** full-perimeter barriers, **taller than a jump** (`LOBBY_WALL_HEIGHT = 12` vs `JUMP_HEIGHT = 7.2`) so a body can't hop out. Three solid walls; the **arena-facing side** is a **transparent but `CanCollide`** glass railing so the downward view is unobstructed but no body can walk *or jump* off.
 - `LobbyArea` exposes only `build()`. Slot *positions* are owned by `BodyManager` (via `SpawnLayout` + `Config`), keeping all body-positioning logic in one place; `LobbyArea` is geometry-only.
 
 ### Component 3 — `src/server/BodyManager.luau` (changed)
@@ -112,8 +112,8 @@ Geometry (all values are `Config` tunables; representative numbers):
 ### Component 5 — `src/shared/Config.luau` (new tunables)
 
 Add a documented block (final names per the plan), e.g.:
-- `LOBBY_ORIGIN = Vector3.new(0, 45, -60)` — balcony surface-center origin (bodies spawn a few studs above).
-- `LOBBY_PAD_SIZE` / wall height / railing thickness — balcony geometry.
+- `LOBBY_ORIGIN = Vector3.new(0, 45, -64)` — balcony surface-center origin (bodies spawn a few studs above).
+- `LOBBY_PAD_SIZE` / `LOBBY_WALL_HEIGHT` (taller than `JUMP_HEIGHT`) / railing thickness — balcony geometry.
 - `LOBBY_PER_ROW = 4`, `LOBBY_SPACING ≈ 10` — balcony grid.
 - `LOBBY_FACE_TARGET = Vector3.new(0, 0, 0)` — the point bodies/cameras face (arena center).
 - Colors (soft-blue platform; glass-railing transparency).
@@ -127,7 +127,7 @@ Each value carries a comment explaining the geometric reasoning (matching the ex
   - `lobbySlot` grid: slots for index 1..N are pairwise distinct, spaced ≥ `spacing`, wrap into rows at `perRow`, and stay within the documented balcony footprint; grid is centered on the origin.
   - Run: `export PATH="$HOME/.rokit/bin:$PATH"; lune run tests/spawn_layout.spec`.
 - **Studio smoke test** — new `docs/smoke-tests/2026-06-21-lobby-staging-area-smoke-test.md`, a 2-client procedure (keep `Config.HAZARDS_ENABLED = false` so the floor stays safe while observing the loop):
-  1. **Join:** both clients spawn on the **balcony**, can walk around behind the railing, and looking forward see the arena below. Cannot walk off (railing blocks).
+  1. **Join:** both clients spawn on the **balcony**, can walk around behind the railing, and looking forward see the arena below. Cannot walk off — and cannot **jump** over the railing (walls are taller than a jump).
   2. **Round start:** at `beginRound`, both bodies teleport down into the **arena** spawn slots; camera retargets to the own body in the arena; hazards (if enabled) start.
   3. **Mid-round elimination (3+ players):** with a third client, drop one body into the void mid-round. That eliminated player's body teleports up to the **balcony** and they keep walking it around / watching the round below — no parked corpse in the arena.
   4. **Round end (victory cam):** force a finish (drop a body into the void). During the Ended "Next round in N" window, **all** clients' cameras frame the **winner** standing in the arena.
@@ -141,8 +141,16 @@ Each value carries a comment explaining the geometric reasoning (matching the ex
 - **Eliminated player mid-round:** the body they were controlling is sent to their balcony slot the instant they die, still under their control, so they walk the balcony / watch from above. They're excluded from `aliveRoster`, so that body is never swapped (`SwapController.plan` only sees alive players) nor void-killed (the void monitor only checks alive players). At round end `resetControl` returns them to their own body like everyone else. Sattolo guarantees no fixed point, so the controlled body is never the player's own — moving it can't disturb a live opponent.
 - **Last elimination ends the round:** with `MIN_PLAYERS_TO_CONTINUE = 2`, eliminating the second-to-last player drops alive to 1 and ends the round, so the **winner is never eliminated** and always remains in the arena as the victory-cam subject; the just-eliminated loser is on the balcony and the victory cam pulls their camera to the winner.
 - **Body with no `HumanoidRootPart`:** the shared `placeOnLobbySlot` guard makes `returnToLobby` / `sendToLobby` no-op (same guard as `resetBody`).
-- **Fall protection is load-bearing:** the balcony floats over the void; the perimeter barriers (incl. the `CanCollide` glass railing) must fully enclose the walkable area, or a player could walk a controlled body off and trigger a void death between rounds. The smoke test explicitly checks this.
+- **Fall protection is load-bearing:** the balcony floats over the void; the perimeter barriers (incl. the `CanCollide` glass railing) must fully enclose the walkable area **and be taller than a jump** (`LOBBY_WALL_HEIGHT = 12` > `JUMP_HEIGHT = 7.2`), or a player could walk/jump a controlled body off and trigger a void death between rounds. The smoke test explicitly checks walking *and jumping* the railing.
 - **Arena spawn math unchanged:** `SpawnLayout.arenaSlot` is asserted to reproduce the current positions, so the disappearing-tile interaction (tile-center spawns) is not regressed.
+
+## Known limitations (deferred — surfaced in review 2026-06-21)
+
+These are accepted for the MVP (2-friends playtest) and noted for later hardening; none are introduced by the eliminated-→-lobby change beyond what's marked:
+
+- **Concurrent disconnect during the post-death window can transiently yank an eliminated player.** `ControlModel` is deliberately *unaware of death* — an eliminated player keeps their `bodyOf`/`controllerOf` entries (only `RoundState.alive` changes). If another player disconnects while an eliminated player is on the balcony, the tested **absorb rule** may reassign that eliminated player onto an arena body (and the disconnecting player's avatar body — possibly the one the eliminated player is standing in — is destroyed). The glitch is visual and is cleaned up by `resetControl` at round end. A proper fix (teaching the disconnect/absorb path about death) is entangled with the load-bearing, lune-tested disconnect design and deserves its own brainstorm — **not** hacked onto this branch.
+- **`BodyManager._index` is never reclaimed.** It increments per join for the whole server session, so the 17th *cumulative* join computes an off-pad balcony slot (and an off-field arena slot). This is the **same accepted limitation** as the arena's single-row spawn (see the `Config.SPAWN_ORIGIN` note: "Fine for the 2-player MVP — when raising player count, spread across rows or enlarge the grid"). Fix both together (a freed-index free-list) when raising player counts.
+- **Victory-cam subject can vanish if the winner's body owner disconnects** during the `ROUND_END_SECONDS` countdown (the avatar body is destroyed on disconnect). Rare; `resetControl` retargets every camera when the countdown ends.
 
 ## Files touched
 

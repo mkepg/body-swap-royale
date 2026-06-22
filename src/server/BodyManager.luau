@@ -86,9 +86,10 @@ function BodyManager.createBody(player)
 	-- A joining player starts in the waiting state, so spawn on the balcony.
 	-- Both slots are stored so resetBody (arena) and returnToLobby (balcony) can
 	-- reposition the body for the rest of its life without recomputing.
+	local lobbyCF = lobbyCFrame(index)
 	BodyManager.arenaSlotByOwner[player] = arenaCFrame(index)
-	BodyManager.lobbySlotByOwner[player] = lobbyCFrame(index)
-	body:PivotTo(BodyManager.lobbySlotByOwner[player])
+	BodyManager.lobbySlotByOwner[player] = lobbyCF
+	body:PivotTo(lobbyCF)
 	body:SetAttribute("OwnerUserId", player.UserId)
 	body.Parent = ensureFolder()
 
@@ -120,23 +121,29 @@ function BodyManager.removeBody(player)
 	BodyManager.lobbySlotByOwner[player] = nil
 end
 
+-- Shared pivot primitive: unanchor root, zero both velocities, PivotTo cf.
+-- Used by resetBody (arena slot) and placeOnLobbySlot (lobby slot) so the
+-- physics-reset sequence only lives in one place.
+local function pivotBodyTo(body, cf)
+	local root = body:FindFirstChild("HumanoidRootPart")
+	if not root then
+		return false -- can't safely reposition without a root
+	end
+	root.Anchored = false
+	root.AssemblyLinearVelocity = Vector3.zero
+	root.AssemblyAngularVelocity = Vector3.zero
+	body:PivotTo(cf)
+	return true
+end
+
 -- Round start: reposition a player's OWN body to its spawn slot and re-enable
 -- physics. The body was never killed (elimination is logical), so no revive is
 -- needed -- just unanchor, zero velocity, and pivot back to the spawn CFrame.
 function BodyManager.resetBody(player)
 	local body = BodyManager.bodyByOwner[player]
 	local cf = BodyManager.arenaSlotByOwner[player]
-	if not body or not cf then
-		return
-	end
-	local root = body:FindFirstChild("HumanoidRootPart")
-	if not root then
-		return -- can't safely reset (and reposition) without a root
-	end
-	root.Anchored = false
-	root.AssemblyLinearVelocity = Vector3.zero
-	root.AssemblyAngularVelocity = Vector3.zero
-	body:PivotTo(cf)
+	if not body or not cf then return end
+	pivotBodyTo(body, cf)
 end
 
 -- Reposition `body` onto `player`'s balcony slot, unanchored + zeroed. Shared by
@@ -146,17 +153,8 @@ end
 -- an anchored part).
 local function placeOnLobbySlot(player, body)
 	local cf = BodyManager.lobbySlotByOwner[player]
-	if not body or not cf then
-		return
-	end
-	local root = body:FindFirstChild("HumanoidRootPart")
-	if not root then
-		return -- can't safely reposition without a root
-	end
-	root.Anchored = false
-	root.AssemblyLinearVelocity = Vector3.zero
-	root.AssemblyAngularVelocity = Vector3.zero
-	body:PivotTo(cf)
+	if not body or not cf then return end
+	pivotBodyTo(body, cf)
 end
 
 -- Between rounds (and the Lobby phase): reposition a player's OWN body to its
