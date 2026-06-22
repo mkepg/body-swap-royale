@@ -24,6 +24,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local RoundState = require(ReplicatedStorage.Shared.RoundState)
 local GraceModel = require(ReplicatedStorage.Shared.GraceModel)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local CadenceModel = require(ReplicatedStorage.Shared.CadenceModel)
 local BodyManager = require(script.Parent.BodyManager)
 local ControlManager = require(script.Parent.ControlManager)
 local SwapController = require(script.Parent.SwapController)
@@ -43,6 +44,12 @@ local model = RoundState.new(Config.MIN_PLAYERS_TO_START, Config.MIN_PLAYERS_TO_
 -- position at its last swap, so the void monitor can derive horizontal travel.
 local grace = GraceModel.new()
 local swapPos = {} -- [player] = Vector3
+
+-- Round-scoped dynamic-cadence state (reset in beginRound). cadenceStartCount is the
+-- alive count at round start; swapsSoFar counts swaps committed this round. CadenceModel
+-- maps these -> the next swap interval (20s calm round-start -> 8s frantic endgame).
+local cadenceStartCount = 0
+local swapsSoFar = 0
 
 -- The single monotonic clock for grace. Pure GraceModel takes `now` injected.
 local function now()
@@ -244,6 +251,8 @@ end
 
 local function beginRound()
 	RoundState.beginRound(model) -- Lobby -> Active; present snapshot into alive
+	cadenceStartCount = RoundState.aliveCount(model)
+	swapsSoFar = 0
 	-- Unanchor + reposition bodies BEFORE re-granting ownership: SetNetworkOwner
 	-- errors on an anchored part. (Lobby bodies are already unanchored, so the
 	-- unanchor in resetBody is defensive.)
@@ -268,14 +277,25 @@ local function waitActive(seconds)
 end
 
 -- Spin during Active. Each cycle: broadcast the swap deadline, free-play for
--- (CYCLE - PREVIEW), then run the PREVIEW window (plan + per-client preview,
+-- (interval - PREVIEW), then run the PREVIEW window (plan + per-client preview,
 -- re-planning if the roster churns), then commit the swap at T0.
 local function runActivePhase()
 	while RoundState.getPhase(model) == "Active" do
-		broadcastState(nil, workspace:GetServerTimeNow() + Config.CYCLE_SECONDS)
+		-- Dynamic cadence: the interval shrinks as players are eliminated and as the
+		-- round drags on (CadenceModel). The HUD counts down to this broadcast deadline.
+		-- Opts are read from Config each cycle so a smoke-test command-bar tweak of the
+		-- CADENCE_* tunables takes effect on the next swap.
+		local interval = CadenceModel.interval(
+			cadenceStartCount, RoundState.aliveCount(model), swapsSoFar, {
+				maxInterval = Config.CADENCE_MAX_INTERVAL,
+				minInterval = Config.CADENCE_MIN_INTERVAL,
+				swapsToFloor = Config.CADENCE_SWAPS_TO_FLOOR,
+				stallWeight = Config.CADENCE_STALL_WEIGHT,
+			})
+		broadcastState(nil, workspace:GetServerTimeNow() + interval)
 
 		-- Free play.
-		waitActive(Config.CYCLE_SECONDS - Config.PREVIEW_SECONDS)
+		waitActive(interval - Config.PREVIEW_SECONDS)
 		if RoundState.getPhase(model) ~= "Active" then
 			break
 		end
@@ -310,6 +330,8 @@ local function runActivePhase()
 		-- Commit at T0.
 		if plan then
 			commitSwap(plan)
+			swapsSoFar += 1 -- advances the cadence progress term (counts planned swaps; a
+			-- late roster-collapse abort inside commitSwap is benign -- the round is ending)
 		end
 	end
 end
