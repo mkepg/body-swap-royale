@@ -5,7 +5,7 @@ local server** in Studio (Test → Clients and Servers → 2 → Start).
 
 **Setup for a fast test** (Server view, command bar): temporarily shorten the clocks
 so you don't wait out the full timers, e.g.
-`local C = require(game.ReplicatedStorage.Shared.Config); C.CYCLE_SECONDS = 8; C.LOBBY_COUNTDOWN_SECONDS = 2; C.ROUND_END_SECONDS = 2`.
+`local C = require(game.ReplicatedStorage.Shared.Config); C.CADENCE_MAX_INTERVAL = 8; C.CADENCE_MIN_INTERVAL = 8; C.LOBBY_COUNTDOWN_SECONDS = 2; C.ROUND_END_SECONDS = 2`.
 Raise `VOID_Y` (e.g. `C.VOID_Y = 0`) if you want bodies to die from a small drop.
 
 **Procedure & PASS criteria:**
@@ -47,9 +47,10 @@ local RM      = require(game.ServerScriptService.Server.RoundManager)
 local CM      = require(game.ServerScriptService.Server.ControlManager)
 local TEST_GRACE = 3
 
-local orig = { VOID_Y = Config.VOID_Y, GRACE = Config.GRACE_SECONDS, CYCLE = Config.CYCLE_SECONDS }
+local orig = { VOID_Y = Config.VOID_Y, GRACE = Config.GRACE_SECONDS, CMAX = Config.CADENCE_MAX_INTERVAL, CMIN = Config.CADENCE_MIN_INTERVAL }
 local function restore()
-    Config.VOID_Y, Config.GRACE_SECONDS, Config.CYCLE_SECONDS = orig.VOID_Y, orig.GRACE, orig.CYCLE
+    Config.VOID_Y, Config.GRACE_SECONDS = orig.VOID_Y, orig.GRACE
+    Config.CADENCE_MAX_INTERVAL, Config.CADENCE_MIN_INTERVAL = orig.CMAX, orig.CMIN
 end
 local function roots()
     local t = {}
@@ -68,7 +69,7 @@ local r0 = roots(); local n = 0; for _ in pairs(r0) do n += 1 end
 if n < 2 then warn("[GRACE TEST] Need 2 players with bodies. Aborting."); return end
 if anyAnchored() then warn("[GRACE TEST] A body is already eliminated — start a FRESH active round and retry."); return end
 
-Config.CYCLE_SECONDS = 120
+Config.CADENCE_MAX_INTERVAL, Config.CADENCE_MIN_INTERVAL = 120, 120 -- pin the interval so no auto-swap interrupts the grace window
 Config.GRACE_SECONDS = TEST_GRACE
 Config.VOID_Y = orig.VOID_Y
 
