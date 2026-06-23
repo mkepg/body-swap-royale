@@ -202,4 +202,22 @@ function BodyManager.sendToLobby(player, body)
 	placeOnLobbySlot(player, body)
 end
 
+-- Reposition `body` back onto its avatar-owner's ARENA spawn slot (unanchored +
+-- zeroed) -- the arena mirror of sendToLobby. Used to rescue a still-alive survivor
+-- whom a disconnect-absorb moved onto a body parked on the balcony (see the
+-- disconnect-strand spec). Resolves the owner from the body's OwnerUserId attribute.
+-- No-op if the owner or their arena slot can't be resolved.
+function BodyManager.sendToArena(body)
+	if not body then
+		return
+	end
+	local userId = body:GetAttribute("OwnerUserId")
+	local owner = userId and Players:GetPlayerByUserId(userId)
+	local cf = owner and BodyManager.arenaSlotByOwner[owner]
+	if not cf then
+		return
+	end
+	pivotBodyTo(body, cf)
+end
+
 return BodyManager
