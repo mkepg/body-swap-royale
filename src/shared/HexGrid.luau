@@ -50,7 +50,8 @@ local function cubeRound(qf, rf)
 	if dx > dy and dx > dz then
 		rx = -ry - rz
 	elseif dy > dz then
-		ry = -rx - rz
+		-- y has the largest rounding error; rx and rz already carry the
+		-- least-error values, and ry is not returned, so nothing to correct here.
 	else
 		rz = -rx - ry
 	end
@@ -70,6 +71,8 @@ function HexGrid.spawnSlots(radius)
 	local slots = { { q = 0, r = 0 } }
 	for k = 1, radius do
 		-- Start at the ring corner center + k * direction {-1, 1}, walk all 6 sides.
+		-- (-k, k) is the corner reached via DIRECTIONS[6] {0, 1}; the walk then
+		-- follows DIRECTIONS[1..6] around the ring.
 		local q, r = -k, k
 		for i = 1, 6 do
 			for _ = 1, k do

@@ -44,6 +44,10 @@ do
 	local dx, dz = HexGrid.toWorld(1, 0, size)
 	local q, r = HexGrid.fromWorld(dx + 0.5, dz - 0.5, size)
 	expect(q == 1 and r == 0, "small offset must stay on the same hex")
+	-- near the boundary toward the +q neighbor, still inside hex (1,0)
+	local bx, bz = HexGrid.toWorld(1, 0, size)
+	local nq, nr = HexGrid.fromWorld(bx + 4.0, bz, size)
+	expect(nq == 1 and nr == 0, "point near the +q boundary must stay on hex (1,0)")
 	print("hexgrid: fromWorld nearest-center OK")
 end
 
@@ -64,6 +68,11 @@ do
 	for _, s in ipairs(slots) do
 		expect(valid[s.q .. ":" .. s.r], "spawn slot off-field: " .. s.q .. ":" .. s.r)
 	end
+	-- spiral order: center, then ring 1 (dist 1), then ring 2 (dist 2), ...
+	local function ringDist(s) return math.max(math.abs(s.q), math.abs(s.r), math.abs(s.q + s.r)) end
+	expect(ringDist(slots[1]) == 0, "slot 1 is the center")
+	for i = 2, 7 do expect(ringDist(slots[i]) == 1, "slots 2-7 are ring 1") end
+	for i = 8, 19 do expect(ringDist(slots[i]) == 2, "slots 8-19 are ring 2") end
 	print("hexgrid: spawnSlots OK")
 end
 
@@ -75,6 +84,7 @@ do
 	expect(HexGrid.floorAt(-17.2, surfaceY, gap, band, count) == 2, "root above floor 2")
 	expect(HexGrid.floorAt(-3, surfaceY, gap, band, count) == nil, "between floors -> nil")
 	expect(HexGrid.floorAt(-30, surfaceY, gap, band, count) == nil, "below all floors -> nil")
+	expect(HexGrid.floorAt(0, surfaceY, gap, band, count) == nil, "exactly at surface is airborne (open lower bound)")
 	print("hexgrid: floorAt banding OK")
 end
 
