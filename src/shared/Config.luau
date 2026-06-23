@@ -27,37 +27,36 @@ Config.GRACE_FLOOR_SECONDS = 0.5
 -- quickly while ignoring sampling jitter. Vertical fall does not count.
 Config.GRACE_MOVE_EPSILON = 0.5
 
--- RoundManager loop tunables (server-owned clocks + the void death source).
+-- RoundManager loop tunables (server-owned clocks).
 -- LOBBY_COUNTDOWN_SECONDS: pre-round countdown once enough players are present.
 -- ROUND_END_SECONDS: winner-display window before resetting to Lobby.
--- VOID_Y: a controlled body whose root falls below this Y is eliminated. With the
--- disappearing-tile floor (TILE_SURFACE_Y = 0), this sits a few studs under the
--- tile bottoms, so falling through a `gone` tile crosses it in ~0.6s -- quick
--- enough for the post-swap grace window (1.5s) to protect a freshly-swapped body.
--- Still far above Workspace.FallenPartsDestroyHeight (default -500).
 Config.LOBBY_COUNTDOWN_SECONDS = 5
 Config.ROUND_END_SECONDS = 5
-Config.VOID_Y = -4
+-- A controlled body whose root falls below this Y is eliminated (grace-gated, via
+-- the void monitor). With the 3-floor hex arena (floors at 0 / -10 / -20), this
+-- sits just under the LOWEST floor, so only a body that falls off floor 3 dies --
+-- falling through an upper floor lands on the next floor down. Still far above
+-- Workspace.FallenPartsDestroyHeight (default -500).
+Config.VOID_Y = -24
 
--- Disappearing-tile hazard (the MVP arena floor). The pure TileFieldModel decides
--- each tile's phase from these durations; HazardSystem maps phase -> part props.
--- A tile cycles solid -> warning(red) -> gone(no collision) -> solid.
--- HAZARDS_ENABLED: dev/test switch (NOT a gameplay tunable). When false,
--- HazardSystem builds the floor but never runs the disappearing cycle, so tiles
--- stay solid and nobody falls -- lets you reach/observe the 30s swap without a
--- body dying first. Leave true for real play.
+-- Hex-A-Gone arena floor. Three stacked hexagonal floors; a hex arms the instant a
+-- body stands on it, flashes the warning color for HEX_GONE_DELAY_SECONDS, then
+-- vanishes for good (monotonic -- no return that round). Pure decisions live in
+-- HexGrid (geometry) + HexErosionModel (arm/phase); HazardSystem maps phase -> parts.
+-- HAZARDS_ENABLED: dev/test switch (NOT a gameplay tunable). When false, floors build
+-- but never arm (stay solid), so swaps can be observed without bodies falling.
 Config.HAZARDS_ENABLED = true
-Config.TILE_SOLID_SECONDS = 4 -- standable time per cycle
-Config.TILE_WARNING_SECONDS = 2 -- red telegraph (GDD §5: "red 2s before")
-Config.TILE_GONE_SECONDS = 1.5 -- vanished (fall-through) window
--- Grid geometry. GRID_SIZE x GRID_SIZE tiles of TILE_SIZE studs each, centered on
--- the X/Z origin; top face at TILE_SURFACE_Y. 8x8 @ 8 studs = a 64x64 arena.
-Config.TILE_GRID_SIZE = 8
-Config.TILE_SIZE = 8
-Config.TILE_SURFACE_Y = 0
-Config.TILE_THICKNESS = 1
-Config.TILE_COLOR_SOLID = Color3.fromRGB(150, 150, 150) -- neutral grey
-Config.TILE_COLOR_WARNING = Color3.fromRGB(200, 40, 40) -- alarm red
+Config.HEX_RADIUS = 3            -- rings from center; tiles/floor = 1+3R(R+1) = 37
+Config.HEX_SIZE = 6              -- hex circumradius (center-to-vertex = side) in studs
+Config.HEX_FLOOR_COUNT = 3       -- stacked floors
+Config.HEX_FLOOR_GAP = 10        -- vertical studs between floors (floors at 0/-10/-20)
+Config.HEX_STAND_BAND = 6        -- root-height window above a floor that counts as "on" it
+                                 -- (must be < HEX_FLOOR_GAP so floor bands don't overlap)
+Config.HEX_GONE_DELAY_SECONDS = 1.2 -- step -> gone delay (warning color shows the whole time)
+Config.TILE_SURFACE_Y = 0        -- top-floor surface Y (reused by HazardSystem + spawn)
+Config.TILE_THICKNESS = 1        -- hex part thickness
+Config.TILE_COLOR_SOLID = Color3.fromRGB(150, 150, 150)   -- neutral grey
+Config.TILE_COLOR_WARNING = Color3.fromRGB(200, 40, 40)   -- alarm red (armed/imminent)
 
 -- Round population thresholds (consumed by RoundState via the server glue).
 -- MIN_PLAYERS_TO_START gates beginning a round; default 2 keeps the MVP playable
@@ -82,22 +81,10 @@ Config.NORMALIZED_SCALES = {
 	ProportionScale = 0,
 }
 
--- Spawn placement for the persistent bodies: a centered GRID (pure SpawnLayout),
--- dropping onto the solid tile floor from SPAWN_ORIGIN.Y. SPAWN_ORIGIN is the grid
--- CENTER (X/Z) and the spawn height (Y).
--- IMPORTANT: spawn positions MUST land on tile CENTERS, not seams. Tile centers sit
--- at odd multiples of TILE_SIZE/2 (X,Z in {..-12,-4,4,12..}); seams (multiples of
--- TILE_SIZE: ..0,8,16..) are where 2-4 tiles meet, and a body straddling one is held
--- up by every tile it touches -- so it only falls when they ALL vanish and looks
--- invincible. With ARENA_SPACING = TILE_SIZE, an even ARENA_PER_ROW, and the grid
--- centered on the field origin (0,0), every slot is a tile center.
--- The grid is sized to LOBBY_CAPACITY (the player cap) and stays within the field
--- [-32,+32]: ARENA_PER_ROW = 4 over 4 rows = 16 slots at X,Z in {-12,-4,4,12} --
--- so no body spawns off the floor (fixes the old single-row layout that put body 6+
--- at X>=36). BodyManager reclaims slot indices on leave, so churn never overflows.
-Config.SPAWN_ORIGIN = Vector3.new(0, 5, 0) -- grid CENTER (X,Z) + spawn height (Y)
-Config.ARENA_PER_ROW = 4                   -- grid columns (rows = ceil(LOBBY_CAPACITY/this))
-Config.ARENA_SPACING = 8                   -- studs between slots; = TILE_SIZE so slots hit tile centers
+-- Spawn placement for the persistent bodies: round-start bodies drop onto the TOP
+-- hex floor at SPAWN_ORIGIN.Y. Arena slot positions come from HexGrid.spawnSlots
+-- (an outward spiral of hex centers); the lobby balcony still uses SpawnLayout.
+Config.SPAWN_ORIGIN = Vector3.new(0, 5, 0) -- arena center (X,Z) + spawn height (Y)
 
 -- Lobby staging area: an elevated balcony overlooking the arena. Players wait
 -- here between rounds and on join; LobbyArea builds the geometry and BodyManager
