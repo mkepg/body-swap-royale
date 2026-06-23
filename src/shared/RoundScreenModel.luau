@@ -5,7 +5,7 @@
 	No Roblox APIs, no clocks, no RNG: the caller injects the RoundStateChanged
 	snapshot plus local-player context, and gets back what the banner should show.
 	The renderer maps the semantic `accent` string to a Color3, keeping this module
-	Roblox-free. Mirrors SwapTelegraphModel / TileFieldModel / GraceModel.
+	Roblox-free. Mirrors SwapTelegraphModel / GraceModel.
 
 	state = { phase, winnerName, secondsRemaining }   (swap fields are ignored)
 	ctx   = { localPlayerName, connectedCount, minPlayers }
