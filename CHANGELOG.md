@@ -7,17 +7,31 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
-- `src/shared/TileFieldModel.luau` — pure, Roblox-free disappearing-tile phase
-  decision (`phaseAt` → `solid`/`warning`/`gone`, deterministic `offsetFor`).
-  Time-agnostic like `RoundState`/`GraceModel`; unit tested with lune
-  (`tests/tile_field_model.spec.luau`).
-- `src/server/HazardSystem.luau` — server glue building the MVP tile-field arena
-  (replaces the baseplate) and driving each tile's color/transparency/collision
-  from `TileFieldModel` during Active rounds. Death reuses the existing void
-  monitor (no new death path); grace gates it automatically.
-- `Config` tile tunables (`TILE_SOLID_SECONDS`, `TILE_WARNING_SECONDS`,
-  `TILE_GONE_SECONDS`, `TILE_GRID_SIZE`, `TILE_SIZE`, `TILE_SURFACE_Y`,
-  `TILE_THICKNESS`, `TILE_COLOR_SOLID`, `TILE_COLOR_WARNING`).
+- **Hex-A-Gone arena** (replaces the time-driven square disappearing-tile floor):
+  - `src/shared/HexGrid.luau` — pure, Roblox-free flat-top hex geometry (`tiles`,
+    axial↔world `toWorld`/`fromWorld` via cube-rounding, outward-spiral
+    `spawnSlots`, vertical `floorAt` banding). Number-in/number-out like
+    `SpawnLayout`; unit tested with lune (`tests/hex_grid.spec.luau`).
+  - `src/shared/HexErosionModel.luau` — pure, Roblox-free step-driven erosion
+    (`arm` → grace-gated, idempotent erosion start; `phaseAt` → monotonic
+    `solid`/`warning`/`gone`). Supersedes the cyclic `TileFieldModel`; unit tested
+    with lune (`tests/hex_erosion_model.spec.luau`).
+  - `src/server/HazardSystem.luau` — rewritten to build the arena as **three
+    stacked hexagonal floors** (each hex = 3 rotated `Block` parts; replaces the
+    baseplate) and erode them step-driven: a hex arms when a body stands on it,
+    warns, then vanishes for good. Driven per-tick by `RoundManager`'s void monitor
+    via `step(now, samples)` (one server loop). Falling lands you on the floor
+    below; only a fall off the lowest floor crosses `Config.VOID_Y` → the existing
+    grace-gated void monitor (no new death path). The hex under a freshly-swapped
+    body won't arm until its grace ends.
+  - `Config` hex tunables (`HEX_RADIUS`, `HEX_SIZE`, `HEX_FLOOR_COUNT`,
+    `HEX_FLOOR_GAP`, `HEX_STAND_BAND`, `HEX_GONE_DELAY_SECONDS`; reused
+    `TILE_SURFACE_Y`/`TILE_THICKNESS`/`TILE_COLOR_SOLID`/`TILE_COLOR_WARNING`).
+  - `BodyManager` round-start spawns now land on hex centers
+    (`HexGrid.spawnSlots`) on the top floor; `Config.VOID_Y` relocated to `-24`
+    (below the lowest hex floor). Removed `TileFieldModel` and the square-tile
+    `Config` fields (`TILE_SOLID_SECONDS`/`TILE_WARNING_SECONDS`/`TILE_GONE_SECONDS`/
+    `TILE_GRID_SIZE`/`TILE_SIZE`/`ARENA_PER_ROW`/`ARENA_SPACING`).
 - `src/shared/GraceModel.luau` — pure, Roblox-free post-swap grace state machine
   (per-player `graceUntil`/`graceMinFloor`/`hasMoved` + `canDieFromHazard`,
   TDD §2). Time-agnostic like `RoundState`/`ControlModel`; unit tested with lune
