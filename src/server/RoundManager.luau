@@ -383,8 +383,22 @@ function RoundManager.addPlayer(player)
 end
 
 function RoundManager.removePlayer(player)
+	-- Capture aliveness BEFORE RoundState drops the player. The rescue below applies
+	-- only when an ELIMINATED leaver's disconnect-absorb would hand the parked body it
+	-- was controlling to a still-ALIVE survivor -- which would otherwise strand that
+	-- survivor on the balcony and stop the round from ever ending (disconnect-strand spec).
+	local leaverWasAlive = RoundState.isAlive(model, player)
 	RoundState.removePlayer(model, player) -- lifecycle (may auto-end the round)
-	ControlManager.removePlayer(player)    -- absorb + destroy the leaver's own body
+	local decision = ControlManager.removePlayer(player) -- absorb + destroy the leaver's own body
+	-- Alive-aware rescue: reposition the survivor's newly-absorbed body back into the
+	-- arena and re-assert their ownership (reposition-then-re-own, like beginRound, so
+	-- the teleport replicates onto the client-owned body). Their camera follows the
+	-- body's humanoid, so no extra remote is needed.
+	if not leaverWasAlive and decision and decision.reassign
+		and RoundState.isAlive(model, decision.reassign.player) then
+		BodyManager.sendToArena(decision.reassign.body)
+		ControlManager.regrantControl(decision.reassign.player)
+	end
 	GraceModel.clear(grace, player)
 	swapPos[player] = nil
 	-- If the disconnect ended the round, the Active loop observes phase Ended and
