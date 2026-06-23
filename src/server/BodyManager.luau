@@ -12,6 +12,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.Config)
 local SpawnLayout = require(ReplicatedStorage.Shared.SpawnLayout)
+local HexGrid = require(ReplicatedStorage.Shared.HexGrid)
 
 local BodyManager = {}
 BodyManager.bodyByOwner = {} -- [player] = body wearing that player's avatar
@@ -19,9 +20,11 @@ BodyManager.arenaSlotByOwner = {} -- [player] = arena spawn CFrame (round-start 
 BodyManager.lobbySlotByOwner = {} -- [player] = balcony slot CFrame (join + between-rounds)
 BodyManager.folder = nil
 
--- Grid row counts, derived once from Config (read-only at runtime).
+-- Lobby grid row count, derived once from Config (read-only at runtime).
 local LOBBY_ROWS = math.ceil(Config.LOBBY_CAPACITY / Config.LOBBY_PER_ROW)
-local ARENA_ROWS = math.ceil(Config.LOBBY_CAPACITY / Config.ARENA_PER_ROW)
+-- Arena spawn slots: an outward spiral of hex centers (pure HexGrid), indexed by
+-- the body's 1-based slot. 37 slots at HEX_RADIUS=3 cover the 16-body cap.
+local ARENA_SLOTS = HexGrid.spawnSlots(Config.HEX_RADIUS)
 
 -- Slot allocator: hand out a 1-based grid index in [1, LOBBY_CAPACITY] per body and
 -- RECLAIM it when the body is removed, so join/leave churn never pushes a body past
@@ -78,12 +81,13 @@ local function buildAvatarBody(player)
 	return body
 end
 
--- Arena spawn CFrame for a 1-based body index: a centered grid (pure SpawnLayout)
--- offset from the arena center, at the spawn height. Slots land on tile centers
--- within the field, so no body spawns off the floor.
+-- Arena spawn CFrame for a 1-based body index: a hex center (pure HexGrid) offset
+-- from the arena center, at the spawn height. Bodies drop onto the TOP hex floor.
+-- Over-cap indices clamp to the last slot (matches the slot allocator's clamp).
 local function arenaCFrame(index)
 	local o = Config.SPAWN_ORIGIN
-	local dx, dz = SpawnLayout.arenaSlot(index, Config.ARENA_PER_ROW, ARENA_ROWS, Config.ARENA_SPACING)
+	local slot = ARENA_SLOTS[index] or ARENA_SLOTS[#ARENA_SLOTS]
+	local dx, dz = HexGrid.toWorld(slot.q, slot.r, Config.HEX_SIZE)
 	return CFrame.new(o.X + dx, o.Y, o.Z + dz)
 end
 
