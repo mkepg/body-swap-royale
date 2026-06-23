@@ -2,8 +2,8 @@
 	HexErosionModel -- PURE step-driven, monotonic tile erosion for Hex-A-Gone.
 	Location (Roblox): ReplicatedStorage/Shared/HexErosionModel (ModuleScript)
 
-	Answers two questions, no clock reads / RNG (lune-tested, like TileFieldModel
-	was for the old cyclic floor):
+	Answers two questions, no clock reads / RNG (lune-tested, pure like the
+	project's other shared decision models):
 	  arm     -- when does a tile's erosion timer start? (grace-gated, idempotent)
 	  phaseAt -- given that start time + now, what phase is the tile in?
 

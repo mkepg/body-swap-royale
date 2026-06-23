@@ -4,7 +4,7 @@
 
 	No Roblox APIs (no Vector3/CFrame/Color3), no clocks, no RNG. Number-in /
 	number-out; the server glue (BodyManager) turns the returned components into
-	CFrames. Mirrors the project's other pure modules (TileFieldModel, RoundState).
+	CFrames. Mirrors the project's other pure modules (HexGrid, RoundState).
 
 	Two layouts, both centered grids (shared geometry):
 	  arenaSlot -- the in-arena spawn grid. With spacing = TILE_SIZE the slots land
