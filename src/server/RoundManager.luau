@@ -199,6 +199,11 @@ local function startMonitor()
 	monitorToken = token
 	task.spawn(function()
 		while monitorToken == token do
+			local t = now()
+			-- One server loop now drives BOTH void death and hex erosion: gather a
+			-- body sample per alive player (position + whether grace still shields it)
+			-- and hand them to HazardSystem.step after the per-player death check.
+			local samples = {}
 			for _, player in ipairs(Players:GetPlayers()) do
 				if RoundState.isAlive(model, player) then
 					local body = ControlManager.getControlledBody(player)
@@ -215,6 +220,18 @@ local function startMonitor()
 								swapPos[player] = nil
 							end
 						end
+						-- Erosion sample. graceBlocked reuses the SAME grace gate as
+						-- hazard death: while a freshly-swapped body still can't die
+						-- from a hazard, the hex under it won't arm either. Computed
+						-- AFTER the move check, so moving (which clears grace) also
+						-- un-blocks arming.
+						local graceBlocked = not GraceModel.canDieFromHazard(grace, player, t)
+						samples[#samples + 1] = {
+							dx = root.Position.X,
+							dz = root.Position.Z,
+							y = root.Position.Y,
+							graceBlocked = graceBlocked,
+						}
 						-- Void death source, gated by the post-swap grace window.
 						if root.Position.Y < Config.VOID_Y then
 							RoundManager.eliminateFromHazard(player)
@@ -222,6 +239,7 @@ local function startMonitor()
 					end
 				end
 			end
+			HazardSystem.step(t, samples)
 			task.wait(0.1)
 		end
 	end)
@@ -412,7 +430,7 @@ function RoundManager.forceSwap()
 end
 
 function RoundManager.start()
-	HazardSystem.build() -- construct the tile-field arena once (replaces the baseplate)
+	HazardSystem.build() -- construct the 3-floor hex arena once (replaces the baseplate)
 	LobbyArea.build() -- construct the elevated lobby balcony once
 	task.spawn(function()
 		while true do
