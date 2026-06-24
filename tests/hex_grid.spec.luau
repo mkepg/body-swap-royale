@@ -51,6 +51,23 @@ do
 	print("hexgrid: fromWorld nearest-center OK")
 end
 
+-- fromWorld must never return IEEE-754 negative zero. Cube re-derivation produces
+-- `-0` at the centre tile (q=0, r=0); since `0 == -0` numerically but `tostring(-0)
+-- == "-0"`, a stringified key like "floor:q:r" silently misses the lookup. Numeric
+-- equality alone (the round-trip check above) does NOT catch this -- the assertion
+-- has to inspect tostring.
+do
+	local q, r = HexGrid.fromWorld(0, 0, 6)
+	expect(q == 0 and r == 0, "fromWorld(0,0) numeric == (0,0)")
+	expect(tostring(q) == "0", "fromWorld(0,0) q tostring must be \"0\", got " .. tostring(q))
+	expect(tostring(r) == "0", "fromWorld(0,0) r tostring must be \"0\", got " .. tostring(r))
+	-- Same check via the field's actual centre toWorld() output (round-trip through 0):
+	local cdx, cdz = HexGrid.toWorld(0, 0, 6)
+	local cq, cr = HexGrid.fromWorld(cdx, cdz, 6)
+	expect(tostring(cq) == "0" and tostring(cr) == "0", "centre tile must stringify to \"0\":\"0\"")
+	print("hexgrid: fromWorld negative-zero canonicalised OK")
+end
+
 -- spawnSlots: spiral, distinct, count == tiles count, >= player cap, all in-field.
 do
 	local slots = HexGrid.spawnSlots(3)

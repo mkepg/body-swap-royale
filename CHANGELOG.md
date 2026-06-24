@@ -20,6 +20,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
     so distinct tiles leave a thin grout seam with zero coincident geometry (kills the
     residual edge z-fighting). Vertical separation widened hard (`HEX_FLOOR_GAP` 10 →
     50; `VOID_Y` → -304). Retired `TILE_COLOR_SOLID`.
+  - **Centre-tile negative-zero fix (2026-06-25):** `HexGrid.fromWorld(0, 0, *)`
+    returned `q=0, r=-0`. Lua treats `-0 == 0` numerically, so the lune round-trip
+    test passed, but `tostring(-0) == "-0"` differs from `"0"`, so HazardSystem's
+    string-keyed `tileByKey["floor:q:r"]` lookup silently missed the centre tile of
+    every floor — the player assigned the centre spawn slot could never arm the hex
+    they were standing on (the "tile doesn't turn red on first contact" bug). Fixed
+    by canonicalising `-0` → `0` in `cubeRound` (`return rx + 0, rz + 0`). Added a
+    regression test that checks `tostring` of the returned coords, since numeric
+    equality alone doesn't catch this class of bug.
   - **Wedge-composed tile fallback (2026-06-25):** the EditableMesh path silently
     no-ops in this place because Experience Settings > Security > Allow Mesh/Image
     Access is off — `pcall` returns ok but the resulting `MeshPart` has no triangles,
