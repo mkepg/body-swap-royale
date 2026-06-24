@@ -20,6 +20,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
     so distinct tiles leave a thin grout seam with zero coincident geometry (kills the
     residual edge z-fighting). Vertical separation widened hard (`HEX_FLOOR_GAP` 10 →
     50; `VOID_Y` → -304). Retired `TILE_COLOR_SOLID`.
+  - **Wedge-composed tile fallback (2026-06-25):** the EditableMesh path silently
+    no-ops in this place because Experience Settings > Security > Allow Mesh/Image
+    Access is off — `pcall` returns ok but the resulting `MeshPart` has no triangles,
+    so it rendered as its rectangular AABB (the "squares with gaps" bug). `HazardSystem`
+    now composes each tile from **5 stock parts** (1 central `Block` + 4 `WedgePart`
+    end-caps) that meet edge-to-edge with NO overlap. Cap rotations derived from a
+    Studio probe so each wedge's slanted face lies flat on top with the right-angle
+    pointing inward to the hex center; the 4 triangles + central block tile the
+    hexagon exactly. Stock parts only — guaranteed to render. `HexPrism` is retained
+    (and still lune-tested) for the future EditableMesh path if the security setting
+    is enabled later.
   - `src/shared/HexGrid.luau` — pure, Roblox-free flat-top hex geometry (`tiles`,
     axial↔world `toWorld`/`fromWorld` via cube-rounding, outward-spiral
     `spawnSlots`, vertical `floorAt` banding). Number-in/number-out like
