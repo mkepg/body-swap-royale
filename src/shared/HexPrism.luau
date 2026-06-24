@@ -1,5 +1,5 @@
 --[[
-	HexPrism -- PURE pointy-top hexagonal-prism mesh geometry for the Hex-A-Gone tiles.
+	HexPrism -- PURE flat-top hexagonal-prism mesh geometry for the Hex-A-Gone tiles.
 	Location (Roblox): ReplicatedStorage/Shared/HexPrism (ModuleScript)
 
 	No Roblox APIs (returns plain {x,y,z} vertex arrays + 1-based triangle index
@@ -10,17 +10,10 @@
 
 	Output: { vertices = { {x,y,z}, ... 12 }, triangles = { {i0,i1,i2}, ... 20 } }.
 	Vertices 1..6 are the top ring (+thickness/2), 7..12 the bottom ring
-	(-thickness/2), both on the circumradius `size`. Vertices are placed at angles
-	30 + 60*i (pointy-top: a vertex sits at world +Z, the next at the +X edge top
-	corner, etc.). Triangle order is the 4 top-fan, then 4 bottom-fan, then 12 side
-	triangles -- each wound so its normal points outward (top +Y, bottom -Y, sides
-	radially out). The winding is computed, not hand-ordered, so it is robust and
-	lune-verifiable.
-
-	NOTE: currently unused by HazardSystem (which composes tiles from stock Block +
-	WedgePart primitives because the EditableMesh API requires Experience Settings >
-	Security > Allow Mesh/Image Access). Kept (and lune-tested) so the EditableMesh
-	path drops back in cleanly once that setting is enabled.
+	(-thickness/2), both on the circumradius `size`. Triangle order is the 4 top-fan,
+	then 4 bottom-fan, then 12 side triangles -- each wound so its normal points
+	outward (top +Y, bottom -Y, sides radially out). The winding is computed, not
+	hand-ordered, so it is robust and lune-verifiable.
 --]]
 
 local HexPrism = {}
@@ -33,18 +26,17 @@ local function triNormal(a, b, c)
 	return uy * vz - uz * vy, uz * vx - ux * vz, ux * vy - uy * vx
 end
 
--- Build a pointy-top hex prism of circumradius `size` and `thickness` (studs),
--- centered at the local origin. Vertices at angles 30+60*i (so a vertex sits at
--- world +Z, matching the pointy-top orientation in HexGrid).
+-- Build a flat-top hex prism of circumradius `size` and `thickness` (studs),
+-- centered at the local origin.
 function HexPrism.build(size, thickness)
 	local hy = thickness / 2
 	local verts = {}
 	for i = 0, 5 do
-		local ang = math.rad(30 + 60 * i)
+		local ang = math.rad(60 * i)
 		verts[i + 1] = { size * math.cos(ang), hy, size * math.sin(ang) }   -- top ring  -> 1..6
 	end
 	for i = 0, 5 do
-		local ang = math.rad(30 + 60 * i)
+		local ang = math.rad(60 * i)
 		verts[7 + i] = { size * math.cos(ang), -hy, size * math.sin(ang) }  -- bottom ring -> 7..12
 	end
 

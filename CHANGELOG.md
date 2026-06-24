@@ -20,16 +20,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
     so distinct tiles leave a thin grout seam with zero coincident geometry (kills the
     residual edge z-fighting). Vertical separation widened hard (`HEX_FLOOR_GAP` 10 →
     50; `VOID_Y` → -304). Retired `TILE_COLOR_SOLID`.
-  - **Pointy-top orientation (2026-06-25):** switched the lattice and tile mesh from
-    flat-top to pointy-top to match the Fall-Guys reference. `HexGrid.toWorld` /
-    `fromWorld` swap to the pointy-top formulas (`dx = √3·size·(q + r/2)`,
-    `dz = 1.5·size·r`). `HexPrism` vertices shift by 30° (vertex 0 at world +Z).
-    `HazardSystem.buildHexParts` swaps the central block's X/Z dimensions
-    (`R√3 × T × R`) and the wedge caps' (`sy`, `sz`) pair so the 4 caps now tile the
-    TOP and BOTTOM end-triangles (along world ±Z) -- the 4 CFrame.Angles rotations
-    stay identical. Verified live: all 4 cap top-triangles land on the 6 hex
-    perimeter vertices, and rows along world +X (the visually prominent honeycomb
-    "rows") are at constant `r`.
   - **Centre-tile negative-zero fix (2026-06-25):** `HexGrid.fromWorld(0, 0, *)`
     returned `q=0, r=-0`. Lua treats `-0 == 0` numerically, so the lune round-trip
     test passed, but `tostring(-0) == "-0"` differs from `"0"`, so HazardSystem's
