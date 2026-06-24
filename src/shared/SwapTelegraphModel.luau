@@ -4,7 +4,7 @@
 
 	No Roblox APIs and no clocks: the caller injects `secondsUntilSwap` (and the
 	preview length). Returns what the HUD should show, so the client renders and
-	lune tests the same logic. Mirrors TileFieldModel / GraceModel.
+	lune tests the same logic. Mirrors HexErosionModel / GraceModel.
 --]]
 
 local SwapTelegraphModel = {}

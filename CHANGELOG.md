@@ -7,17 +7,63 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
-- `src/shared/TileFieldModel.luau` — pure, Roblox-free disappearing-tile phase
-  decision (`phaseAt` → `solid`/`warning`/`gone`, deterministic `offsetFor`).
-  Time-agnostic like `RoundState`/`GraceModel`; unit tested with lune
-  (`tests/tile_field_model.spec.luau`).
-- `src/server/HazardSystem.luau` — server glue building the MVP tile-field arena
-  (replaces the baseplate) and driving each tile's color/transparency/collision
-  from `TileFieldModel` during Active rounds. Death reuses the existing void
-  monitor (no new death path); grace gates it automatically.
-- `Config` tile tunables (`TILE_SOLID_SECONDS`, `TILE_WARNING_SECONDS`,
-  `TILE_GONE_SECONDS`, `TILE_GRID_SIZE`, `TILE_SIZE`, `TILE_SURFACE_Y`,
-  `TILE_THICKNESS`, `TILE_COLOR_SOLID`, `TILE_COLOR_WARNING`).
+- **Hex-A-Gone arena** (replaces the time-driven square disappearing-tile floor):
+  - **Rendering + depth revision (2026-06-24):** each tile is now ONE true
+    hexagonal-prism `MeshPart` (built once via `AssetService` EditableMesh from the
+    new pure `src/shared/HexPrism.luau`, then cloned) — fixes the inter-tile gaps and
+    the z-fighting when a stepped tile recolored. `HexPrism.build` returns vertex +
+    triangle lists with computed-outward face normals, lune-tested
+    (`tests/hex_prism.spec.luau`). Floors raised to **7** (`HEX_FLOOR_COUNT`), each a
+    **distinct color** (`HEX_FLOOR_COLORS`). Tiles tuned to a fine honeycomb matching
+    the reference look: smaller + more (`HEX_SIZE` 6 → 4, `HEX_RADIUS` 3 → 5 = 91
+    tiles/floor), each rendered/collided **inset** by `HEX_GAP` (0.3) from the lattice
+    so distinct tiles leave a thin grout seam with zero coincident geometry (kills the
+    residual edge z-fighting). Vertical separation widened hard (`HEX_FLOOR_GAP` 10 →
+    50; `VOID_Y` → -304). Retired `TILE_COLOR_SOLID`.
+  - **Centre-tile negative-zero fix (2026-06-25):** `HexGrid.fromWorld(0, 0, *)`
+    returned `q=0, r=-0`. Lua treats `-0 == 0` numerically, so the lune round-trip
+    test passed, but `tostring(-0) == "-0"` differs from `"0"`, so HazardSystem's
+    string-keyed `tileByKey["floor:q:r"]` lookup silently missed the centre tile of
+    every floor — the player assigned the centre spawn slot could never arm the hex
+    they were standing on (the "tile doesn't turn red on first contact" bug). Fixed
+    by canonicalising `-0` → `0` in `cubeRound` (`return rx + 0, rz + 0`). Added a
+    regression test that checks `tostring` of the returned coords, since numeric
+    equality alone doesn't catch this class of bug.
+  - **Wedge-composed tile fallback (2026-06-25):** the EditableMesh path silently
+    no-ops in this place because Experience Settings > Security > Allow Mesh/Image
+    Access is off — `pcall` returns ok but the resulting `MeshPart` has no triangles,
+    so it rendered as its rectangular AABB (the "squares with gaps" bug). `HazardSystem`
+    now composes each tile from **5 stock parts** (1 central `Block` + 4 `WedgePart`
+    end-caps) that meet edge-to-edge with NO overlap. Cap rotations derived from a
+    Studio probe so each wedge's slanted face lies flat on top with the right-angle
+    pointing inward to the hex center; the 4 triangles + central block tile the
+    hexagon exactly. Stock parts only — guaranteed to render. `HexPrism` is retained
+    (and still lune-tested) for the future EditableMesh path if the security setting
+    is enabled later.
+  - `src/shared/HexGrid.luau` — pure, Roblox-free flat-top hex geometry (`tiles`,
+    axial↔world `toWorld`/`fromWorld` via cube-rounding, outward-spiral
+    `spawnSlots`, vertical `floorAt` banding). Number-in/number-out like
+    `SpawnLayout`; unit tested with lune (`tests/hex_grid.spec.luau`).
+  - `src/shared/HexErosionModel.luau` — pure, Roblox-free step-driven erosion
+    (`arm` → grace-gated, idempotent erosion start; `phaseAt` → monotonic
+    `solid`/`warning`/`gone`). Supersedes the cyclic `TileFieldModel`; unit tested
+    with lune (`tests/hex_erosion_model.spec.luau`).
+  - `src/server/HazardSystem.luau` — rewritten to build the arena as **three
+    stacked hexagonal floors** (each hex = 3 rotated `Block` parts; replaces the
+    baseplate) and erode them step-driven: a hex arms when a body stands on it,
+    warns, then vanishes for good. Driven per-tick by `RoundManager`'s void monitor
+    via `step(now, samples)` (one server loop). Falling lands you on the floor
+    below; only a fall off the lowest floor crosses `Config.VOID_Y` → the existing
+    grace-gated void monitor (no new death path). The hex under a freshly-swapped
+    body won't arm until its grace ends.
+  - `Config` hex tunables (`HEX_RADIUS`, `HEX_SIZE`, `HEX_FLOOR_COUNT`,
+    `HEX_FLOOR_GAP`, `HEX_STAND_BAND`, `HEX_GONE_DELAY_SECONDS`; reused
+    `TILE_SURFACE_Y`/`TILE_THICKNESS`/`TILE_COLOR_SOLID`/`TILE_COLOR_WARNING`).
+  - `BodyManager` round-start spawns now land on hex centers
+    (`HexGrid.spawnSlots`) on the top floor; `Config.VOID_Y` relocated to `-24`
+    (below the lowest hex floor). Removed `TileFieldModel` and the square-tile
+    `Config` fields (`TILE_SOLID_SECONDS`/`TILE_WARNING_SECONDS`/`TILE_GONE_SECONDS`/
+    `TILE_GRID_SIZE`/`TILE_SIZE`/`ARENA_PER_ROW`/`ARENA_SPACING`).
 - `src/shared/GraceModel.luau` — pure, Roblox-free post-swap grace state machine
   (per-player `graceUntil`/`graceMinFloor`/`hasMoved` + `canDieFromHazard`,
   TDD §2). Time-agnostic like `RoundState`/`ControlModel`; unit tested with lune
