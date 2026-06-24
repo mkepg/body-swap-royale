@@ -9,3 +9,6 @@ sourcemap.json
 
 # Superpowers brainstorm visual-companion sessions
 .superpowers/
+
+# Per-user Claude Code overrides (project settings.json is committed)
+.claude/settings.local.json
