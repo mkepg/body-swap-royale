@@ -7,9 +7,9 @@
 	CFrames. Mirrors the project's other pure modules (HexGrid, RoundState).
 
 	Two layouts, both centered grids (shared geometry):
-	  arenaSlot -- the in-arena spawn grid. With spacing = TILE_SIZE the slots land
-	               on tile CENTERS (never seams) and, sized to the player cap, stay
-	               within the tile field -- so no body spawns off the floor.
+	  arenaSlot -- a generic centered spawn grid. CURRENTLY UNUSED: the live arena
+	               floor is hexagonal, so round-start spawns now use HexGrid.spawnSlots.
+	               Retained as a square-grid helper (still lune-tested).
 	  lobbySlot -- a centered grid on the elevated lobby balcony.
 --]]
 

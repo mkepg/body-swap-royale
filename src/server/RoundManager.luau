@@ -430,7 +430,7 @@ function RoundManager.forceSwap()
 end
 
 function RoundManager.start()
-	HazardSystem.build() -- construct the tile-field arena once (replaces the baseplate)
+	HazardSystem.build() -- construct the 3-floor hex arena once (replaces the baseplate)
 	LobbyArea.build() -- construct the elevated lobby balcony once
 	task.spawn(function()
 		while true do
