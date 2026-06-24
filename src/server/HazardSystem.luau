@@ -1,10 +1,11 @@
 --[[
 	HazardSystem (server) -- the Hex-A-Gone arena floor (the MVP arena).
-	Builds THREE stacked hexagonal floors once, then erodes them step-driven during
+	Builds SEVEN stacked hexagonal floors once, then erodes them step-driven during
 	Active rounds: a hex arms when a body stands on it, flashes the warning color,
-	then vanishes for good (monotonic). Each hex is a cluster of 3 rotated Block
-	parts (reads as a hexagon, erodes as a unit) -- no mesh asset, consistent with
-	the build-in-code pattern (LobbyArea.build).
+	then vanishes for good (monotonic). Each tile is ONE true hexagonal MeshPart
+	(built once via EditableMesh from the pure HexPrism geometry, then cloned per
+	tile) -- a single surface, so no gaps between neighbors and no z-fighting when a
+	stepped tile recolors. Each floor has a distinct solid color (depth read).
 
 	Death is NOT handled here. A body over a `gone` hex falls to the floor below
 	(intermediate floors are CanCollide); only a fall off the LOWEST floor crosses
@@ -14,24 +15,24 @@
 	body samples and calls HazardSystem.step(now, samples).
 
 	Lifecycle (called by RoundManager):
-	  build()          -- once at startup: replace the baseplate, construct 3 hex floors
+	  build()          -- once at startup: replace the baseplate, construct 7 hex floors
 	  start(startTime) -- beginRound: reset all hexes to solid
 	  step(now, samples) -- per tick: arm stepped hexes, apply phases
 	  stop()           -- endRound: reset all hexes to solid
 
-	Depends on: ReplicatedStorage.Shared.Config / HexGrid / HexErosionModel
+	Depends on: ReplicatedStorage.Shared.Config / HexGrid / HexErosionModel / HexPrism
 --]]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local AssetService = game:GetService("AssetService")
 local Config = require(ReplicatedStorage.Shared.Config)
 local HexGrid = require(ReplicatedStorage.Shared.HexGrid)
 local HexErosionModel = require(ReplicatedStorage.Shared.HexErosionModel)
+local HexPrism = require(ReplicatedStorage.Shared.HexPrism)
 
 local HazardSystem = {}
 
-local SQRT3 = math.sqrt(3)
-
-local tiles = {}      -- array of { parts = {Part,Part,Part}, steppedAt, phase, floor, q, r }
+local tiles = {}      -- array of { part = MeshPart, steppedAt, phase, floor, q, r }
 local tileByKey = {}  -- ["floor:q:r"] = tile record
 
 local function keyOf(floor, q, r)
@@ -42,47 +43,66 @@ local function durations()
 	return { gone = Config.HEX_GONE_DELAY_SECONDS }
 end
 
--- Map a phase to a hex tile's 3 parts (caller applies only on change).
+-- Solid color for a 0-based floor (clamped to the palette length).
+local function floorColor(floor)
+	local palette = Config.HEX_FLOOR_COLORS
+	return palette[math.min(floor + 1, #palette)]
+end
+
+-- Map a phase to a tile's single part (caller applies only on change). Solid shows
+-- the floor's own color; warning shows the universal red; gone hides + drops collision.
 local function applyPhase(tile, phase)
-	local canCollide, transparency, color
+	local part = tile.part
 	if phase == "solid" then
-		canCollide, transparency, color = true, 0, Config.TILE_COLOR_SOLID
+		part.CanCollide = true
+		part.Transparency = 0
+		part.Color = floorColor(tile.floor)
 	elseif phase == "warning" then
-		canCollide, transparency, color = true, 0, Config.TILE_COLOR_WARNING
+		part.CanCollide = true
+		part.Transparency = 0
+		part.Color = Config.TILE_COLOR_WARNING
 	else -- "gone"
-		canCollide, transparency, color = false, 1, Config.TILE_COLOR_SOLID
-	end
-	for _, part in ipairs(tile.parts) do
-		part.CanCollide = canCollide
-		part.Transparency = transparency
-		part.Color = color
+		part.CanCollide = false
+		part.Transparency = 1
 	end
 end
 
--- Three Block parts rotated 0/60/120 deg about Y, centered at (cx, *, cz), reading
--- as one flat-top hexagon (a regular hexagon = union of 3 rectangles of size
--- size*sqrt(3) x size). Top faces sit at surfaceY.
-local function buildHexParts(folder, cx, cz, surfaceY, floor, q, r)
-	local size = Config.HEX_SIZE
-	local thickness = Config.TILE_THICKNESS
-	local centerY = surfaceY - thickness / 2
-	local parts = {}
-	for i = 0, 2 do
-		local part = Instance.new("Part")
-		part.Anchored = true
-		part.Size = Vector3.new(size * SQRT3, thickness, size)
-		part.CFrame = CFrame.new(cx, centerY, cz) * CFrame.Angles(0, math.rad(60 * i), 0)
-		part.TopSurface = Enum.SurfaceType.Smooth
-		part.BottomSurface = Enum.SurfaceType.Smooth
-		part.Color = Config.TILE_COLOR_SOLID
-		part.Name = string.format("Hex_%d_%d_%d_%d", floor, q, r, i)
-		part.Parent = folder
-		parts[#parts + 1] = part
+-- Build ONE hexagonal-prism MeshPart (the template that every tile clones) from the
+-- pure HexPrism geometry via EditableMesh. Hull collision matches the hex exactly
+-- (no box-overlap holding bodies up across seams). Falls back to a bounding block
+-- if the mesh API fails, so the arena still builds.
+local function buildHexTemplate()
+	local geom = HexPrism.build(Config.HEX_SIZE, Config.TILE_THICKNESS)
+	local ok, result = pcall(function()
+		local em = AssetService:CreateEditableMesh()
+		local ids = {}
+		for _, v in ipairs(geom.vertices) do
+			ids[#ids + 1] = em:AddVertex(Vector3.new(v[1], v[2], v[3]))
+		end
+		for _, t in ipairs(geom.triangles) do
+			em:AddTriangle(ids[t[1]], ids[t[2]], ids[t[3]])
+		end
+		return AssetService:CreateMeshPartAsync(Content.fromObject(em), {
+			CollisionFidelity = Enum.CollisionFidelity.Hull,
+		})
+	end)
+
+	local part
+	if ok and result then
+		part = result
+		part.Material = Enum.Material.SmoothPlastic
+	else
+		warn("[BSR] HexField EditableMesh build failed; using block tiles: " .. tostring(result))
+		part = Instance.new("Part")
+		part.Size = Vector3.new(Config.HEX_SIZE * 2, Config.TILE_THICKNESS, Config.HEX_SIZE * math.sqrt(3))
 	end
-	return parts
+	part.Anchored = true
+	part.TopSurface = Enum.SurfaceType.Smooth
+	part.BottomSurface = Enum.SurfaceType.Smooth
+	return part
 end
 
--- Build the 3 stacked hex floors once. The hex field IS the floor, so any leftover
+-- Build the 7 stacked hex floors once. The hex field IS the floor, so any leftover
 -- floor from the place template is removed: the Baseplate, plus any SpawnLocation
 -- (this game never spawns player Characters). Singleton: a second call is a no-op.
 function HazardSystem.build()
@@ -107,17 +127,24 @@ function HazardSystem.build()
 		folder.Parent = workspace
 	end
 
+	local template = buildHexTemplate()
 	local coords = HexGrid.tiles(Config.HEX_RADIUS)
 	for floor = 0, Config.HEX_FLOOR_COUNT - 1 do
 		local surfaceY = Config.TILE_SURFACE_Y - floor * Config.HEX_FLOOR_GAP
+		local centerY = surfaceY - Config.TILE_THICKNESS / 2
 		for _, c in ipairs(coords) do
 			local dx, dz = HexGrid.toWorld(c.q, c.r, Config.HEX_SIZE)
-			local parts = buildHexParts(folder, dx, dz, surfaceY, floor, c.q, c.r)
-			local tile = { parts = parts, steppedAt = nil, phase = "solid", floor = floor, q = c.q, r = c.r }
+			local part = template:Clone()
+			part.CFrame = CFrame.new(dx, centerY, dz)
+			part.Name = string.format("Hex_%d_%d_%d", floor, c.q, c.r)
+			part.Color = floorColor(floor)
+			part.Parent = folder
+			local tile = { part = part, steppedAt = nil, phase = "solid", floor = floor, q = c.q, r = c.r }
 			tiles[#tiles + 1] = tile
 			tileByKey[keyOf(floor, c.q, c.r)] = tile
 		end
 	end
+	template:Destroy()
 end
 
 local function forceAllSolid()

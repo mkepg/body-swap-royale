@@ -18,11 +18,13 @@ This work intentionally **defers** the remaining MVP "earn currency" economy sli
 
 | Decision | Choice |
 |----------|--------|
-| Layers | **Multi-layer**, 3 floors (tunable in Config) |
+| Layers | **Multi-layer**, 7 floors (tunable in Config) — *revised from 3 on 2026-06-24* |
 | Tile shape | **Hexagons** (true Hex-A-Gone look) |
-| Hex construction | Runtime-built cluster of **3 rotated `Block` parts** per tile — no mesh asset, consistent with the build-in-code pattern (`HazardSystem.build`/`LobbyArea.build`) |
+| Hex construction | **One true hexagonal-prism `MeshPart` per tile**, built once at runtime via `AssetService` EditableMesh from the pure `HexPrism` geometry, then cloned — *revised from a 3-block cluster on 2026-06-24* (the cluster left gaps and z-fought when a stepped tile recolored). Still asset-free (no upload). |
+| Floor color | Each floor a **distinct solid color** (`Config.HEX_FLOOR_COLORS`, 7-step palette top→bottom) — *added 2026-06-24* |
+| Vertical gap | `HEX_FLOOR_GAP = 28` studs (deep, readable pit) — *raised from 10 on 2026-06-24* |
 | Erosion | **Step-driven, monotonic** (gone never returns within a round) |
-| Death model | **Unchanged** — existing grace-gated void monitor, with `VOID_Y` relocated below floor 3; intermediate floors are real `CanCollide` so a fall lands on the next floor |
+| Death model | **Unchanged** — existing grace-gated void monitor, with `VOID_Y` relocated below the lowest floor; intermediate floors are real `CanCollide` so a fall lands on the next floor |
 | Server loops | **Consolidated** — fold erosion into the existing void monitor (one 0.1s loop), not a second loop |
 | Client | **No change, no new remote** — tile part property changes replicate as today |
 
@@ -55,9 +57,15 @@ Replaces `TileFieldModel`'s cyclic logic with two tiny pure decisions. Monotonic
   - else → `"gone"`.
   - `durations = { gone = number }` — the single step→gone delay. A stepped hex flashes the warning color for the whole delay, then vanishes (Fall-Guys-accurate; no separate grey-then-warn sub-phase).
 
+### Pure module — `HexPrism` (`src/shared/HexPrism.luau`, lune-tested) — *added 2026-06-24*
+
+Flat-top hexagonal-prism mesh geometry, so each tile is one true hexagon (no overlapping parts → no z-fighting; exact shape → no gaps).
+
+- `HexPrism.build(size, thickness)` → `{ vertices = {{x,y,z}×12}, triangles = {{i0,i1,i2}×20} }`. Vertices 1–6 top ring (`+thickness/2`), 7–12 bottom ring, all on the circumradius. Triangle order: 4 top-fan, 4 bottom-fan, 12 side; each wound (via a computed-normal flip helper) so its normal points outward (top +Y, bottom −Y, sides radial). The winding is the load-bearing, un-eyeballable bit — the lune test asserts the per-face normal directions.
+
 ### Server glue — `HazardSystem` rewrite (`src/server/HazardSystem.luau`)
 
-- `build()` — construct 3 stacked hex floors. Each tile is a small cluster of 3 rotated `Block` parts (60°/120° apart) grouped so the union reads as a hexagon from above and erodes as a unit. Tile record: `{ parts = {Part, Part, Part}, steppedAt = nil|number, phase = "solid", floor = number, q = number, r = number }`. Continues to clear the leftover `Baseplate` / `SpawnLocation` as today. Singleton (second call is a no-op).
+- `build()` — construct 7 stacked hex floors. Build ONE hexagonal-prism `MeshPart` template via `AssetService` EditableMesh from the pure `HexPrism` geometry (`Hull` collision), then `:Clone()` it per tile and color it by floor (`Config.HEX_FLOOR_COLORS`). A single surface per tile → no neighbor gaps and no z-fighting on recolor. Tile record: `{ part = MeshPart, steppedAt = nil|number, phase = "solid", floor = number, q = number, r = number }`. Falls back to a bounding `Block` (with a `warn`) if the mesh API fails. Continues to clear the leftover `Baseplate` / `SpawnLocation`. Singleton (second call is a no-op).
 - `start(startTime)` — reset all tiles to solid (`steppedAt = nil`), force-apply solid. Does **not** spin its own loop anymore.
 - `step(now, samples)` — called by `RoundManager`'s void monitor each tick. `samples` is an array of `{ dx, dz, y, graceBlocked }` (one per alive body, offsets relative to the field center). For each sample: resolve `floor` from the `y` band and `{q,r}` from `HexGrid.fromWorld(dx, dz, size)`; `arm` that tile via `HexErosionModel`. Then for **every** tile, compute `phaseAt(steppedAt, now)` and apply on change to its 3 parts (`CanCollide` / `Transparency` / `Color`).
 - `stop()` — force all tiles solid (Lobby/Ended floor for parked bodies); clears `steppedAt`.
@@ -74,7 +82,7 @@ Today two 0.1s loops run: the void monitor (`startMonitor`) and `HazardSystem`'s
 ### Death model & vertical geometry
 
 - Floors at `Y = TILE_SURFACE_Y`, `- HEX_FLOOR_GAP`, `- 2·HEX_FLOOR_GAP`. Intermediate floors are real `CanCollide`, so a body falling through a `gone` hex lands on the next floor's solid hex below.
-- `VOID_Y` relocates to just **below** floor 3. The grace-gated void monitor eliminates exactly as today — only the kill line moves under the lowest floor. Death path otherwise unchanged.
+- `VOID_Y` relocates to just **below** the lowest (7th) floor. The grace-gated void monitor eliminates exactly as today — only the kill line moves under the lowest floor. Death path otherwise unchanged.
 - Vertical fall does not count as "moved" (grace survives a drop between floors — already handled by the horizontal-only `GRACE_MOVE_EPSILON` check).
 - The lobby balcony (`Y=45`) now overlooks a deeper pit — no balcony geometry change.
 
@@ -88,15 +96,17 @@ Today two 0.1s loops run: the void monitor (`startMonitor`) and `HazardSystem`'s
 **New:**
 - `HEX_RADIUS` — rings from center (default `3` → 37 hexes/floor).
 - `HEX_SIZE` — hex circumradius in studs.
-- `HEX_FLOOR_COUNT = 3`.
-- `HEX_FLOOR_GAP` — vertical studs between floors.
+- `HEX_FLOOR_COUNT = 7` *(revised from 3 on 2026-06-24)*.
+- `HEX_FLOOR_GAP = 28` — vertical studs between floors *(raised from 10 on 2026-06-24)*.
+- `HEX_STAND_BAND` — root-height window counting as "on" a floor (must be `< HEX_FLOOR_GAP`).
 - `HEX_GONE_DELAY_SECONDS` — single step→gone delay (the hex shows the warning color for this whole window, then vanishes).
+- `HEX_FLOOR_COLORS` — 7-step distinct-per-floor solid palette (top→bottom), indexed by `floor+1` *(added 2026-06-24)*.
 
-**Reused:** `TILE_COLOR_SOLID` / `TILE_COLOR_WARNING` for hex phases; `HAZARDS_ENABLED` as the dev switch; `TILE_THICKNESS` for hex part thickness.
+**Reused:** `TILE_COLOR_WARNING` for the armed/imminent red; `HAZARDS_ENABLED` as the dev switch; `TILE_THICKNESS` for hex part thickness; `TILE_SURFACE_Y` for the top floor.
 
-**Retired:** cyclic `TILE_SOLID_SECONDS` / `TILE_GONE_SECONDS` semantics; the square arena tunables `ARENA_PER_ROW` / `ARENA_SPACING` (arena now hex). `LOBBY_*` untouched.
+**Retired:** cyclic `TILE_SOLID_SECONDS` / `TILE_GONE_SECONDS` semantics; the square arena tunables `ARENA_PER_ROW` / `ARENA_SPACING`; `TILE_COLOR_SOLID` (per-floor `HEX_FLOOR_COLORS` replaces it). `LOBBY_*` untouched.
 
-**Recomputed:** `VOID_Y` below floor 3.
+**Recomputed:** `VOID_Y` below the lowest floor (`-172` for 7 floors at gap 28).
 
 ## Client / legibility
 
@@ -105,7 +115,8 @@ Today two 0.1s loops run: the void monitor (`startMonitor`) and `HazardSystem`'s
 
 ## Testing
 
-### Pure (lune): `tests/HexGrid.spec`, `tests/HexErosionModel.spec`
+### Pure (lune): `tests/hex_grid.spec`, `tests/hex_erosion_model.spec`, `tests/hex_prism.spec`
+- `HexPrism.build` — 12 vertices / 20 triangles, top & bottom rings at `±thickness/2` on the circumradius, and **each face's computed normal points outward** (top +Y, bottom −Y, sides radial) — the winding correctness that can't be eyeballed in Studio.
 - `HexGrid.tiles(radius)` count `= 1 + 3R(R+1)`; no duplicate coords; center present.
 - `toWorld`/`fromWorld` round-trip: `fromWorld(toWorld(q,r,size), size) == {q,r}` for all tiles; `fromWorld` near a hex edge resolves to the correct (nearest-center) hex.
 - `spawnSlots` returns distinct in-field coords, at least `LOBBY_CAPACITY` of them.
@@ -115,7 +126,7 @@ Today two 0.1s loops run: the void monitor (`startMonitor`) and `HazardSystem`'s
 ### Studio smoke test: `docs/smoke-tests/2026-06-23-hex-a-gone-smoke-test.md` (RUNTIME-UNVERIFIED until run)
 2-client procedure:
 1. Walk across floor 1 — hexes arm, flash warning, vanish, and do **not** return.
-2. Fall through floor 1 → land on floor 2 → through to floor 3 → off floor 3 → eliminated (crossed `VOID_Y`).
+2. Fall through floor 1 → land on floor 2 → continue down the stack → off the lowest (7th) floor → eliminated (crossed `VOID_Y`).
 3. Floors 2 and 3 stay pristine until a body is on them.
 4. Force a swap (`RoundManager.forceSwap()`) onto an eroded trail; confirm the tile under the freshly-swapped body does **not** drop during the grace window, then arms once grace ends or the body moves.
 5. Round ends with a winner; the 3-floor pit reads clearly from the balcony.
@@ -129,4 +140,4 @@ Today two 0.1s loops run: the void monitor (`startMonitor`) and `HazardSystem`'s
 1. **Touching the load-bearing void monitor.** Keep the death + move/grace branches behaviorally identical; the change is additive (gather samples, call `step`). Covered by the smoke test.
 2. **Composed-hex collision seams** — a body must stand cleanly on 3 overlapping blocks. Tune part sizes/overlap; verify in the smoke test.
 3. **`fromWorld` edge-straddle** — a body between two centers arms the nearest hex, which is acceptable (arming the standing-on hex is the goal).
-4. **Part count** — 3 floors × ~37 hexes × 3 blocks ≈ 333 parts; negligible at MVP scale.
+4. **Part count** — 7 floors × ~37 hexes × 1 MeshPart = 259 parts; negligible at MVP scale.
