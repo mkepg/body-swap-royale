@@ -19,19 +19,18 @@ lune-covered.
 - [ ] Below the balcony there are **seven stacked hexagonal floors** (a `HexField`
       folder in Workspace), each floor a **distinct color** (amber → green → teal →
       blue → indigo → magenta → slate, top → bottom), top floor at Y=0.
-- [ ] Each floor is a **fine honeycomb of many small hexagons** (~91/floor), each a
-      **single hexagonal MeshPart** reading as a **distinct hexagon separated by a thin
-      grout seam** (NOT one continuous surface — tiles are inset by `HEX_GAP` from the
-      lattice so neighbors never touch). Compare against the Fall-Guys reference look.
+- [ ] Each floor is a **fine honeycomb of many small hexagons** (~91/floor). Each tile
+      is **5 anchored parts** (1 `Block` + 4 `WedgePart`, names `Hex_{floor}_{q}_{r}_{B|RU|RL|LU|LL}`)
+      meeting edge-to-edge to read as one **distinct hexagon separated by a thin grout
+      seam** (tiles are inset by `HEX_GAP` from the lattice so neighbors never touch).
+      Compare against the Fall-Guys reference look.
 - [ ] No leftover `Baseplate` / `SpawnLocation` remains.
 - [ ] Bodies stand cleanly on the top floor (hull collision matches the hexagon) and
       **walk across the grout seams without catching/falling through** (if they snag,
       lower `HEX_GAP`).
 - [ ] The floors are **strongly separated vertically** (50-stud gap) — a clearly deep,
       readable pit with obvious air between layers, not a compact stack.
-- [ ] If the EditableMesh API fails, the output log shows the `[BSR] HexField
-      EditableMesh build failed` warning and tiles fall back to blocks (should NOT
-      happen on current Studio — flag if it does).
+- [ ] (Removed: EditableMesh path no longer used. Tiles are stock parts only.)
 
 ### 2. Step-driven, monotonic erosion
 - [ ] Walk a body across floor 1: each hex you stand on turns **red (warning)**,

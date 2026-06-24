@@ -2,10 +2,12 @@
 	HazardSystem (server) -- the Hex-A-Gone arena floor (the MVP arena).
 	Builds SEVEN stacked hexagonal floors once, then erodes them step-driven during
 	Active rounds: a hex arms when a body stands on it, flashes the warning color,
-	then vanishes for good (monotonic). Each tile is ONE true hexagonal MeshPart
-	(built once via EditableMesh from the pure HexPrism geometry, then cloned per
-	tile) -- a single surface, so no gaps between neighbors and no z-fighting when a
-	stepped tile recolors. Each floor has a distinct solid color (depth read).
+	then vanishes for good (monotonic). Each tile is composed of 5 stock parts -- one
+	central Block + four WedgeParts forming the two triangular end-caps -- meeting
+	edge-to-edge with NO overlap, so neighbors never share geometry (no z-fighting on
+	recolor) and the tile reads as a true hexagon. Each floor has a distinct solid
+	color (depth read). Stock parts only: works without the EditableMesh API beta
+	(which requires Experience Settings > Security > Allow Mesh/Image Access).
 
 	Death is NOT handled here. A body over a `gone` hex falls to the floor below
 	(intermediate floors are CanCollide); only a fall off the LOWEST floor crosses
@@ -20,19 +22,19 @@
 	  step(now, samples) -- per tick: arm stepped hexes, apply phases
 	  stop()           -- endRound: reset all hexes to solid
 
-	Depends on: ReplicatedStorage.Shared.Config / HexGrid / HexErosionModel / HexPrism
+	Depends on: ReplicatedStorage.Shared.Config / HexGrid / HexErosionModel
 --]]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local AssetService = game:GetService("AssetService")
 local Config = require(ReplicatedStorage.Shared.Config)
 local HexGrid = require(ReplicatedStorage.Shared.HexGrid)
 local HexErosionModel = require(ReplicatedStorage.Shared.HexErosionModel)
-local HexPrism = require(ReplicatedStorage.Shared.HexPrism)
 
 local HazardSystem = {}
 
-local tiles = {}      -- array of { part = MeshPart, steppedAt, phase, floor, q, r }
+local SQRT3 = math.sqrt(3)
+
+local tiles = {}      -- array of { parts = {Part, WedgePart×4}, steppedAt, phase, floor, q, r }
 local tileByKey = {}  -- ["floor:q:r"] = tile record
 
 local function keyOf(floor, q, r)
@@ -49,61 +51,80 @@ local function floorColor(floor)
 	return palette[math.min(floor + 1, #palette)]
 end
 
--- Map a phase to a tile's single part (caller applies only on change). Solid shows
+-- Map a phase to all parts of a tile (caller applies only on change). Solid shows
 -- the floor's own color; warning shows the universal red; gone hides + drops collision.
 local function applyPhase(tile, phase)
-	local part = tile.part
+	local canCollide, transparency, color
 	if phase == "solid" then
-		part.CanCollide = true
-		part.Transparency = 0
-		part.Color = floorColor(tile.floor)
+		canCollide, transparency, color = true, 0, floorColor(tile.floor)
 	elseif phase == "warning" then
-		part.CanCollide = true
-		part.Transparency = 0
-		part.Color = Config.TILE_COLOR_WARNING
+		canCollide, transparency, color = true, 0, Config.TILE_COLOR_WARNING
 	else -- "gone"
-		part.CanCollide = false
-		part.Transparency = 1
+		canCollide, transparency, color = false, 1, floorColor(tile.floor)
+	end
+	for _, part in ipairs(tile.parts) do
+		part.CanCollide = canCollide
+		part.Transparency = transparency
+		part.Color = color
 	end
 end
 
--- Build ONE hexagonal-prism MeshPart (the template that every tile clones) from the
--- pure HexPrism geometry via EditableMesh. Hull collision matches the hex exactly
--- (no box-overlap holding bodies up across seams). Falls back to a bounding block
--- if the mesh API fails, so the arena still builds.
-local function buildHexTemplate()
-	-- Render/collide each tile INSET from the lattice radius (HexGrid still spaces
-	-- centers by the full HEX_SIZE), so neighbors leave a grout seam and never share
-	-- geometry -- distinct tiles, and no z-fighting when a stepped tile recolors.
-	local renderSize = Config.HEX_SIZE - Config.HEX_GAP
-	local geom = HexPrism.build(renderSize, Config.TILE_THICKNESS)
-	local ok, result = pcall(function()
-		local em = AssetService:CreateEditableMesh()
-		local ids = {}
-		for _, v in ipairs(geom.vertices) do
-			ids[#ids + 1] = em:AddVertex(Vector3.new(v[1], v[2], v[3]))
-		end
-		for _, t in ipairs(geom.triangles) do
-			em:AddTriangle(ids[t[1]], ids[t[2]], ids[t[3]])
-		end
-		return AssetService:CreateMeshPartAsync(Content.fromObject(em), {
-			CollisionFidelity = Enum.CollisionFidelity.Hull,
-		})
-	end)
+-- Per-cap CFrame.Angles needed so the wedge's slanted triangular face lies flat on
+-- TOP of the tile with the right-angle pointing INWARD (toward the hex center).
+-- Derived experimentally in Studio; see docs/smoke-tests for the geometry probe.
+--   { signX, signZ, yAng, zAng } -- signs pick the quadrant; yAng/zAng in degrees.
+local CAP_ROTATIONS = {
+	{  1,  1,   0,  -90 }, -- right-upper
+	{  1, -1, 180,   90 }, -- right-lower
+	{ -1,  1,   0,   90 }, -- left-upper
+	{ -1, -1, 180,  -90 }, -- left-lower
+}
 
-	local part
-	if ok and result then
-		part = result
-		part.Material = Enum.Material.SmoothPlastic
-	else
-		warn("[BSR] HexField EditableMesh build failed; using block tiles: " .. tostring(result))
-		part = Instance.new("Part")
-		part.Size = Vector3.new(renderSize * 2, Config.TILE_THICKNESS, renderSize * math.sqrt(3))
+-- Build one hex tile centered at world (cx, cz) with its TOP surface at surfaceY.
+-- Geometry (flat-top, circumradius R, thickness T, inset HEX_GAP from the lattice):
+--   1 central Block: x ∈ [-R/2, R/2], z ∈ [-R*sqrt(3)/2, R*sqrt(3)/2]
+--   4 WedgeParts as 2 isosceles end-caps (right and left), each cap split into upper
+--     and lower halves meeting at z=0. Each wedge is a right triangle with legs R/2
+--     and R*sqrt(3)/2; the 4 caps tile the two end-triangles of the hexagon exactly.
+-- All 5 parts are anchored, share the same Y and thickness, and DO NOT overlap --
+-- they share edges only, so no z-fighting on recolor.
+local function buildHexParts(folder, cx, cz, surfaceY, floor, q, r)
+	local R = Config.HEX_SIZE - Config.HEX_GAP
+	local T = Config.TILE_THICKNESS
+	local centerY = surfaceY - T / 2
+	local color = floorColor(floor)
+	local parts = {}
+
+	local function init(p, suffix)
+		p.Anchored = true
+		p.Color = color
+		p.Material = Enum.Material.SmoothPlastic
+		p.TopSurface = Enum.SurfaceType.Smooth
+		p.BottomSurface = Enum.SurfaceType.Smooth
+		p.Name = string.format("Hex_%d_%d_%d_%s", floor, q, r, suffix)
+		p.Parent = folder
+		parts[#parts + 1] = p
 	end
-	part.Anchored = true
-	part.TopSurface = Enum.SurfaceType.Smooth
-	part.BottomSurface = Enum.SurfaceType.Smooth
-	return part
+
+	local block = Instance.new("Part")
+	block.Size = Vector3.new(R, T, R * SQRT3)
+	block.CFrame = CFrame.new(cx, centerY, cz)
+	init(block, "B")
+
+	-- The 4 cap wedges. Each wedge bounding box is (T, R/2, R*sqrt(3)/2); after the
+	-- per-cap rotation its triangular face lies on top with the right-angle pointing
+	-- inward, so the 4 triangles + central block tile the hexagon edge-to-edge.
+	local capNames = { "RU", "RL", "LU", "LL" }
+	for i, rot in ipairs(CAP_ROTATIONS) do
+		local signX, signZ, yAng, zAng = rot[1], rot[2], rot[3], rot[4]
+		local wedge = Instance.new("WedgePart")
+		wedge.Size = Vector3.new(T, R / 2, R * SQRT3 / 2)
+		wedge.CFrame = CFrame.new(cx + signX * (R * 3 / 4), centerY, cz + signZ * (R * SQRT3 / 4))
+			* CFrame.Angles(0, math.rad(yAng), math.rad(zAng))
+		init(wedge, capNames[i])
+	end
+
+	return parts
 end
 
 -- Build the 7 stacked hex floors once. The hex field IS the floor, so any leftover
@@ -131,24 +152,17 @@ function HazardSystem.build()
 		folder.Parent = workspace
 	end
 
-	local template = buildHexTemplate()
 	local coords = HexGrid.tiles(Config.HEX_RADIUS)
 	for floor = 0, Config.HEX_FLOOR_COUNT - 1 do
 		local surfaceY = Config.TILE_SURFACE_Y - floor * Config.HEX_FLOOR_GAP
-		local centerY = surfaceY - Config.TILE_THICKNESS / 2
 		for _, c in ipairs(coords) do
 			local dx, dz = HexGrid.toWorld(c.q, c.r, Config.HEX_SIZE)
-			local part = template:Clone()
-			part.CFrame = CFrame.new(dx, centerY, dz)
-			part.Name = string.format("Hex_%d_%d_%d", floor, c.q, c.r)
-			part.Color = floorColor(floor)
-			part.Parent = folder
-			local tile = { part = part, steppedAt = nil, phase = "solid", floor = floor, q = c.q, r = c.r }
+			local parts = buildHexParts(folder, dx, dz, surfaceY, floor, c.q, c.r)
+			local tile = { parts = parts, steppedAt = nil, phase = "solid", floor = floor, q = c.q, r = c.r }
 			tiles[#tiles + 1] = tile
 			tileByKey[keyOf(floor, c.q, c.r)] = tile
 		end
 	end
-	template:Destroy()
 end
 
 local function forceAllSolid()
