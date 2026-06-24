@@ -43,7 +43,7 @@ Number-in / number-out like `SpawnLayout`. No Vector3 / CFrame / Color3, no cloc
 - `HexGrid.fromWorld(dx, dz, size)` → nearest `{ q, r }` via cube-rounding (the "which hex is this body standing on" lookup).
 - `HexGrid.spawnSlots(radius)` → ordered array of `{ q, r }` used for round-start body placement (replaces `SpawnLayout.arenaSlot` for the arena floor only). Ordering should spread bodies across the field (e.g. outward spiral).
 
-Orientation: **flat-top** hexes (choose one orientation and keep `toWorld`/`fromWorld` consistent; document it inline).
+Orientation: **pointy-top** hexes (vertices at world ±Z, flat edges on the ±X sides — matches the Fall-Guys reference look; *revised from flat-top on 2026-06-25*). `toWorld`/`fromWorld` use the pointy-top formulas (`dx = √3·size·(q + r/2)`, `dz = 1.5·size·r`).
 
 ### Pure module — `HexErosionModel` (`src/shared/HexErosionModel.luau`, lune-tested)
 
