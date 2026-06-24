@@ -42,6 +42,12 @@ function HexGrid.toWorld(q, r, size)
 end
 
 -- Round fractional axial coords to the nearest hex (cube rounding).
+-- The trailing `+ 0` canonicalises IEEE-754 negative zero to positive zero -- the
+-- cube re-derivation (`rz = -rx - ry`) can yield `-0` when rx and ry are zero, and
+-- `-0` and `0` compare equal numerically but stringify differently (`"-0"` vs
+-- `"0"`), which silently broke HazardSystem's `floor:q:r` string lookup for the
+-- centre tile (`q=0, r=0`) on every floor (the body assigned the centre spawn slot
+-- could never arm the hex it was standing on; only the centre tile was affected).
 local function cubeRound(qf, rf)
 	local x, z = qf, rf
 	local y = -x - z
@@ -55,7 +61,7 @@ local function cubeRound(qf, rf)
 	else
 		rz = -rx - ry
 	end
-	return rx, rz
+	return rx + 0, rz + 0
 end
 
 -- Flat-top world offset -> nearest axial q, r.
