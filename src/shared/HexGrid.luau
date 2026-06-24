@@ -7,8 +7,7 @@
 	offsets into world positions. Mirrors the project's other pure modules
 	(SpawnLayout, RoundState).
 
-	Axial coords {q, r}, POINTY-TOP orientation (vertices at world +Z / -Z; flat
-	edges on the +X and -X sides). `size` is the hex circumradius
+	Axial coords {q, r}, FLAT-TOP orientation. `size` is the hex circumradius
 	(center-to-vertex = side length) in studs.
 --]]
 
@@ -16,9 +15,7 @@ local HexGrid = {}
 
 local SQRT3 = math.sqrt(3)
 
--- Axial neighbor directions (pointy-top), used by the spawn-slot ring spiral. Same
--- six axial vectors as flat-top -- the only thing pointy-top changes is the world
--- mapping in toWorld/fromWorld, not the hex-coord topology.
+-- Axial neighbor directions (flat-top), used by the spawn-slot ring spiral.
 local DIRECTIONS = {
 	{ 1, 0 }, { 1, -1 }, { 0, -1 }, { -1, 0 }, { -1, 1 }, { 0, 1 },
 }
@@ -37,12 +34,10 @@ function HexGrid.tiles(radius)
 	return out
 end
 
--- Pointy-top axial -> world center offset (dx, dz studs) from the field center.
--- Neighbor (1, 0) is east-and-slightly-south; the long horizontal rows along +X are
--- at constant r (the "rows" of the honeycomb -- the Fall-Guys reference look).
+-- Flat-top axial -> world center offset (dx, dz studs) from the field center.
 function HexGrid.toWorld(q, r, size)
-	local dx = size * SQRT3 * (q + r / 2)
-	local dz = size * 1.5 * r
+	local dx = size * 1.5 * q
+	local dz = size * SQRT3 * (r + q / 2)
 	return dx, dz
 end
 
@@ -69,10 +64,10 @@ local function cubeRound(qf, rf)
 	return rx + 0, rz + 0
 end
 
--- Pointy-top world offset -> nearest axial q, r (inverse of toWorld).
+-- Flat-top world offset -> nearest axial q, r.
 function HexGrid.fromWorld(dx, dz, size)
-	local qf = (SQRT3 / 3 * dx - 1 / 3 * dz) / size
-	local rf = (2 / 3 * dz) / size
+	local qf = (2 / 3 * dx) / size
+	local rf = (-1 / 3 * dx + SQRT3 / 3 * dz) / size
 	return cubeRound(qf, rf)
 end
 

@@ -71,24 +71,21 @@ end
 
 -- Per-cap CFrame.Angles needed so the wedge's slanted triangular face lies flat on
 -- TOP of the tile with the right-angle pointing INWARD (toward the hex center).
--- Derived experimentally in Studio. The same 4 rotations work for both flat-top and
--- pointy-top -- only the wedge's native (sy, sz) and its position offsets swap
--- between the two orientations (see buildHexParts).
+-- Derived experimentally in Studio; see docs/smoke-tests for the geometry probe.
 --   { signX, signZ, yAng, zAng } -- signs pick the quadrant; yAng/zAng in degrees.
 local CAP_ROTATIONS = {
-	{  1,  1,   0,  -90 }, -- top-right    (pointy-top) / right-upper (flat-top)
-	{  1, -1, 180,   90 }, -- bottom-right                / right-lower
-	{ -1,  1,   0,   90 }, -- top-left                    / left-upper
-	{ -1, -1, 180,  -90 }, -- bottom-left                 / left-lower
+	{  1,  1,   0,  -90 }, -- right-upper
+	{  1, -1, 180,   90 }, -- right-lower
+	{ -1,  1,   0,   90 }, -- left-upper
+	{ -1, -1, 180,  -90 }, -- left-lower
 }
 
 -- Build one hex tile centered at world (cx, cz) with its TOP surface at surfaceY.
--- Geometry (pointy-top, circumradius R, thickness T, inset HEX_GAP from the lattice):
---   1 central Block: x ∈ [-R*sqrt(3)/2, R*sqrt(3)/2], z ∈ [-R/2, R/2]
---   4 WedgeParts as 2 isosceles end-caps (top and bottom along world +Z / -Z), each
---     cap split into +X and -X halves meeting at x=0. Each wedge is a right triangle
---     with legs R*sqrt(3)/2 (along world X) and R/2 (along world Z); the 4 caps tile
---     the two end-triangles of the hexagon exactly.
+-- Geometry (flat-top, circumradius R, thickness T, inset HEX_GAP from the lattice):
+--   1 central Block: x ∈ [-R/2, R/2], z ∈ [-R*sqrt(3)/2, R*sqrt(3)/2]
+--   4 WedgeParts as 2 isosceles end-caps (right and left), each cap split into upper
+--     and lower halves meeting at z=0. Each wedge is a right triangle with legs R/2
+--     and R*sqrt(3)/2; the 4 caps tile the two end-triangles of the hexagon exactly.
 -- All 5 parts are anchored, share the same Y and thickness, and DO NOT overlap --
 -- they share edges only, so no z-fighting on recolor.
 local function buildHexParts(folder, cx, cz, surfaceY, floor, q, r)
@@ -109,21 +106,20 @@ local function buildHexParts(folder, cx, cz, surfaceY, floor, q, r)
 		parts[#parts + 1] = p
 	end
 
-	-- Central block: long along world X (R*sqrt(3)), short along world Z (R).
 	local block = Instance.new("Part")
-	block.Size = Vector3.new(R * SQRT3, T, R)
+	block.Size = Vector3.new(R, T, R * SQRT3)
 	block.CFrame = CFrame.new(cx, centerY, cz)
 	init(block, "B")
 
-	-- The 4 cap wedges. Native size sy=R*sqrt(3)/2 (becomes the X leg after the
-	-- -90/+90 Z-rotation), sz=R/2 (the Z leg). Position offsets put each cap's bbox
-	-- centre at signX*(R*sqrt(3)/4) horizontally and signZ*(3R/4) along the apex axis.
-	local capNames = { "TR", "BR", "TL", "BL" }
+	-- The 4 cap wedges. Each wedge bounding box is (T, R/2, R*sqrt(3)/2); after the
+	-- per-cap rotation its triangular face lies on top with the right-angle pointing
+	-- inward, so the 4 triangles + central block tile the hexagon edge-to-edge.
+	local capNames = { "RU", "RL", "LU", "LL" }
 	for i, rot in ipairs(CAP_ROTATIONS) do
 		local signX, signZ, yAng, zAng = rot[1], rot[2], rot[3], rot[4]
 		local wedge = Instance.new("WedgePart")
-		wedge.Size = Vector3.new(T, R * SQRT3 / 2, R / 2)
-		wedge.CFrame = CFrame.new(cx + signX * (R * SQRT3 / 4), centerY, cz + signZ * (R * 3 / 4))
+		wedge.Size = Vector3.new(T, R / 2, R * SQRT3 / 2)
+		wedge.CFrame = CFrame.new(cx + signX * (R * 3 / 4), centerY, cz + signZ * (R * SQRT3 / 4))
 			* CFrame.Angles(0, math.rad(yAng), math.rad(zAng))
 		init(wedge, capNames[i])
 	end
