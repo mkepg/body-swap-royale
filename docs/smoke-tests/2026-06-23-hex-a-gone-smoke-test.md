@@ -16,24 +16,33 @@ lune-covered.
 ## Checks
 
 ### 1. Build & geometry
-- [ ] Below the balcony there are **three stacked hexagonal floors** (a `HexField`
-      folder in Workspace), each tile reading as a hexagon, top floor at Y=0.
+- [ ] Below the balcony there are **seven stacked hexagonal floors** (a `HexField`
+      folder in Workspace), each floor a **distinct color** (amber → green → teal →
+      blue → indigo → magenta → slate, top → bottom), top floor at Y=0.
+- [ ] Each tile is a **single hexagonal MeshPart** with **no visible gaps** to its
+      neighbors (tiles tessellate edge-to-edge).
 - [ ] No leftover `Baseplate` / `SpawnLocation` remains.
-- [ ] At round start every hex is solid grey; bodies stand cleanly on the top floor
-      (no falling through seams between the 3 sub-parts of a hex).
+- [ ] Bodies stand cleanly on the top floor (hull collision matches the hexagon).
+- [ ] The floors are **well separated vertically** (28-stud gap) — a clearly deep,
+      readable pit, not a compact stack.
+- [ ] If the EditableMesh API fails, the output log shows the `[BSR] HexField
+      EditableMesh build failed` warning and tiles fall back to blocks (should NOT
+      happen on current Studio — flag if it does).
 
 ### 2. Step-driven, monotonic erosion
 - [ ] Walk a body across floor 1: each hex you stand on turns **red (warning)**,
       then **vanishes** ~1.2s later.
+- [ ] When a hex turns red it recolors **cleanly — no edge flicker / z-fighting**
+      against its neighbors (this was the bug; confirm it's gone).
 - [ ] A vanished hex **does not come back** for the rest of the round.
 - [ ] A hex you never touch **stays solid** (erosion is occupancy-driven, not timed).
 
 ### 3. Multi-floor descent & death
 - [ ] Walk off / erode a path so a body **falls through floor 1 and lands on floor 2**
-      (not eliminated). Continue to **floor 3**, then off floor 3 → **eliminated**
-      (crossed VOID_Y).
-- [ ] Floors 2 and 3 stay pristine until a body is actually on them, then erode the
-      same way.
+      (not eliminated). Continue down through the floors; only falling **off the
+      lowest (7th) floor** → **eliminated** (crossed VOID_Y).
+- [ ] Lower floors stay pristine until a body is actually on them, then erode the
+      same way — and each lands you on its own distinctly-colored surface.
 
 ### 4. Swap × grace synergy (the headline interaction)
 - [ ] In the command bar run `require(game.ServerScriptService.Server.RoundManager).forceSwap()`

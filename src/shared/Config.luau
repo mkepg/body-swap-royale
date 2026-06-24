@@ -33,30 +33,44 @@ Config.GRACE_MOVE_EPSILON = 0.5
 Config.LOBBY_COUNTDOWN_SECONDS = 5
 Config.ROUND_END_SECONDS = 5
 -- A controlled body whose root falls below this Y is eliminated (grace-gated, via
--- the void monitor). With the 3-floor hex arena (floors at 0 / -10 / -20), this
--- sits just under the LOWEST floor, so only a body that falls off floor 3 dies --
--- falling through an upper floor lands on the next floor down. Still far above
+-- the void monitor). With the 7-floor hex arena (floors at 0 / -28 / ... / -168),
+-- this sits just under the LOWEST floor, so only a body that falls off floor 7 dies
+-- -- falling through an upper floor lands on the next floor down. Still far above
 -- Workspace.FallenPartsDestroyHeight (default -500).
-Config.VOID_Y = -24
+Config.VOID_Y = -172
 
--- Hex-A-Gone arena floor. Three stacked hexagonal floors; a hex arms the instant a
+-- Hex-A-Gone arena floor. Seven stacked hexagonal floors; a hex arms the instant a
 -- body stands on it, flashes the warning color for HEX_GONE_DELAY_SECONDS, then
 -- vanishes for good (monotonic -- no return that round). Pure decisions live in
--- HexGrid (geometry) + HexErosionModel (arm/phase); HazardSystem maps phase -> parts.
--- HAZARDS_ENABLED: dev/test switch (NOT a gameplay tunable). When false, floors build
--- but never arm (stay solid), so swaps can be observed without bodies falling.
+-- HexGrid (geometry) + HexErosionModel (arm/phase) + HexPrism (tile mesh); HazardSystem
+-- builds one true hexagonal MeshPart per tile (EditableMesh, no gaps / no z-fighting)
+-- and maps phase -> part props. HAZARDS_ENABLED: dev/test switch (NOT a gameplay
+-- tunable). When false, floors build but never arm (stay solid), so swaps can be
+-- observed without bodies falling.
 Config.HAZARDS_ENABLED = true
 Config.HEX_RADIUS = 3            -- rings from center; tiles/floor = 1+3R(R+1) = 37
 Config.HEX_SIZE = 6              -- hex circumradius (center-to-vertex = side) in studs
-Config.HEX_FLOOR_COUNT = 3       -- stacked floors
-Config.HEX_FLOOR_GAP = 10        -- vertical studs between floors (floors at 0/-10/-20)
+Config.HEX_FLOOR_COUNT = 7       -- stacked floors
+Config.HEX_FLOOR_GAP = 28        -- vertical studs between floors (floors at 0/-28/.../-168)
 Config.HEX_STAND_BAND = 6        -- root-height window above a floor that counts as "on" it
                                  -- (must be < HEX_FLOOR_GAP so floor bands don't overlap)
 Config.HEX_GONE_DELAY_SECONDS = 1.2 -- step -> gone delay (warning color shows the whole time)
 Config.TILE_SURFACE_Y = 0        -- top-floor surface Y (reused by HazardSystem + spawn)
 Config.TILE_THICKNESS = 1        -- hex part thickness
-Config.TILE_COLOR_SOLID = Color3.fromRGB(150, 150, 150)   -- neutral grey
 Config.TILE_COLOR_WARNING = Color3.fromRGB(200, 40, 40)   -- alarm red (armed/imminent)
+-- One distinct solid color per floor (top -> bottom), so depth reads at a glance.
+-- Indexed by floor+1 (floor is 0-based). Length MUST be >= HEX_FLOOR_COUNT. The
+-- warning red above is deliberately kept out of this palette so "about to drop" is
+-- never confused with a floor color.
+Config.HEX_FLOOR_COLORS = {
+	Color3.fromRGB(245, 200, 70),   -- 1 amber (top)
+	Color3.fromRGB(140, 210, 90),   -- 2 green
+	Color3.fromRGB(70, 200, 180),   -- 3 teal
+	Color3.fromRGB(80, 160, 240),   -- 4 blue
+	Color3.fromRGB(150, 120, 235),  -- 5 indigo
+	Color3.fromRGB(215, 110, 225),  -- 6 magenta
+	Color3.fromRGB(120, 120, 140),  -- 7 slate (bottom)
+}
 
 -- Round population thresholds (consumed by RoundState via the server glue).
 -- MIN_PLAYERS_TO_START gates beginning a round; default 2 keeps the MVP playable
