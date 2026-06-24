@@ -14,8 +14,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
     the z-fighting when a stepped tile recolored. `HexPrism.build` returns vertex +
     triangle lists with computed-outward face normals, lune-tested
     (`tests/hex_prism.spec.luau`). Floors raised to **7** (`HEX_FLOOR_COUNT`), each a
-    **distinct color** (`HEX_FLOOR_COLORS`), with a much larger vertical separation
-    (`HEX_FLOOR_GAP` 10 → 28; `VOID_Y` → -172). Retired `TILE_COLOR_SOLID`.
+    **distinct color** (`HEX_FLOOR_COLORS`). Tiles tuned to a fine honeycomb matching
+    the reference look: smaller + more (`HEX_SIZE` 6 → 4, `HEX_RADIUS` 3 → 5 = 91
+    tiles/floor), each rendered/collided **inset** by `HEX_GAP` (0.3) from the lattice
+    so distinct tiles leave a thin grout seam with zero coincident geometry (kills the
+    residual edge z-fighting). Vertical separation widened hard (`HEX_FLOOR_GAP` 10 →
+    50; `VOID_Y` → -304). Retired `TILE_COLOR_SOLID`.
   - `src/shared/HexGrid.luau` — pure, Roblox-free flat-top hex geometry (`tiles`,
     axial↔world `toWorld`/`fromWorld` via cube-rounding, outward-spiral
     `spawnSlots`, vertical `floorAt` banding). Number-in/number-out like

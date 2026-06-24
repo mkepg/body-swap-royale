@@ -33,11 +33,11 @@ Config.GRACE_MOVE_EPSILON = 0.5
 Config.LOBBY_COUNTDOWN_SECONDS = 5
 Config.ROUND_END_SECONDS = 5
 -- A controlled body whose root falls below this Y is eliminated (grace-gated, via
--- the void monitor). With the 7-floor hex arena (floors at 0 / -28 / ... / -168),
+-- the void monitor). With the 7-floor hex arena (floors at 0 / -50 / ... / -300),
 -- this sits just under the LOWEST floor, so only a body that falls off floor 7 dies
 -- -- falling through an upper floor lands on the next floor down. Still far above
 -- Workspace.FallenPartsDestroyHeight (default -500).
-Config.VOID_Y = -172
+Config.VOID_Y = -304
 
 -- Hex-A-Gone arena floor. Seven stacked hexagonal floors; a hex arms the instant a
 -- body stands on it, flashes the warning color for HEX_GONE_DELAY_SECONDS, then
@@ -48,10 +48,14 @@ Config.VOID_Y = -172
 -- tunable). When false, floors build but never arm (stay solid), so swaps can be
 -- observed without bodies falling.
 Config.HAZARDS_ENABLED = true
-Config.HEX_RADIUS = 3            -- rings from center; tiles/floor = 1+3R(R+1) = 37
-Config.HEX_SIZE = 6              -- hex circumradius (center-to-vertex = side) in studs
+Config.HEX_RADIUS = 5            -- rings from center; tiles/floor = 1+3R(R+1) = 91 (fine honeycomb)
+Config.HEX_SIZE = 4              -- LATTICE hex circumradius (tile centers + occupancy lookup); small
+                                 -- tiles -> many distinct hexagons, ~one body per tile
+Config.HEX_GAP = 0.3            -- studs each tile is INSET from the lattice radius, so neighbors
+                                 -- don't touch: a THIN grout seam between tiles + zero coincident
+                                 -- geometry (no z-fighting). Rendered/collided radius = HEX_SIZE - HEX_GAP.
 Config.HEX_FLOOR_COUNT = 7       -- stacked floors
-Config.HEX_FLOOR_GAP = 28        -- vertical studs between floors (floors at 0/-28/.../-168)
+Config.HEX_FLOOR_GAP = 50        -- vertical studs between floors (floors at 0/-50/.../-300)
 Config.HEX_STAND_BAND = 6        -- root-height window above a floor that counts as "on" it
                                  -- (must be < HEX_FLOOR_GAP so floor bands don't overlap)
 Config.HEX_GONE_DELAY_SECONDS = 1.2 -- step -> gone delay (warning color shows the whole time)
