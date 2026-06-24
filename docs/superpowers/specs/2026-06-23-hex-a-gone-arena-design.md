@@ -22,7 +22,9 @@ This work intentionally **defers** the remaining MVP "earn currency" economy sli
 | Tile shape | **Hexagons** (true Hex-A-Gone look) |
 | Hex construction | **One true hexagonal-prism `MeshPart` per tile**, built once at runtime via `AssetService` EditableMesh from the pure `HexPrism` geometry, then cloned — *revised from a 3-block cluster on 2026-06-24* (the cluster left gaps and z-fought when a stepped tile recolored). Still asset-free (no upload). |
 | Floor color | Each floor a **distinct solid color** (`Config.HEX_FLOOR_COLORS`, 7-step palette top→bottom) — *added 2026-06-24* |
-| Vertical gap | `HEX_FLOOR_GAP = 28` studs (deep, readable pit) — *raised from 10 on 2026-06-24* |
+| Vertical gap | `HEX_FLOOR_GAP = 50` studs (deep, clearly-separated pit) — *raised 10 → 28 → 50 over 2026-06-24* |
+| Tile size / count | Small tiles, fine honeycomb: `HEX_SIZE = 4`, `HEX_RADIUS = 5` (91 tiles/floor) — *revised from size 6 / radius 3 on 2026-06-24 to match the reference look* |
+| Tile seam | Each tile rendered/collided **inset** by `HEX_GAP = 0.3` studs from the lattice radius → a thin grout seam between distinct tiles, and **zero coincident geometry** (the real z-fighting fix) — *added 2026-06-24*. The lattice (`HexGrid`) still spaces centers by full `HEX_SIZE`, so occupancy lookup is unaffected. |
 | Erosion | **Step-driven, monotonic** (gone never returns within a round) |
 | Death model | **Unchanged** — existing grace-gated void monitor, with `VOID_Y` relocated below the lowest floor; intermediate floors are real `CanCollide` so a fall lands on the next floor |
 | Server loops | **Consolidated** — fold erosion into the existing void monitor (one 0.1s loop), not a second loop |
@@ -96,8 +98,10 @@ Today two 0.1s loops run: the void monitor (`startMonitor`) and `HazardSystem`'s
 **New:**
 - `HEX_RADIUS` — rings from center (default `3` → 37 hexes/floor).
 - `HEX_SIZE` — hex circumradius in studs.
+- `HEX_RADIUS = 5` / `HEX_SIZE = 4` — small tiles, 91/floor (fine honeycomb) *(revised from 3 / 6)*.
+- `HEX_GAP = 0.3` — studs each tile is inset from the lattice radius (thin grout seam; render/collide radius = `HEX_SIZE - HEX_GAP`) *(added 2026-06-24)*.
 - `HEX_FLOOR_COUNT = 7` *(revised from 3 on 2026-06-24)*.
-- `HEX_FLOOR_GAP = 28` — vertical studs between floors *(raised from 10 on 2026-06-24)*.
+- `HEX_FLOOR_GAP = 50` — vertical studs between floors *(raised 10 → 28 → 50 on 2026-06-24)*.
 - `HEX_STAND_BAND` — root-height window counting as "on" a floor (must be `< HEX_FLOOR_GAP`).
 - `HEX_GONE_DELAY_SECONDS` — single step→gone delay (the hex shows the warning color for this whole window, then vanishes).
 - `HEX_FLOOR_COLORS` — 7-step distinct-per-floor solid palette (top→bottom), indexed by `floor+1` *(added 2026-06-24)*.
@@ -106,7 +110,7 @@ Today two 0.1s loops run: the void monitor (`startMonitor`) and `HazardSystem`'s
 
 **Retired:** cyclic `TILE_SOLID_SECONDS` / `TILE_GONE_SECONDS` semantics; the square arena tunables `ARENA_PER_ROW` / `ARENA_SPACING`; `TILE_COLOR_SOLID` (per-floor `HEX_FLOOR_COLORS` replaces it). `LOBBY_*` untouched.
 
-**Recomputed:** `VOID_Y` below the lowest floor (`-172` for 7 floors at gap 28).
+**Recomputed:** `VOID_Y` below the lowest floor (`-304` for 7 floors at gap 50).
 
 ## Client / legibility
 

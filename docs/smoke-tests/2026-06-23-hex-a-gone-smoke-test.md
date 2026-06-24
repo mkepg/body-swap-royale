@@ -19,12 +19,16 @@ lune-covered.
 - [ ] Below the balcony there are **seven stacked hexagonal floors** (a `HexField`
       folder in Workspace), each floor a **distinct color** (amber → green → teal →
       blue → indigo → magenta → slate, top → bottom), top floor at Y=0.
-- [ ] Each tile is a **single hexagonal MeshPart** with **no visible gaps** to its
-      neighbors (tiles tessellate edge-to-edge).
+- [ ] Each floor is a **fine honeycomb of many small hexagons** (~91/floor), each a
+      **single hexagonal MeshPart** reading as a **distinct hexagon separated by a thin
+      grout seam** (NOT one continuous surface — tiles are inset by `HEX_GAP` from the
+      lattice so neighbors never touch). Compare against the Fall-Guys reference look.
 - [ ] No leftover `Baseplate` / `SpawnLocation` remains.
-- [ ] Bodies stand cleanly on the top floor (hull collision matches the hexagon).
-- [ ] The floors are **well separated vertically** (28-stud gap) — a clearly deep,
-      readable pit, not a compact stack.
+- [ ] Bodies stand cleanly on the top floor (hull collision matches the hexagon) and
+      **walk across the grout seams without catching/falling through** (if they snag,
+      lower `HEX_GAP`).
+- [ ] The floors are **strongly separated vertically** (50-stud gap) — a clearly deep,
+      readable pit with obvious air between layers, not a compact stack.
 - [ ] If the EditableMesh API fails, the output log shows the `[BSR] HexField
       EditableMesh build failed` warning and tiles fall back to blocks (should NOT
       happen on current Studio — flag if it does).

@@ -72,7 +72,11 @@ end
 -- (no box-overlap holding bodies up across seams). Falls back to a bounding block
 -- if the mesh API fails, so the arena still builds.
 local function buildHexTemplate()
-	local geom = HexPrism.build(Config.HEX_SIZE, Config.TILE_THICKNESS)
+	-- Render/collide each tile INSET from the lattice radius (HexGrid still spaces
+	-- centers by the full HEX_SIZE), so neighbors leave a grout seam and never share
+	-- geometry -- distinct tiles, and no z-fighting when a stepped tile recolors.
+	local renderSize = Config.HEX_SIZE - Config.HEX_GAP
+	local geom = HexPrism.build(renderSize, Config.TILE_THICKNESS)
 	local ok, result = pcall(function()
 		local em = AssetService:CreateEditableMesh()
 		local ids = {}
@@ -94,7 +98,7 @@ local function buildHexTemplate()
 	else
 		warn("[BSR] HexField EditableMesh build failed; using block tiles: " .. tostring(result))
 		part = Instance.new("Part")
-		part.Size = Vector3.new(Config.HEX_SIZE * 2, Config.TILE_THICKNESS, Config.HEX_SIZE * math.sqrt(3))
+		part.Size = Vector3.new(renderSize * 2, Config.TILE_THICKNESS, renderSize * math.sqrt(3))
 	end
 	part.Anchored = true
 	part.TopSurface = Enum.SurfaceType.Smooth
