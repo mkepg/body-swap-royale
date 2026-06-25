@@ -30,6 +30,14 @@ This is the **cross-slice source of truth**. Each slice gets its own `docs/super
 
 ---
 
+## Parking lot (not scheduled — ideas, not yet slices)
+
+Captured so they aren't lost, but deliberately **not** numbered slices and not committed to this roadmap's order.
+
+- **Dedicated social hub world.** A persistent space players land in *before/around* matches — main menu, shop, cosmetic customization, matchmaking queue, friends, emotes, hanging out (Fall Guys' main-menu/show-select equivalent). Distinct from the in-game balcony ([LobbyArea](../src/server/LobbyArea.luau)), which is between-rounds staging in the match world. A meaty addition: its own world, navigation, and likely a `TeleportService` flow; overlaps TDD §4 (lobby matchmaking) and the `MenuController`/shop systems. If pursued, scope as its **own** roadmap/effort rather than folding into Slice 2.
+
+---
+
 ## Notes
 
 - Slices are independent specs built in order; revisit ordering after each playtest.
