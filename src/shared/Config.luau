@@ -159,4 +159,61 @@ Config.SOUL_PALETTE = {
 	Color3.fromRGB(255, 130, 200),  -- pink
 }
 
+-- ===== Broadcast World Shell ("Soul Festival Sky") -- Slice 1 ============
+-- All client-side cosmetic. Every assetId below has a code-only fallback: an
+-- empty string ("") means "skip the asset, use the procedural fallback", so the
+-- shell renders with no uploaded assets. Reuses Config.SOUL_PALETTE for colors.
+
+-- Atmosphere / lighting grade (warm dusk: amber -> rose -> violet). Set client-side.
+Config.WORLD_CLOCK_TIME = 17.2                                  -- golden-hour sun angle
+Config.WORLD_AMBIENT = Color3.fromRGB(95, 70, 110)             -- soft violet fill
+Config.WORLD_OUTDOOR_AMBIENT = Color3.fromRGB(150, 110, 130)   -- warm outdoor fill
+Config.WORLD_FOG_COLOR = Color3.fromRGB(255, 175, 150)         -- warm haze
+Config.WORLD_ATMOSPHERE_DENSITY = 0.32
+Config.WORLD_ATMOSPHERE_HAZE = 2.2
+Config.WORLD_BLOOM_INTENSITY = 0.9
+Config.WORLD_COLORCORRECTION_TINT = Color3.fromRGB(255, 225, 235)
+Config.WORLD_COLORCORRECTION_SATURATION = 0.12
+-- Dusk skybox: six face assetIds. Leave all "" to use the gradient fallback
+-- (Atmosphere + Lighting tint only, no Sky instance).
+Config.WORLD_SKYBOX = { Up = "", Down = "", Left = "", Right = "", Front = "", Back = "" }
+
+-- Soul-wisps: drifting glowing orbs colored from SOUL_PALETTE, high in the sky.
+Config.WORLD_WISP_COUNT = 22            -- mobile-budgeted default
+Config.WORLD_WISP_CENTER_Y = 140        -- height above arena center the field sits at
+Config.WORLD_WISP_SPREAD = 220          -- horizontal half-extent of the field
+Config.WORLD_WISP_HEIGHT = 80           -- vertical thickness of the field
+Config.WORLD_WISP_SIZE = 3              -- stud diameter of each wisp
+Config.WORLD_WISP_DRIFT_SPEED = 0.4     -- bob cycles/sec
+Config.WORLD_WISP_DRIFT_AMP = 6         -- bob amplitude (studs)
+Config.WORLD_WISP_SEED = 20260625       -- deterministic field seed
+
+-- Aurora ribbon overhead; flares (brightens) briefly on each swap.
+Config.WORLD_AURORA_Y = 200             -- height of the ribbon
+Config.WORLD_AURORA_SIZE = Vector3.new(800, 0.2, 220)
+Config.WORLD_AURORA_BASE_TRANSPARENCY = 0.85
+Config.WORLD_AURORA_FLARE_TRANSPARENCY = 0.45
+Config.WORLD_AURORA_FLARE_SECONDS = 1.1
+
+-- Distant soul-orb crowd: a far ring on the horizon that cheers (bobs) on events.
+Config.WORLD_CROWD_RADIUS = 420
+Config.WORLD_CROWD_Y = 30
+Config.WORLD_CROWD_COUNT = 48
+Config.WORLD_CROWD_ORB_SIZE = 8
+Config.WORLD_CROWD_CHEER_BOB = 10       -- studs an orb pops up on a cheer
+Config.WORLD_CROWD_CHEER_SECONDS = 0.5
+
+-- Layer 2 local dressing (parametric from the ArenaDescriptor).
+Config.WORLD_SPOTLIGHT_MARGIN = 14      -- studs outward from the footprint corners
+Config.WORLD_SPOTLIGHT_HEIGHT = 60      -- rig height above the play surface
+Config.WORLD_SPOTLIGHT_RANGE = 90
+Config.WORLD_SPOTLIGHT_BRIGHTNESS = 3
+Config.WORLD_NEAR_ORB_RADIUS = 70       -- ring of close spectator orbs around the rim
+Config.WORLD_NEAR_ORB_COUNT = 18
+Config.WORLD_NEAR_ORB_Y = 6
+Config.WORLD_NEAR_ORB_SIZE = 4
+Config.WORLD_MARQUEE_TEXT = "BODY SWAP ROYALE"
+Config.WORLD_MARQUEE_SIZE = Vector3.new(60, 12, 2)
+Config.WORLD_MARQUEE_HEIGHT = 28        -- above the play surface, on the balcony side
+
 return Config
