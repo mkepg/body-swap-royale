@@ -3,8 +3,10 @@
 	parametrically from an ArenaDescriptor (never from arena internals), so any
 	future arena gets dressed by publishing its own descriptor. 100% local cosmetic.
 
-	Slice 1 dressing: spotlight rigs at the footprint corners, a "BODY SWAP ROYALE"
-	marquee on the balcony side, and a near ring of soul-orb spectators.
+	Per-floor dressing: short torches at every level's footprint corners (Neon head
+	tinted to the floor color; a real PointLight + flame only on the top
+	WORLD_TORCH_LIT_FLOORS floors), a soul-orb ring per floor, and a framed
+	"BODY SWAP ROYALE" marquee header on posts at the balcony's arena-facing edge.
 
 	Location: StarterPlayerScripts/Client/ArenaDressing (ModuleScript)
 --]]
@@ -79,11 +81,12 @@ end
 -- 4 torches at the footprint corners of every level; only the top
 -- WORLD_TORCH_LIT_FLOORS levels get a real light + flame.
 local function buildTorches(folder, desc)
+	-- Corners are level-invariant (depend only on center/footprint/margin); compute once.
+	local corners = WorldLayout.footprintCorners(
+		desc.center.X, desc.center.Z, desc.footprint.X, desc.footprint.Y,
+		Config.WORLD_TORCH_MARGIN)
 	for i, lv in ipairs(desc.levels) do
 		local lit = i <= Config.WORLD_TORCH_LIT_FLOORS
-		local corners = WorldLayout.footprintCorners(
-			desc.center.X, desc.center.Z, desc.footprint.X, desc.footprint.Y,
-			Config.WORLD_TORCH_MARGIN)
 		for _, c in ipairs(corners) do
 			buildTorch(folder, c.x, c.z, lv.y, lv.color, lit)
 		end
