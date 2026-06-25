@@ -120,14 +120,22 @@ local function buildBanner(folder)
 		Vector3.new(0, y, mountZ),
 		Config.WORLD_BANNER_BG_BOTTOM, Enum.Material.SmoothPlastic, folder)
 	panel.Name = "Banner"
+	-- Hide the square part itself: only the rounded SurfaceGui frame should show, so
+	-- the part's sharp dark corners don't protrude past the rounded amber border.
+	panel.Transparency = 1
 
 	local gui = Instance.new("SurfaceGui")
 	gui.Face = Enum.NormalId.Front -- -Z, toward the balcony players
 	gui.CanvasSize = Vector2.new(640, 160) -- 4:1 matches the 64x16 panel
+	gui.LightInfluence = 0 -- render at full brightness regardless of the dusk grade
 	gui.Parent = panel
 
+	-- Inset + centered so the rounded frame and its stroke sit fully inside the
+	-- canvas (no edge clipping); with the part transparent, the margin shows sky.
 	local frame = Instance.new("Frame")
-	frame.Size = UDim2.fromScale(1, 1)
+	frame.AnchorPoint = Vector2.new(0.5, 0.5)
+	frame.Position = UDim2.fromScale(0.5, 0.5)
+	frame.Size = UDim2.fromScale(0.96, 0.9)
 	frame.BackgroundColor3 = Config.WORLD_BANNER_BG_TOP
 	frame.Parent = gui
 	local corner = Instance.new("UICorner")
