@@ -33,4 +33,14 @@ function ArenaDescriptor.hex()
 	}
 end
 
+-- Cheap shape guard so a future arena's hand-built descriptor fails loudly/early
+-- rather than producing silently-wrong dressing. Returns the descriptor for chaining.
+function ArenaDescriptor.validate(desc)
+	assert(typeof(desc.center) == "Vector3", "ArenaDescriptor.center must be a Vector3")
+	assert(typeof(desc.footprint) == "Vector2", "ArenaDescriptor.footprint must be a Vector2")
+	assert(type(desc.depth) == "number", "ArenaDescriptor.depth must be a number")
+	assert(typeof(desc.accent) == "Color3", "ArenaDescriptor.accent must be a Color3")
+	return desc
+end
+
 return ArenaDescriptor

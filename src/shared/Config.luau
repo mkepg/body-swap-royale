@@ -213,6 +213,9 @@ Config.WORLD_CROWD_COUNT = 48
 Config.WORLD_CROWD_ORB_SIZE = 8
 Config.WORLD_CROWD_CHEER_BOB = 10       -- studs an orb pops up on a cheer
 Config.WORLD_CROWD_CHEER_SECONDS = 0.5
+Config.WORLD_CROWD_IDLE_AMP = 1.5       -- studs of gentle idle bob
+Config.WORLD_CROWD_IDLE_SPEED = 0.5     -- idle bob cycles/sec
+Config.WORLD_CROWD_CHEER_SCALE = 0.6    -- orb size pop fraction at full cheer
 
 -- Layer 2 local dressing (parametric from the ArenaDescriptor).
 Config.WORLD_SPOTLIGHT_MARGIN = 14      -- studs outward from the footprint corners

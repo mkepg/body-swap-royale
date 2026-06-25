@@ -11,7 +11,8 @@
 local WorldLayout = {}
 
 -- `count` evenly spaced points on a circle of `radius` around (cx, cz).
--- Returns { { x, z }, ... }. Point 1 is at angle 0 (the +X axis), going CCW.
+-- Returns { { x, z }, ... }. Point 1 is at angle 0 (the +X axis); successive
+-- points advance by +angle (clockwise viewed top-down from +Y, since +Z is "into" the map).
 function WorldLayout.ring(cx, cz, radius, count)
 	local out = {}
 	for i = 0, count - 1 do
