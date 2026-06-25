@@ -52,8 +52,10 @@ local function buildSpotlights(folder, desc)
 		local pole = rigPart(Vector3.new(2, Config.WORLD_SPOTLIGHT_HEIGHT, 2),
 			Vector3.new(c.x, desc.center.Y + Config.WORLD_SPOTLIGHT_HEIGHT / 2, c.z),
 			Color3.fromRGB(40, 40, 50), Enum.Material.Metal, folder)
+		pole.Name = "SpotlightPole"
 		local head = rigPart(Vector3.new(5, 3, 5), Vector3.new(c.x, topY, c.z),
 			desc.accent, Enum.Material.Neon, folder)
+		head.Name = "SpotlightHead"
 		local light = Instance.new("SpotLight")
 		light.Face = Enum.NormalId.Bottom
 		light.Angle = 75
@@ -61,11 +63,10 @@ local function buildSpotlights(folder, desc)
 		light.Brightness = Config.WORLD_SPOTLIGHT_BRIGHTNESS
 		light.Color = desc.accent
 		light.Parent = head
-		pole.Name, head.Name = "SpotlightPole", "SpotlightHead"
 	end
 end
 
-local function buildMarquee(folder, desc)
+local function buildMarquee(folder)
 	-- A banner mounted just above the balcony's arena-facing front edge, facing
 	-- the waiting players. Anchored to the lobby geometry (not the arena), since
 	-- the balcony is where players read signage during downtime. Players stand at
@@ -80,7 +81,7 @@ local function buildMarquee(folder, desc)
 
 	local gui = Instance.new("SurfaceGui")
 	gui.Face = Enum.NormalId.Front -- -Z face, toward the balcony players
-	gui.CanvasSize = Vector2.new(600, 120)
+	gui.CanvasSize = Vector2.new(600, 120) -- 5:1, matches WORLD_MARQUEE_SIZE 60x12
 	gui.Parent = part
 
 	local label = Instance.new("TextLabel")
@@ -111,7 +112,7 @@ function ArenaDressing.start()
 	local folder = newFolder()
 	local desc = ArenaDescriptor.hex()
 	buildSpotlights(folder, desc)
-	buildMarquee(folder, desc)
+	buildMarquee(folder)
 	buildNearOrbs(folder, desc)
 end
 
