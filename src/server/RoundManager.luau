@@ -75,12 +75,54 @@ end
 
 -- ===== alive roster =====
 
--- The ordered alive roster = connected players filtered by RoundState.isAlive.
--- (No new RoundState accessor needed; the pure module stays untouched.)
+-- A player is a valid participant only if they currently control a fully-spawned
+-- body: it exists, is parented in the world, and has a HumanoidRootPart. Guards
+-- against a present-but-bodyless player (e.g. an avatar load that produced no
+-- usable body, leaving the client with only a camera) being counted toward round
+-- start or handed into the swap derangement.
+local function hasValidBody(player)
+	local body = ControlManager.getControlledBody(player)
+	return body ~= nil and body.Parent ~= nil and body:FindFirstChild("HumanoidRootPart") ~= nil
+end
+
+-- The set of connected players that currently have a valid body. Passed to
+-- RoundState.beginRound so only they become round participants (alive).
+local function eligibleSet()
+	local set = {}
+	for _, p in ipairs(Players:GetPlayers()) do
+		if hasValidBody(p) then
+			set[p] = true
+		end
+	end
+	return set
+end
+
+-- How many connected players have a valid body right now.
+local function validBodiedCount()
+	local n = 0
+	for _, p in ipairs(Players:GetPlayers()) do
+		if hasValidBody(p) then
+			n += 1
+		end
+	end
+	return n
+end
+
+-- Round-start gate: the pure lifecycle gate (enough present, in Lobby) AND enough
+-- of those players actually have a valid body. Stops a round from starting while a
+-- present player is still bodyless (camera-only).
+local function readyToStart()
+	return RoundState.canStart(model) and validBodiedCount() >= Config.MIN_PLAYERS_TO_START
+end
+
+-- The ordered alive roster = connected, alive players that ALSO have a valid body.
+-- The body check is defensive (alive players normally always have a body, since it
+-- is only destroyed on disconnect, which un-alives them), guaranteeing the swap
+-- derangement never receives a bodyless participant.
 local function aliveRoster()
 	local roster = {}
 	for _, p in ipairs(Players:GetPlayers()) do
-		if RoundState.isAlive(model, p) then
+		if RoundState.isAlive(model, p) and hasValidBody(p) then
 			roster[#roster + 1] = p
 		end
 	end
@@ -256,8 +298,8 @@ end
 local function runCountdown()
 	local remaining = Config.LOBBY_COUNTDOWN_SECONDS
 	while remaining > 0 do
-		if not RoundState.canStart(model) then
-			broadcastState() -- back to plain Lobby
+		if not readyToStart() then
+			broadcastState() -- back to plain Lobby (dropped below threshold or a body went invalid)
 			return true
 		end
 		broadcastState(remaining)
@@ -268,7 +310,7 @@ local function runCountdown()
 end
 
 local function beginRound()
-	RoundState.beginRound(model) -- Lobby -> Active; present snapshot into alive
+	RoundState.beginRound(model, eligibleSet()) -- Lobby -> Active; only valid-bodied present players become alive
 	cadenceStartCount = RoundState.aliveCount(model)
 	swapsSoFar = 0
 	-- Unanchor + reposition bodies BEFORE re-granting ownership: SetNetworkOwner
@@ -435,7 +477,7 @@ function RoundManager.start()
 	task.spawn(function()
 		while true do
 			broadcastState() -- Lobby
-			while not RoundState.canStart(model) do
+			while not readyToStart() do
 				task.wait(0.25)
 			end
 			local aborted = runCountdown()

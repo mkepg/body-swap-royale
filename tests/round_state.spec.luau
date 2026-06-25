@@ -55,6 +55,25 @@ do
 	print("beginRound: snapshot present->alive + roster OK")
 end
 
+-- beginRound with an `eligible` set: only eligible present players become alive
+-- (the server passes the set of players who have a valid, spawned body, so a
+-- bodyless present player is excluded from the round and its swaps). nil = all.
+do
+	local m = RoundState.new(2, 2)
+	RoundState.addPlayer(m, "A")
+	RoundState.addPlayer(m, "B")
+	RoundState.addPlayer(m, "C")
+
+	local roster = RoundState.beginRound(m, { A = true, C = true }) -- B has no body
+
+	expect(RoundState.aliveCount(m) == 2, "only eligible present players are alive")
+	expect(RoundState.isAlive(m, "A") and RoundState.isAlive(m, "C"), "A and C are alive")
+	expect(not RoundState.isAlive(m, "B"), "ineligible B is not alive despite being present")
+	expect(#roster == 2, "roster lists only the eligible players")
+	expect(m.present["B"] == true, "B stays present (still in the lobby), just not alive")
+	print("beginRound: eligible filter OK")
+end
+
 -- beginRound: refuses to start below threshold.
 do
 	local m = RoundState.new(2, 2)
