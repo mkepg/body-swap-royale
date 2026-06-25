@@ -128,13 +128,11 @@ All hooks are read-only cosmetic listeners on **existing** remotes; the shell ne
 
 ## 9. Scope boundary & slice roadmap
 
+> The cross-slice roadmap (Slices 1–5, status, decisions) is tracked in [docs/world-enrichment-roadmap.md](../../world-enrichment-roadmap.md) — the source of truth. The note below is Slice 1's local scope boundary only.
+
 **In this slice (Slice 1):** Layer 1 WorldShell + the `ArenaDescriptor` contract + minimal Layer 2 framing (spotlights, marquee, near orbs), with the hex arena as the first descriptor consumer.
 
-**Explicitly NOT in this slice — later slices:**
-- **Slice 2 — Lobby hub redress (hybrid rebuild):** rebuild the balcony into a broadcast "on-deck" stage matching the Soul Festival world, using the hybrid approach.
-- **Slice 3 — Hex pit hybrid re-skin:** upgrade the hex tiles from stock parts to hybrid (materials/textures/mesh) matching the new aesthetic, **without changing the erosion gameplay**.
-- **Slice 4 — Ambient life systems:** functional jumbotron leaderboard, confetti on win, spotlight sweeps, richer crowd reactions.
-- **Slice 5 — Activities:** warmup / practice-swap things to do while waiting between rounds.
+**Explicitly NOT in this slice:** the lobby hybrid rebuild (Slice 2), the hex pit hybrid re-skin (Slice 3), ambient-life systems incl. the functional jumbotron + confetti (Slice 4), and activities (Slice 5). See the roadmap for the full breakdown.
 
 ---
 
