@@ -47,6 +47,7 @@ do
 			"wispField must be deterministic for a seed")
 		expect(a[i].x >= -50 and a[i].x <= 50, "wisp x in [-spread,spread]")
 		expect(a[i].y >= 100 and a[i].y <= 140, "wisp y in [cy, cy+height]")
+		expect(a[i].z >= -50 and a[i].z <= 50, "wisp z in [-spread,spread]")
 		expect(a[i].colorIndex >= 1 and a[i].colorIndex <= 8, "colorIndex within palette")
 	end
 	local c = WorldLayout.wispField(0, 100, 0, 50, 40, 12, 8, 9999)

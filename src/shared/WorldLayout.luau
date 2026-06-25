@@ -39,9 +39,9 @@ function WorldLayout.footprintCorners(cx, cz, footX, footZ, margin)
 	}
 end
 
--- Deterministic pseudo-random wisp positions inside a box volume centered at
--- (cx,cy,cz): x,z in [-spread,spread], y in [cy, cy+height]. Uses a seeded LCG
--- (no global RNG) so tests are stable. colorIndex wraps over `paletteLen`.
+-- Deterministic pseudo-random wisp positions inside a box volume with base at
+-- (cx,cy,cz): x,z in [cx±spread] / [cz±spread], y in [cy, cy+height]. Uses a
+-- seeded LCG (no global RNG) so tests are stable. colorIndex wraps over `paletteLen`.
 function WorldLayout.wispField(cx, cy, cz, spread, height, count, paletteLen, seed)
 	local out = {}
 	local s = seed % 2147483647
