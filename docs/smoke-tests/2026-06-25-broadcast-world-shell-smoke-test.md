@@ -37,6 +37,10 @@ Verified single-client via MCP (counts + colors + screen captures):
 16. **[PASS] Framed banner** — "BODY SWAP ROYALE" renders in the framed header (glow frame, gradient, ON AIR pill) on two posts at the balcony edge, legible to waiting players.
 17. **[ ] Perf glance (2-client / live round)** — with ~12 dynamic lights + flame particles, watch FPS during tile erosion (Voxel re-lights). Dial `WORLD_TORCH_LIT_FLOORS` down if needed.
 
+## Fixes (2026-06-25)
+18. **[PASS] Banner clear of the lobby** — the framed banner floats at (0, 71, −34): 6 studs above the railing top (57) and 6 studs forward of the railing (−40), no support posts. Not touching the lobby structure (MCP-verified).
+19. **[ ] Valid-body gate (2-client)** — with 2 players where one has no spawned body (camera-only), the round must NOT start and no swap occurs; once both have valid bodies it starts normally. (Pure `RoundState.beginRound(eligible)` is lune-tested; the server gate uses the live `ControlManager.getControlledBody` — confirm end-to-end with 2 clients.)
+
 ## Result
-- Single-client visual + build verification: **PASS** (checks 1–8 and 13–16, via MCP).
-- 2-client / live-round checks (9–12, 17): _pending a live 2-client session._
+- Single-client visual + build verification: **PASS** (checks 1–8, 13–16, 18; via MCP).
+- 2-client / live-round checks (9–12, 17, 19): _pending a live 2-client session._
