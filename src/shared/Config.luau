@@ -218,16 +218,30 @@ Config.WORLD_CROWD_IDLE_SPEED = 0.5     -- idle bob cycles/sec
 Config.WORLD_CROWD_CHEER_SCALE = 0.6    -- orb size pop fraction at full cheer
 
 -- Layer 2 local dressing (parametric from the ArenaDescriptor).
-Config.WORLD_SPOTLIGHT_MARGIN = 14      -- studs outward from the footprint corners
-Config.WORLD_SPOTLIGHT_HEIGHT = 60      -- rig height above the play surface
-Config.WORLD_SPOTLIGHT_RANGE = 90
-Config.WORLD_SPOTLIGHT_BRIGHTNESS = 3
 Config.WORLD_NEAR_ORB_RADIUS = 70       -- ring of close spectator orbs around the rim
-Config.WORLD_NEAR_ORB_COUNT = 18
+Config.WORLD_NEAR_ORB_COUNT = 12        -- ring per floor; reduced so 7 stacked rings aren't soup
 Config.WORLD_NEAR_ORB_Y = 6
 Config.WORLD_NEAR_ORB_SIZE = 4
-Config.WORLD_MARQUEE_TEXT = "BODY SWAP ROYALE"
-Config.WORLD_MARQUEE_SIZE = Vector3.new(60, 12, 2)
-Config.WORLD_MARQUEE_HEIGHT = 16        -- studs above the balcony surface (banner mounts on the balcony front edge)
+
+-- Per-floor torches: short posts; Neon head = floor color on ALL floors; a real
+-- PointLight + flame particles only on the top WORLD_TORCH_LIT_FLOORS floors
+-- (perf dial -- avoids 28 dynamic lights / particle-budget blowout / cross-floor bleed).
+Config.WORLD_TORCH_MARGIN = 14          -- studs outward from the footprint corners
+Config.WORLD_TORCH_POST_HEIGHT = 12     -- short (< HEX_FLOOR_GAP 50 so it can't pierce the floor above)
+Config.WORLD_TORCH_HEAD_SIZE = 3
+Config.WORLD_TORCH_LIT_FLOORS = 3       -- top N floors get a real PointLight + flame particles
+Config.WORLD_TORCH_LIGHT_RANGE = 34     -- < HEX_FLOOR_GAP so light doesn't bleed across floors
+Config.WORLD_TORCH_LIGHT_BRIGHTNESS = 2
+Config.WORLD_TORCH_FLAME_RATE = 6       -- particles/sec per lit torch (low for the mobile budget)
+
+-- Framed marquee header (banner) on support posts at the balcony's arena-facing edge.
+Config.WORLD_BANNER_TEXT = "BODY SWAP ROYALE"
+Config.WORLD_BANNER_SIZE = Vector3.new(64, 16, 2)
+Config.WORLD_BANNER_HEIGHT = 14                 -- studs above the balcony surface
+Config.WORLD_BANNER_FRAME_COLOR = Color3.fromRGB(255, 216, 77)   -- glowing amber frame
+Config.WORLD_BANNER_BG_TOP = Color3.fromRGB(36, 16, 72)
+Config.WORLD_BANNER_BG_BOTTOM = Color3.fromRGB(22, 10, 46)
+Config.WORLD_BANNER_TEXT_COLOR = Color3.fromRGB(255, 216, 77)
+Config.WORLD_BANNER_POST_COLOR = Color3.fromRGB(40, 40, 50)
 
 return Config
