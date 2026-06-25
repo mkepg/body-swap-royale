@@ -110,7 +110,7 @@ end
 
 function ArenaDressing.start()
 	local folder = newFolder()
-	local desc = ArenaDescriptor.hex()
+	local desc = ArenaDescriptor.validate(ArenaDescriptor.hex())
 	buildSpotlights(folder, desc)
 	buildMarquee(folder)
 	buildNearOrbs(folder, desc)

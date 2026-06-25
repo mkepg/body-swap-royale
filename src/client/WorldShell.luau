@@ -150,20 +150,38 @@ local function buildCrowd(folder)
 		local color = palette[WorldLayout.paletteIndex(i, #palette)]
 		local orb = glowOrb(Config.WORLD_CROWD_ORB_SIZE, color, folder)
 		orb.Position = Vector3.new(pt.x, Config.WORLD_CROWD_Y, pt.z)
-		crowd[#crowd + 1] = { part = orb, base = Vector3.new(pt.x, Config.WORLD_CROWD_Y, pt.z) }
+		crowd[#crowd + 1] = {
+			part = orb,
+			base = orb.Position,
+			baseSize = Config.WORLD_CROWD_ORB_SIZE,
+			phase = (pt.x + pt.z),
+			cheer = 0,
+		}
 	end
+	-- One Heartbeat drives a gentle idle wobble plus a decaying cheer pop (bob +
+	-- size = brighter neon glow) for the whole crowd. A per-orb decaying impulse
+	-- (not TweenService) keeps the idle Position write from fighting a tween.
+	RunService.Heartbeat:Connect(function(dt)
+		local t = os.clock() * Config.WORLD_CROWD_IDLE_SPEED * math.pi * 2
+		for _, e in ipairs(crowd) do
+			local p = e.part
+			if p.Parent then
+				local idle = math.sin(t + e.phase) * Config.WORLD_CROWD_IDLE_AMP
+				local pop = e.cheer * Config.WORLD_CROWD_CHEER_BOB
+				p.Position = e.base + Vector3.new(0, idle + pop, 0)
+				local s = e.baseSize * (1 + e.cheer * Config.WORLD_CROWD_CHEER_SCALE)
+				p.Size = Vector3.new(s, s, s)
+				if e.cheer > 0 then
+					e.cheer = math.max(0, e.cheer - dt / Config.WORLD_CROWD_CHEER_SECONDS)
+				end
+			end
+		end
+	end)
 end
 
 local function cheer()
-	for _, entry in ipairs(crowd) do
-		local orb = entry.part
-		if orb.Parent then
-			local up = entry.base + Vector3.new(0, Config.WORLD_CROWD_CHEER_BOB * (0.6 + math.random() * 0.8), 0)
-			orb.Position = up
-			TweenService:Create(orb,
-				TweenInfo.new(Config.WORLD_CROWD_CHEER_SECONDS, Enum.EasingStyle.Bounce, Enum.EasingDirection.Out),
-				{ Position = entry.base }):Play()
-		end
+	for _, e in ipairs(crowd) do
+		e.cheer = 0.6 + math.random() * 0.4
 	end
 end
 
