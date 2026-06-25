@@ -62,17 +62,22 @@ function RoundState.canStart(model)
 	return model.phase == "Lobby" and count(model.present) >= model.minToStart
 end
 
--- Lobby -> Active. Snapshots the current `present` set into `alive` and returns
--- the starting roster as an array so the caller can spawn / assign control.
-function RoundState.beginRound(model)
+-- Lobby -> Active. Snapshots the eligible `present` players into `alive` and
+-- returns the starting roster as an array so the caller can spawn / assign control.
+-- `eligible` (optional [player]=true set) restricts who becomes alive -- the server
+-- passes the players that have a valid, fully-spawned body, so a bodyless present
+-- player stays in the lobby (present) but is NOT a round participant. nil = all present.
+function RoundState.beginRound(model, eligible)
 	assert(RoundState.canStart(model), "beginRound requires canStart")
 	model.phase = "Active"
 	model.winner = nil
 	model.alive = {}
 	local roster = {}
 	for player in pairs(model.present) do
-		model.alive[player] = true
-		roster[#roster + 1] = player
+		if eligible == nil or eligible[player] then
+			model.alive[player] = true
+			roster[#roster + 1] = player
+		end
 	end
 	return roster
 end
