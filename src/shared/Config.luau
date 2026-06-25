@@ -237,11 +237,11 @@ Config.WORLD_TORCH_FLAME_RATE = 6       -- particles/sec per lit torch (low for 
 -- Framed marquee header (banner) on support posts at the balcony's arena-facing edge.
 Config.WORLD_BANNER_TEXT = "BODY SWAP ROYALE"
 Config.WORLD_BANNER_SIZE = Vector3.new(64, 16, 2)
-Config.WORLD_BANNER_HEIGHT = 14                 -- studs above the balcony surface
+Config.WORLD_BANNER_HEIGHT = 26                 -- studs above the balcony surface (clears the 12-high railing with a gap)
+Config.WORLD_BANNER_FORWARD = 6                 -- studs toward the arena from the balcony edge (clear of the railing)
 Config.WORLD_BANNER_FRAME_COLOR = Color3.fromRGB(255, 216, 77)   -- glowing amber frame
 Config.WORLD_BANNER_BG_TOP = Color3.fromRGB(36, 16, 72)
 Config.WORLD_BANNER_BG_BOTTOM = Color3.fromRGB(22, 10, 46)
 Config.WORLD_BANNER_TEXT_COLOR = Color3.fromRGB(255, 216, 77)
-Config.WORLD_BANNER_POST_COLOR = Color3.fromRGB(40, 40, 50)
 
 return Config

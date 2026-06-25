@@ -110,25 +110,16 @@ local function buildOrbRings(folder, desc)
 	end
 end
 
--- Framed marquee header on two support posts at the balcony's arena-facing edge,
--- facing the waiting players (-Z Front face). Built from lobby Config, not the arena.
+-- Framed marquee header floating clear above the balcony's arena-facing edge,
+-- facing the waiting players (-Z Front face). Raised above the railing and nudged
+-- toward the arena so it doesn't touch the lobby structure. Built from lobby Config.
 local function buildBanner(folder)
-	local frontEdgeZ = Config.LOBBY_ORIGIN.Z + Config.LOBBY_PAD_SIZE.Z / 2
+	local mountZ = Config.LOBBY_ORIGIN.Z + Config.LOBBY_PAD_SIZE.Z / 2 + Config.WORLD_BANNER_FORWARD
 	local y = Config.LOBBY_ORIGIN.Y + Config.WORLD_BANNER_HEIGHT
 	local panel = rigPart(Config.WORLD_BANNER_SIZE,
-		Vector3.new(0, y, frontEdgeZ),
+		Vector3.new(0, y, mountZ),
 		Config.WORLD_BANNER_BG_BOTTOM, Enum.Material.SmoothPlastic, folder)
 	panel.Name = "Banner"
-
-	-- Two posts from the balcony surface up to the panel (mounted, not floating).
-	local halfW = Config.WORLD_BANNER_SIZE.X / 2 - 3
-	local postH = Config.WORLD_BANNER_HEIGHT + Config.WORLD_BANNER_SIZE.Y / 2
-	for _, sx in ipairs({ -halfW, halfW }) do
-		local post = rigPart(Vector3.new(1.2, postH, 1.2),
-			Vector3.new(sx, Config.LOBBY_ORIGIN.Y + postH / 2, frontEdgeZ),
-			Config.WORLD_BANNER_POST_COLOR, Enum.Material.Metal, folder)
-		post.Name = "BannerPost"
-	end
 
 	local gui = Instance.new("SurfaceGui")
 	gui.Face = Enum.NormalId.Front -- -Z, toward the balcony players
