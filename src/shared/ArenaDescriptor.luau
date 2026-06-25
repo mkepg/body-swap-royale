@@ -25,11 +25,20 @@ local ArenaDescriptor = {}
 function ArenaDescriptor.hex()
 	local halfWidth = Config.HEX_SIZE * 1.5 * Config.HEX_RADIUS + Config.HEX_SIZE
 	local extent = halfWidth * 2
+	-- One dressable level per hex floor, top -> bottom, each carrying its floor color.
+	local levels = {}
+	for k = 0, Config.HEX_FLOOR_COUNT - 1 do
+		levels[#levels + 1] = {
+			y = Config.TILE_SURFACE_Y - k * Config.HEX_FLOOR_GAP,
+			color = Config.HEX_FLOOR_COLORS[k + 1],
+		}
+	end
 	return {
 		center = Vector3.new(0, Config.TILE_SURFACE_Y, 0),
 		footprint = Vector2.new(extent, extent),
 		depth = Config.HEX_FLOOR_GAP * (Config.HEX_FLOOR_COUNT - 1),
 		accent = Config.HEX_FLOOR_COLORS[1],
+		levels = levels,
 	}
 end
 
@@ -40,6 +49,12 @@ function ArenaDescriptor.validate(desc)
 	assert(typeof(desc.footprint) == "Vector2", "ArenaDescriptor.footprint must be a Vector2")
 	assert(type(desc.depth) == "number", "ArenaDescriptor.depth must be a number")
 	assert(typeof(desc.accent) == "Color3", "ArenaDescriptor.accent must be a Color3")
+	assert(type(desc.levels) == "table" and #desc.levels > 0,
+		"ArenaDescriptor.levels must be a non-empty array")
+	for i, lv in ipairs(desc.levels) do
+		assert(type(lv.y) == "number", "ArenaDescriptor.levels[" .. i .. "].y must be a number")
+		assert(typeof(lv.color) == "Color3", "ArenaDescriptor.levels[" .. i .. "].color must be a Color3")
+	end
 	return desc
 end
 
