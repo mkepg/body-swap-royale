@@ -66,16 +66,20 @@ local function buildSpotlights(folder, desc)
 end
 
 local function buildMarquee(folder, desc)
-	-- Place on the balcony side (-Z), facing the arena (+Z). Balcony is at
-	-- Config.LOBBY_ORIGIN; sit the marquee just in front of its edge, high up.
-	local z = Config.LOBBY_ORIGIN.Z + 6
+	-- A banner mounted just above the balcony's arena-facing front edge, facing
+	-- the waiting players. Anchored to the lobby geometry (not the arena), since
+	-- the balcony is where players read signage during downtime. Players stand at
+	-- z < the front edge and look +Z toward the arena, so the banner's -Z face
+	-- (NormalId.Front) points back at them.
+	local frontEdgeZ = Config.LOBBY_ORIGIN.Z + Config.LOBBY_PAD_SIZE.Z / 2
+	local y = Config.LOBBY_ORIGIN.Y + Config.WORLD_MARQUEE_HEIGHT
 	local part = rigPart(Config.WORLD_MARQUEE_SIZE,
-		Vector3.new(0, desc.center.Y + Config.WORLD_MARQUEE_HEIGHT, z),
+		Vector3.new(0, y, frontEdgeZ),
 		Color3.fromRGB(20, 16, 36), Enum.Material.SmoothPlastic, folder)
 	part.Name = "Marquee"
 
 	local gui = Instance.new("SurfaceGui")
-	gui.Face = Enum.NormalId.Front -- +Z face, toward the arena
+	gui.Face = Enum.NormalId.Front -- -Z face, toward the balcony players
 	gui.CanvasSize = Vector2.new(600, 120)
 	gui.Parent = part
 
