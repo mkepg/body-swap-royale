@@ -169,15 +169,24 @@ Config.WORLD_CLOCK_TIME = 17.2                                  -- golden-hour s
 Config.WORLD_AMBIENT = Color3.fromRGB(95, 70, 110)             -- soft violet fill
 Config.WORLD_OUTDOOR_AMBIENT = Color3.fromRGB(150, 110, 130)   -- warm outdoor fill
 Config.WORLD_FOG_COLOR = Color3.fromRGB(255, 175, 150)         -- warm haze
-Config.WORLD_ATMOSPHERE_DENSITY = 0.32
-Config.WORLD_ATMOSPHERE_HAZE = 2.2
+Config.WORLD_ATMOSPHERE_DENSITY = 0.05  -- light: let the dusk skybox read through (heavy haze muddies it)
+Config.WORLD_ATMOSPHERE_HAZE = 0.4
 Config.WORLD_ATMOSPHERE_DECAY = Color3.fromRGB(120, 70, 130)   -- deep violet horizon decay (distinct from Color)
 Config.WORLD_BLOOM_INTENSITY = 0.9
 Config.WORLD_COLORCORRECTION_TINT = Color3.fromRGB(255, 225, 235)
-Config.WORLD_COLORCORRECTION_SATURATION = 0.12
+Config.WORLD_COLORCORRECTION_SATURATION = 0.06
 -- Dusk skybox: six face assetIds. Leave all "" to use the gradient fallback
--- (Atmosphere + Lighting tint only, no Sky instance).
-Config.WORLD_SKYBOX = { Up = "", Down = "", Left = "", Right = "", Front = "", Back = "" }
+-- (Atmosphere + Lighting tint only, no Sky instance). Faces below are from the
+-- free Creator Store "Sunset Dawn Skybox" (assetId 325545295) -- warm dusk,
+-- cloud-based, no terrain. Swap to "" per face to fall back to the gradient.
+Config.WORLD_SKYBOX = {
+	Up = "rbxassetid://323493360",
+	Down = "rbxassetid://323494368",
+	Left = "rbxassetid://323494252",
+	Right = "rbxassetid://323494067",
+	Front = "rbxassetid://323494130",
+	Back = "rbxassetid://323494035",
+}
 
 -- Soul-wisps: drifting glowing orbs colored from SOUL_PALETTE, high in the sky.
 Config.WORLD_WISP_COUNT = 22            -- mobile-budgeted default
