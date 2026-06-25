@@ -216,6 +216,6 @@ Config.WORLD_NEAR_ORB_Y = 6
 Config.WORLD_NEAR_ORB_SIZE = 4
 Config.WORLD_MARQUEE_TEXT = "BODY SWAP ROYALE"
 Config.WORLD_MARQUEE_SIZE = Vector3.new(60, 12, 2)
-Config.WORLD_MARQUEE_HEIGHT = 28        -- above the play surface, on the balcony side
+Config.WORLD_MARQUEE_HEIGHT = 16        -- studs above the balcony surface (banner mounts on the balcony front edge)
 
 return Config
