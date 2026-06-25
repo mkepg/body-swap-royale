@@ -42,78 +42,146 @@ local function rigPart(size, pos, color, material, parent)
 	return p
 end
 
-local function buildSpotlights(folder, desc)
-	local corners = WorldLayout.footprintCorners(
-		desc.center.X, desc.center.Z,
-		desc.footprint.X, desc.footprint.Y, -- Vector2.Y holds the Z extent
-		Config.WORLD_SPOTLIGHT_MARGIN)
-	local topY = desc.center.Y + Config.WORLD_SPOTLIGHT_HEIGHT
-	for _, c in ipairs(corners) do
-		local pole = rigPart(Vector3.new(2, Config.WORLD_SPOTLIGHT_HEIGHT, 2),
-			Vector3.new(c.x, desc.center.Y + Config.WORLD_SPOTLIGHT_HEIGHT / 2, c.z),
-			Color3.fromRGB(40, 40, 50), Enum.Material.Metal, folder)
-		pole.Name = "SpotlightPole"
-		local head = rigPart(Vector3.new(5, 3, 5), Vector3.new(c.x, topY, c.z),
-			desc.accent, Enum.Material.Neon, folder)
-		head.Name = "SpotlightHead"
-		local light = Instance.new("SpotLight")
-		light.Face = Enum.NormalId.Bottom
-		light.Angle = 75
-		light.Range = Config.WORLD_SPOTLIGHT_RANGE
-		light.Brightness = Config.WORLD_SPOTLIGHT_BRIGHTNESS
-		light.Color = desc.accent
+-- One short torch: dark post + Neon head tinted to the floor color (all floors).
+-- `lit` floors additionally get a real floor-colored PointLight + a low-rate flame.
+local function buildTorch(folder, x, z, baseY, color, lit)
+	local postH = Config.WORLD_TORCH_POST_HEIGHT
+	local post = rigPart(Vector3.new(1.5, postH, 1.5),
+		Vector3.new(x, baseY + postH / 2, z),
+		Color3.fromRGB(40, 40, 50), Enum.Material.Metal, folder)
+	post.Name = "TorchPost"
+
+	local hs = Config.WORLD_TORCH_HEAD_SIZE
+	local head = rigPart(Vector3.new(hs, hs, hs),
+		Vector3.new(x, baseY + postH + hs / 2, z),
+		color, Enum.Material.Neon, folder)
+	head.Name = "TorchHead"
+
+	if lit then
+		local light = Instance.new("PointLight")
+		light.Color = color
+		light.Range = Config.WORLD_TORCH_LIGHT_RANGE
+		light.Brightness = Config.WORLD_TORCH_LIGHT_BRIGHTNESS
 		light.Parent = head
+
+		local flame = Instance.new("ParticleEmitter")
+		flame.Color = ColorSequence.new(color)
+		flame.Rate = Config.WORLD_TORCH_FLAME_RATE
+		flame.Lifetime = NumberRange.new(0.5, 0.9)
+		flame.Speed = NumberRange.new(2, 4)
+		flame.Size = NumberSequence.new(1.2, 0)
+		flame.Transparency = NumberSequence.new(0.2, 1)
+		flame.LightEmission = 1
+		flame.Parent = head
 	end
 end
 
-local function buildMarquee(folder)
-	-- A banner mounted just above the balcony's arena-facing front edge, facing
-	-- the waiting players. Anchored to the lobby geometry (not the arena), since
-	-- the balcony is where players read signage during downtime. Players stand at
-	-- z < the front edge and look +Z toward the arena, so the banner's -Z face
-	-- (NormalId.Front) points back at them.
+-- 4 torches at the footprint corners of every level; only the top
+-- WORLD_TORCH_LIT_FLOORS levels get a real light + flame.
+local function buildTorches(folder, desc)
+	for i, lv in ipairs(desc.levels) do
+		local lit = i <= Config.WORLD_TORCH_LIT_FLOORS
+		local corners = WorldLayout.footprintCorners(
+			desc.center.X, desc.center.Z, desc.footprint.X, desc.footprint.Y,
+			Config.WORLD_TORCH_MARGIN)
+		for _, c in ipairs(corners) do
+			buildTorch(folder, c.x, c.z, lv.y, lv.color, lit)
+		end
+	end
+end
+
+-- A soul-palette orb ring around every level (distinct from the floor-colored torches).
+local function buildOrbRings(folder, desc)
+	local palette = Config.SOUL_PALETTE
+	for _, lv in ipairs(desc.levels) do
+		local pts = WorldLayout.ring(desc.center.X, desc.center.Z,
+			Config.WORLD_NEAR_ORB_RADIUS, Config.WORLD_NEAR_ORB_COUNT)
+		for i, pt in ipairs(pts) do
+			local orb = rigPart(
+				Vector3.new(Config.WORLD_NEAR_ORB_SIZE, Config.WORLD_NEAR_ORB_SIZE, Config.WORLD_NEAR_ORB_SIZE),
+				Vector3.new(pt.x, lv.y + Config.WORLD_NEAR_ORB_Y, pt.z),
+				palette[WorldLayout.paletteIndex(i, #palette)], Enum.Material.Neon, folder)
+			orb.Shape = Enum.PartType.Ball
+			orb.Name = "NearOrb"
+		end
+	end
+end
+
+-- Framed marquee header on two support posts at the balcony's arena-facing edge,
+-- facing the waiting players (-Z Front face). Built from lobby Config, not the arena.
+local function buildBanner(folder)
 	local frontEdgeZ = Config.LOBBY_ORIGIN.Z + Config.LOBBY_PAD_SIZE.Z / 2
-	local y = Config.LOBBY_ORIGIN.Y + Config.WORLD_MARQUEE_HEIGHT
-	local part = rigPart(Config.WORLD_MARQUEE_SIZE,
+	local y = Config.LOBBY_ORIGIN.Y + Config.WORLD_BANNER_HEIGHT
+	local panel = rigPart(Config.WORLD_BANNER_SIZE,
 		Vector3.new(0, y, frontEdgeZ),
-		Color3.fromRGB(20, 16, 36), Enum.Material.SmoothPlastic, folder)
-	part.Name = "Marquee"
+		Config.WORLD_BANNER_BG_BOTTOM, Enum.Material.SmoothPlastic, folder)
+	panel.Name = "Banner"
+
+	-- Two posts from the balcony surface up to the panel (mounted, not floating).
+	local halfW = Config.WORLD_BANNER_SIZE.X / 2 - 3
+	local postH = Config.WORLD_BANNER_HEIGHT + Config.WORLD_BANNER_SIZE.Y / 2
+	for _, sx in ipairs({ -halfW, halfW }) do
+		local post = rigPart(Vector3.new(1.2, postH, 1.2),
+			Vector3.new(sx, Config.LOBBY_ORIGIN.Y + postH / 2, frontEdgeZ),
+			Config.WORLD_BANNER_POST_COLOR, Enum.Material.Metal, folder)
+		post.Name = "BannerPost"
+	end
 
 	local gui = Instance.new("SurfaceGui")
-	gui.Face = Enum.NormalId.Front -- -Z face, toward the balcony players
-	gui.CanvasSize = Vector2.new(600, 120) -- 5:1, matches WORLD_MARQUEE_SIZE 60x12
-	gui.Parent = part
+	gui.Face = Enum.NormalId.Front -- -Z, toward the balcony players
+	gui.CanvasSize = Vector2.new(640, 160) -- 4:1 matches the 64x16 panel
+	gui.Parent = panel
 
-	local label = Instance.new("TextLabel")
-	label.Size = UDim2.fromScale(1, 1)
-	label.BackgroundTransparency = 1
-	label.Text = Config.WORLD_MARQUEE_TEXT
-	label.Font = Enum.Font.FredokaOne
-	label.TextScaled = true
-	label.TextColor3 = Color3.fromRGB(255, 216, 77)
-	label.Parent = gui
-end
+	local frame = Instance.new("Frame")
+	frame.Size = UDim2.fromScale(1, 1)
+	frame.BackgroundColor3 = Config.WORLD_BANNER_BG_TOP
+	frame.Parent = gui
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0.14, 0)
+	corner.Parent = frame
+	local grad = Instance.new("UIGradient")
+	grad.Color = ColorSequence.new(Config.WORLD_BANNER_BG_TOP, Config.WORLD_BANNER_BG_BOTTOM)
+	grad.Rotation = 90
+	grad.Parent = frame
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = Config.WORLD_BANNER_FRAME_COLOR
+	stroke.Thickness = 6
+	stroke.Parent = frame
 
-local function buildNearOrbs(folder, desc)
-	local palette = Config.SOUL_PALETTE
-	local pts = WorldLayout.ring(desc.center.X, desc.center.Z,
-		Config.WORLD_NEAR_ORB_RADIUS, Config.WORLD_NEAR_ORB_COUNT)
-	for i, pt in ipairs(pts) do
-		local orb = rigPart(
-			Vector3.new(Config.WORLD_NEAR_ORB_SIZE, Config.WORLD_NEAR_ORB_SIZE, Config.WORLD_NEAR_ORB_SIZE),
-			Vector3.new(pt.x, desc.center.Y + Config.WORLD_NEAR_ORB_Y, pt.z),
-			palette[WorldLayout.paletteIndex(i, #palette)], Enum.Material.Neon, folder)
-		orb.Shape = Enum.PartType.Ball
-		orb.Name = "NearOrb"
-	end
+	local title = Instance.new("TextLabel")
+	title.Size = UDim2.fromScale(0.9, 0.52)
+	title.Position = UDim2.fromScale(0.05, 0.34)
+	title.BackgroundTransparency = 1
+	title.Text = Config.WORLD_BANNER_TEXT
+	title.Font = Enum.Font.FredokaOne
+	title.TextScaled = true
+	title.TextColor3 = Config.WORLD_BANNER_TEXT_COLOR
+	title.Parent = frame
+	local tstroke = Instance.new("UIStroke")
+	tstroke.Color = Color3.fromRGB(60, 20, 10)
+	tstroke.Thickness = 2
+	tstroke.Parent = title
+
+	local pill = Instance.new("TextLabel")
+	pill.Size = UDim2.fromScale(0.3, 0.16)
+	pill.Position = UDim2.fromScale(0.35, 0.08)
+	pill.BackgroundColor3 = Color3.fromRGB(255, 61, 139)
+	pill.Text = "★ ON AIR ★"
+	pill.Font = Enum.Font.GothamBold
+	pill.TextScaled = true
+	pill.TextColor3 = Color3.new(1, 1, 1)
+	pill.Parent = frame
+	local pcorner = Instance.new("UICorner")
+	pcorner.CornerRadius = UDim.new(0.5, 0)
+	pcorner.Parent = pill
 end
 
 function ArenaDressing.start()
 	local folder = newFolder()
 	local desc = ArenaDescriptor.validate(ArenaDescriptor.hex())
-	buildSpotlights(folder, desc)
-	buildMarquee(folder)
-	buildNearOrbs(folder, desc)
+	buildTorches(folder, desc)
+	buildOrbRings(folder, desc)
+	buildBanner(folder)
 end
 
 return ArenaDressing
