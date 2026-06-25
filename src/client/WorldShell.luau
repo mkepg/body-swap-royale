@@ -49,7 +49,8 @@ local function glowOrb(size, color, parent)
 end
 
 -- Dusk grade + optional skybox (fallback: no Sky, gradient via atmosphere only).
-local function buildAtmosphere(folder)
+local function buildAtmosphere()
+	-- Lighting effects must live in Lighting (not the workspace folder) to take effect.
 	Lighting.ClockTime = Config.WORLD_CLOCK_TIME
 	Lighting.Ambient = Config.WORLD_AMBIENT
 	Lighting.OutdoorAmbient = Config.WORLD_OUTDOOR_AMBIENT
@@ -59,7 +60,7 @@ local function buildAtmosphere(folder)
 	atmo.Density = Config.WORLD_ATMOSPHERE_DENSITY
 	atmo.Haze = Config.WORLD_ATMOSPHERE_HAZE
 	atmo.Color = Config.WORLD_FOG_COLOR
-	atmo.Decay = Config.WORLD_FOG_COLOR
+	atmo.Decay = Config.WORLD_ATMOSPHERE_DECAY
 	atmo.Parent = Lighting
 
 	local bloom = Instance.new("BloomEffect")
@@ -91,7 +92,7 @@ local function buildWisps(folder)
 	for _, w in ipairs(field) do
 		local orb = glowOrb(Config.WORLD_WISP_SIZE, palette[w.colorIndex], folder)
 		orb.Position = Vector3.new(w.x, w.y, w.z)
-		wisps[#wisps + 1] = { part = orb, baseY = w.y, phase = (w.x + w.z) }
+		wisps[#wisps + 1] = { part = orb, baseX = w.x, baseY = w.y, baseZ = w.z, phase = (w.x + w.z) }
 	end
 	-- One Heartbeat bob for the whole field (cheap; session-lifetime).
 	RunService.Heartbeat:Connect(function()
@@ -100,9 +101,9 @@ local function buildWisps(folder)
 			local p = wp.part
 			if p.Parent then
 				p.Position = Vector3.new(
-					p.Position.X,
+					wp.baseX,
 					wp.baseY + math.sin(t + wp.phase) * Config.WORLD_WISP_DRIFT_AMP,
-					p.Position.Z)
+					wp.baseZ)
 			end
 		end
 	end)
@@ -120,7 +121,7 @@ local function buildAurora(folder)
 	auroraPart.Material = Enum.Material.Neon
 	auroraPart.Size = Config.WORLD_AURORA_SIZE
 	auroraPart.Position = Vector3.new(0, Config.WORLD_AURORA_Y, 0)
-	auroraPart.Color = Config.SOUL_PALETTE[5] -- purple base
+	auroraPart.Color = Config.WORLD_AURORA_BASE_COLOR
 	auroraPart.Transparency = Config.WORLD_AURORA_BASE_TRANSPARENCY
 	auroraPart.Parent = folder
 end
@@ -149,26 +150,26 @@ local function buildCrowd(folder)
 		local color = palette[WorldLayout.paletteIndex(i, #palette)]
 		local orb = glowOrb(Config.WORLD_CROWD_ORB_SIZE, color, folder)
 		orb.Position = Vector3.new(pt.x, Config.WORLD_CROWD_Y, pt.z)
-		crowd[#crowd + 1] = orb
+		crowd[#crowd + 1] = { part = orb, base = Vector3.new(pt.x, Config.WORLD_CROWD_Y, pt.z) }
 	end
 end
 
 local function cheer()
-	for _, orb in ipairs(crowd) do
+	for _, entry in ipairs(crowd) do
+		local orb = entry.part
 		if orb.Parent then
-			local base = Vector3.new(orb.Position.X, Config.WORLD_CROWD_Y, orb.Position.Z)
-			local up = base + Vector3.new(0, Config.WORLD_CROWD_CHEER_BOB * (0.6 + math.random() * 0.8), 0)
+			local up = entry.base + Vector3.new(0, Config.WORLD_CROWD_CHEER_BOB * (0.6 + math.random() * 0.8), 0)
 			orb.Position = up
 			TweenService:Create(orb,
 				TweenInfo.new(Config.WORLD_CROWD_CHEER_SECONDS, Enum.EasingStyle.Bounce, Enum.EasingDirection.Out),
-				{ Position = base }):Play()
+				{ Position = entry.base }):Play()
 		end
 	end
 end
 
 function WorldShell.start()
 	local folder = newFolder()
-	buildAtmosphere(folder)
+	buildAtmosphere()
 	buildWisps(folder)
 	buildAurora(folder)
 	buildCrowd(folder)

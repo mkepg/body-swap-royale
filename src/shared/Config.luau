@@ -171,6 +171,7 @@ Config.WORLD_OUTDOOR_AMBIENT = Color3.fromRGB(150, 110, 130)   -- warm outdoor f
 Config.WORLD_FOG_COLOR = Color3.fromRGB(255, 175, 150)         -- warm haze
 Config.WORLD_ATMOSPHERE_DENSITY = 0.32
 Config.WORLD_ATMOSPHERE_HAZE = 2.2
+Config.WORLD_ATMOSPHERE_DECAY = Color3.fromRGB(120, 70, 130)   -- deep violet horizon decay (distinct from Color)
 Config.WORLD_BLOOM_INTENSITY = 0.9
 Config.WORLD_COLORCORRECTION_TINT = Color3.fromRGB(255, 225, 235)
 Config.WORLD_COLORCORRECTION_SATURATION = 0.12
@@ -194,6 +195,7 @@ Config.WORLD_AURORA_SIZE = Vector3.new(800, 0.2, 220)
 Config.WORLD_AURORA_BASE_TRANSPARENCY = 0.85
 Config.WORLD_AURORA_FLARE_TRANSPARENCY = 0.45
 Config.WORLD_AURORA_FLARE_SECONDS = 1.1
+Config.WORLD_AURORA_BASE_COLOR = Color3.fromRGB(200, 110, 255)  -- purple (was SOUL_PALETTE[5] hardcoded)
 
 -- Distant soul-orb crowd: a far ring on the horizon that cheers (bobs) on events.
 Config.WORLD_CROWD_RADIUS = 420
