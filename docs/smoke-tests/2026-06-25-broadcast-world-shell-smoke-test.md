@@ -29,6 +29,14 @@
 11. **[ ] No gameplay regression** — a normal round still runs end-to-end: swaps, grace, hex erosion, void death, winner declared. The shell never blocks movement (all parts `CanCollide=false`) and never appears under server ownership (it's client-built).
 12. **[ ] Perf sanity** — no obvious FPS drop vs. before on a mid-tier setting.
 
+## Per-floor dressing + banner redesign (2026-06-25 polish)
+Verified single-client via MCP (counts + colors + screen captures):
+13. **[PASS] Per-floor torches** — all 7 floors have 4 corner torches (28 posts + 28 heads); each head's Neon color matches its floor (amber→green→teal→blue→indigo→magenta→slate). Real `PointLight` + flame only on the top 3 floors (12 lights + 12 flames confirmed).
+14. **[PASS] No clipping** — torch posts (~12 studs) sit well under the floor above (floors 50 apart).
+15. **[PASS] Per-floor orb rings** — 84 orbs (7 × 12) soul-palette rings; reads as depth, not clutter.
+16. **[PASS] Framed banner** — "BODY SWAP ROYALE" renders in the framed header (glow frame, gradient, ON AIR pill) on two posts at the balcony edge, legible to waiting players.
+17. **[ ] Perf glance (2-client / live round)** — with ~12 dynamic lights + flame particles, watch FPS during tile erosion (Voxel re-lights). Dial `WORLD_TORCH_LIT_FLOORS` down if needed.
+
 ## Result
-- Single-client visual + build verification: **PASS** (checks 1–8, via MCP).
-- 2-client checks (9–12): _pending a live 2-client session._
+- Single-client visual + build verification: **PASS** (checks 1–8 and 13–16, via MCP).
+- 2-client / live-round checks (9–12, 17): _pending a live 2-client session._
