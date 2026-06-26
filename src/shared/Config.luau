@@ -244,4 +244,66 @@ Config.WORLD_BANNER_BG_TOP = Color3.fromRGB(36, 16, 72)
 Config.WORLD_BANNER_BG_BOTTOM = Color3.fromRGB(22, 10, 46)
 Config.WORLD_BANNER_TEXT_COLOR = Color3.fromRGB(255, 216, 77)
 
+-- ============ Lobby Grandstand Stage (World Slice 2) ============
+-- Consumed by the client LobbyStage module to redress the lobby balcony into a
+-- festival grandstand stage. Add-only + non-colliding (LobbyArea geometry is
+-- server-owned and untouched). "Magic-Hour Fair": warm festoon lights against the
+-- cool dusk/aurora. All heights are relative to the platform top (= LOBBY_ORIGIN.Y).
+
+-- Stage deck: a thin cosmetic slab skinning the platform top + a lit pit-facing lip.
+Config.LOBBY_STAGE_DECK_INSET = 0.5         -- shrink from pad edges so it reads as a skin
+Config.LOBBY_STAGE_DECK_THICKNESS = 0.4
+Config.LOBBY_STAGE_DECK_LIFT = 0.3          -- studs above the platform top face
+Config.LOBBY_STAGE_DECK_COLOR = Color3.fromRGB(28, 26, 44)    -- dark broadcast deck
+Config.LOBBY_STAGE_EDGE_COLOR = Color3.fromRGB(120, 230, 220) -- lit stage lip (cool accent)
+Config.LOBBY_STAGE_EDGE_THICKNESS = 0.6
+
+-- U-wrap crowd tiers (back + 2 wings; front/+Z open). Neon orbs only (no per-orb
+-- light) for mobile. Heights above the platform top.
+Config.LOBBY_STAGE_TIER_ROWS = 3
+Config.LOBBY_STAGE_TIER_RISE = 3.5          -- studs each row climbs
+Config.LOBBY_STAGE_TIER_DEPTH = 3           -- studs each row recedes outward
+Config.LOBBY_STAGE_TIER_PER_SIDE = 5        -- orbs per edge per row
+Config.LOBBY_STAGE_TIER_SPACING = 7         -- studs between back-row orbs
+Config.LOBBY_STAGE_TIER_BASE_LIFT = 2       -- studs above platform top the first row sits
+Config.LOBBY_STAGE_ORB_SIZE = 2.4
+
+-- Festoon string-lights: warm-gold Neon bulbs in a catenary sag; real PointLights
+-- capped to LOBBY_STAGE_FESTOON_LIT total (mobile budget, like WORLD_TORCH_LIT_FLOORS).
+Config.LOBBY_STAGE_FESTOON_COLOR = Color3.fromRGB(255, 207, 107) -- warm gold
+Config.LOBBY_STAGE_FESTOON_BULBS = 9        -- bulbs per strand
+Config.LOBBY_STAGE_FESTOON_SAG = 4          -- studs of mid-span droop
+Config.LOBBY_STAGE_FESTOON_BULB_SIZE = 0.7
+Config.LOBBY_STAGE_FESTOON_HEIGHT = 16      -- studs above platform top the strands hang
+Config.LOBBY_STAGE_FESTOON_LIT = 4          -- TOTAL real PointLights across all strands
+Config.LOBBY_STAGE_LIGHT_RANGE = 18
+Config.LOBBY_STAGE_LIGHT_BRIGHTNESS = 1.4
+
+-- Bunting pennants along the back tier front.
+Config.LOBBY_STAGE_BUNTING_COUNT = 10
+Config.LOBBY_STAGE_BUNTING_SIZE = Vector3.new(1.6, 1.8, 0.2)
+Config.LOBBY_STAGE_BUNTING_HEIGHT = 6       -- studs above platform top
+
+-- Back crest: small festival header crowning the back tier (distinct from the kept
+-- front marquee in ArenaDressing -- no duplicate title).
+Config.LOBBY_STAGE_CREST_SIZE = Vector3.new(20, 5, 0.5)
+Config.LOBBY_STAGE_CREST_HEIGHT = 17        -- studs above platform top
+Config.LOBBY_STAGE_CREST_TEXT = "★ SOUL FESTIVAL ★"
+Config.LOBBY_STAGE_CREST_BG = Color3.fromRGB(58, 42, 92)
+Config.LOBBY_STAGE_CREST_TEXT_COLOR = Color3.fromRGB(255, 227, 166)
+
+-- Crowd cheer (mirror WORLD_CROWD_* so the grandstand reacts like the distant crowd).
+Config.LOBBY_STAGE_IDLE_SPEED = 0.5
+Config.LOBBY_STAGE_IDLE_AMP = 0.4
+Config.LOBBY_STAGE_CHEER_BOB = 6            -- studs an orb pops up on a cheer
+Config.LOBBY_STAGE_CHEER_SCALE = 0.5        -- orb size pop fraction at full cheer
+Config.LOBBY_STAGE_CHEER_SECONDS = 0.5      -- cheer decay time
+
+-- Hybrid asset fields (blank "" ⇒ code fallback, per the WORLD_SKYBOX idiom). Set
+-- by Studio MCP sourcing in the final task; the slice ships fully on fallbacks.
+Config.LOBBY_STAGE_DECK_TEXTURE = ""        -- Texture id for the deck top
+Config.LOBBY_STAGE_ORB_MESH = ""            -- MeshId for crowd orbs
+Config.LOBBY_STAGE_FESTOON_MESH = ""        -- MeshId for festoon bulbs
+Config.LOBBY_STAGE_BUNTING_TEXTURE = ""     -- Texture id for pennant flags
+
 return Config
