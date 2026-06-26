@@ -3,10 +3,10 @@
 	parametrically from an ArenaDescriptor (never from arena internals), so any
 	future arena gets dressed by publishing its own descriptor. 100% local cosmetic.
 
-	Per-floor dressing: short torches at every level's footprint corners (Neon head
-	tinted to the floor color; a real PointLight + flame only on the top
-	WORLD_TORCH_LIT_FLOORS floors), a soul-orb ring per floor, and a framed
-	"BODY SWAP ROYALE" marquee header on posts at the balcony's arena-facing edge.
+	Per-floor dressing: a floor-colored glowing EDGE TRIM hugging each floor's rim
+	(WORLD_TRIM_SEGMENTS Neon tangent bars on a footprint-derived ring; a real
+	PointLight on a few segments only on the top WORLD_TRIM_LIT_FLOORS floors), and
+	a framed "BODY SWAP ROYALE" marquee header at the balcony's arena-facing edge.
 
 	Location: StarterPlayerScripts/Client/ArenaDressing (ModuleScript)
 --]]
@@ -44,68 +44,40 @@ local function rigPart(size, pos, color, material, parent)
 	return p
 end
 
--- One short torch: dark post + Neon head tinted to the floor color (all floors).
--- `lit` floors additionally get a real floor-colored PointLight + a low-rate flame.
-local function buildTorch(folder, x, z, baseY, color, lit)
-	local postH = Config.WORLD_TORCH_POST_HEIGHT
-	local post = rigPart(Vector3.new(1.5, postH, 1.5),
-		Vector3.new(x, baseY + postH / 2, z),
-		Color3.fromRGB(40, 40, 50), Enum.Material.Metal, folder)
-	post.Name = "TorchPost"
-
-	local hs = Config.WORLD_TORCH_HEAD_SIZE
-	local head = rigPart(Vector3.new(hs, hs, hs),
-		Vector3.new(x, baseY + postH + hs / 2, z),
-		color, Enum.Material.Neon, folder)
-	head.Name = "TorchHead"
-
-	if lit then
-		local light = Instance.new("PointLight")
-		light.Color = color
-		light.Range = Config.WORLD_TORCH_LIGHT_RANGE
-		light.Brightness = Config.WORLD_TORCH_LIGHT_BRIGHTNESS
-		light.Parent = head
-
-		local flame = Instance.new("ParticleEmitter")
-		flame.Color = ColorSequence.new(color)
-		flame.Rate = Config.WORLD_TORCH_FLAME_RATE
-		flame.Lifetime = NumberRange.new(0.5, 0.9)
-		flame.Speed = NumberRange.new(2, 4)
-		flame.Size = NumberSequence.new(1.2, 0)
-		flame.Transparency = NumberSequence.new(0.2, 1)
-		flame.LightEmission = 1
-		flame.Parent = head
-	end
-end
-
--- 4 torches at the footprint corners of every level; only the top
--- WORLD_TORCH_LIT_FLOORS levels get a real light + flame.
-local function buildTorches(folder, desc)
-	-- Corners are level-invariant (depend only on center/footprint/margin); compute once.
-	local corners = WorldLayout.footprintCorners(
-		desc.center.X, desc.center.Z, desc.footprint.X, desc.footprint.Y,
-		Config.WORLD_TORCH_MARGIN)
-	for i, lv in ipairs(desc.levels) do
-		local lit = i <= Config.WORLD_TORCH_LIT_FLOORS
-		for _, c in ipairs(corners) do
-			buildTorch(folder, c.x, c.z, lv.y, lv.color, lit)
-		end
-	end
-end
-
--- A soul-palette orb ring around every level (distinct from the floor-colored torches).
-local function buildOrbRings(folder, desc)
-	local palette = Config.SOUL_PALETTE
-	for _, lv in ipairs(desc.levels) do
-		local pts = WorldLayout.ring(desc.center.X, desc.center.Z,
-			Config.WORLD_NEAR_ORB_RADIUS, Config.WORLD_NEAR_ORB_COUNT)
+-- Per-floor EDGE TRIM: a floor-colored glowing rim hugging each floor's edge,
+-- built as WORLD_TRIM_SEGMENTS thin Neon tangent bars around a ring derived from
+-- the descriptor footprint (radius = footprint.X/2 + margin) -- one coherent rim
+-- per floor (replaces the old corner torches + soul-orb rings). The ring sits
+-- OUTSIDE the outermost tiles, so eroding tiles never reveal a glowing plate.
+-- Only the top WORLD_TRIM_LIT_FLOORS floors get real PointLights (the trim is the
+-- only floor light); deeper floors glow via Neon only (mobile budget).
+local function buildFloorTrim(folder, desc)
+	local segs = Config.WORLD_TRIM_SEGMENTS
+	local radius = desc.footprint.X / 2 + Config.WORLD_TRIM_MARGIN
+	local pts = WorldLayout.ring(desc.center.X, desc.center.Z, radius, segs)
+	-- bar length from the chord between adjacent ring points (slack closes the rim)
+	local chord = 2 * radius * math.sin(math.pi / segs)
+	local barLen = chord * Config.WORLD_TRIM_LENGTH_SLACK
+	local lightEvery = math.max(1, math.floor(segs / Config.WORLD_TRIM_LIGHTS_PER_FLOOR))
+	for fi, lv in ipairs(desc.levels) do
+		local lit = fi <= Config.WORLD_TRIM_LIT_FLOORS
+		local y = lv.y + Config.WORLD_TRIM_Y
 		for i, pt in ipairs(pts) do
-			local orb = rigPart(
-				Vector3.new(Config.WORLD_NEAR_ORB_SIZE, Config.WORLD_NEAR_ORB_SIZE, Config.WORLD_NEAR_ORB_SIZE),
-				Vector3.new(pt.x, lv.y + Config.WORLD_NEAR_ORB_Y, pt.z),
-				palette[WorldLayout.paletteIndex(i, #palette)], Enum.Material.Neon, folder)
-			orb.Shape = Enum.PartType.Ball
-			orb.Name = "NearOrb"
+			local nxt = pts[(i % segs) + 1]
+			local here = Vector3.new(pt.x, y, pt.z)
+			local bar = rigPart(
+				Vector3.new(Config.WORLD_TRIM_DEPTH, Config.WORLD_TRIM_HEIGHT, barLen),
+				here, lv.color, Enum.Material.Neon, folder)
+			bar.Name = "FloorTrim"
+			-- point the bar's long (Z) axis along the tangent toward the next point
+			bar.CFrame = CFrame.lookAt(here, Vector3.new(nxt.x, y, nxt.z))
+			if lit and (i - 1) % lightEvery == 0 then
+				local light = Instance.new("PointLight")
+				light.Color = lv.color
+				light.Range = Config.WORLD_TRIM_LIGHT_RANGE
+				light.Brightness = Config.WORLD_TRIM_LIGHT_BRIGHTNESS
+				light.Parent = bar
+			end
 		end
 	end
 end
@@ -181,8 +153,7 @@ end
 function ArenaDressing.start()
 	local folder = newFolder()
 	local desc = ArenaDescriptor.validate(ArenaDescriptor.hex())
-	buildTorches(folder, desc)
-	buildOrbRings(folder, desc)
+	buildFloorTrim(folder, desc)
 	buildBanner(folder)
 end
 
