@@ -31,5 +31,15 @@ Keep `Config.HAZARDS_ENABLED = false` so the floor stays safe while observing th
 - [ ] On the lobby with the new lights, FPS is stable (real PointLights are capped to `Config.LOBBY_STAGE_FESTOON_LIT`). Note any drop on a mid-tier/mobile profile.
 
 ## Result
+
+### 2026-06-26 — MCP structural verification (automated, Studio Play solo)
+The connected "Body Swap Royale" Studio was put into Play and `workspace.LobbyStage` was inspected:
+- **Built to spec:** 85 parts — 1 StageDeck + 1 StageLip + **45** CrowdOrbs (3 rows × 3 edges × 5) + **27** FestoonBulbs (3 strands × 9) + **10** BuntingFlag (WedgePart fallbacks) + 1 BackCrest. `totalDescendants` 91 = +4 capped PointLights + crest SurfaceGui/TextLabel.
+- **Light cap honored:** exactly 4 real PointLights (`LOBBY_STAGE_FESTOON_LIT = 4`).
+- **Non-colliding confirmed:** StageDeck spot-checked `CanCollide=false, CanQuery=false, CanTouch=false, CastShadow=false, Anchored=true`, at y=45.3 (DECK_LIFT above the platform top). Bunting fallbacks are WedgeParts (asset fields blank ⇒ code path exercised).
+- **Hybrid assets:** all four `LOBBY_STAGE_*` asset fields left blank — slice runs fully on code fallbacks. Asset sourcing (MCP upload to owner inventory) deferred as an optional polish pass.
+- **Not yet verified (needs the manual pass below):** the *aesthetic* read (magic-hour warm-vs-cool, crest facing, festoon droop framing) — `screen_capture` timed out this session, so sections 1, 3, 4, 5 still need a human/2-client run.
+
+### Manual pass
 - Date run / client(s) / outcome:
 - Tuning notes (Config values changed):
