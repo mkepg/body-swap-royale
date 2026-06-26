@@ -76,7 +76,7 @@ local function buildStageDeck(folder)
 	-- warm/lit lip along the +Z (pit-facing) edge
 	local lip = rigPart(
 		Vector3.new(pad.X - inset * 2, Config.LOBBY_STAGE_DECK_THICKNESS * 1.2, Config.LOBBY_STAGE_EDGE_THICKNESS),
-		Config.LOBBY_ORIGIN + Vector3.new(0, Config.LOBBY_STAGE_DECK_LIFT + 0.1,
+		Config.LOBBY_ORIGIN + Vector3.new(0, Config.LOBBY_STAGE_DECK_LIFT + Config.LOBBY_STAGE_DECK_THICKNESS * 0.25,
 			pad.Z / 2 - inset - Config.LOBBY_STAGE_EDGE_THICKNESS),
 		Config.LOBBY_STAGE_EDGE_COLOR, Enum.Material.Neon, folder)
 	lip.Name = "StageLip"
@@ -85,6 +85,7 @@ end
 -- U-wrap soul-orb crowd; one Heartbeat drives idle wobble + decaying cheer pop.
 local tierOrbs = {}
 local function buildCrowdTiers(folder)
+	table.clear(tierOrbs)
 	local pad = Config.LOBBY_PAD_SIZE
 	local palette = Config.SOUL_PALETTE
 	local slots = WorldLayout.tierRows(
@@ -214,7 +215,7 @@ local function buildBackCrest(folder)
 	panel.Name = "BackCrest"
 
 	local gui = Instance.new("SurfaceGui")
-	gui.Face = Enum.NormalId.Back -- +Z, toward the stage / players' backs / the pit beyond
+	gui.Face = Enum.NormalId.Back -- NormalId.Back is the +Z face; the panel sits on the -Z back wall, so +Z faces inward toward the stage (note: ArenaDressing's front marquee instead uses Front = -Z to face out toward players)
 	gui.CanvasSize = Vector2.new(400, 100)
 	gui.LightInfluence = 0
 	gui.Parent = panel
