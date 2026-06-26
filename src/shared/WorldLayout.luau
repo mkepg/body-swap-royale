@@ -108,4 +108,15 @@ function WorldLayout.festoonStrand(x1, y1, z1, x2, y2, z2, count, sag)
 	return out
 end
 
+-- `count` evenly spaced points along the segment (x1,z1)->(x2,z2) at constant
+-- height `y`, for hanging pennant flags.
+function WorldLayout.buntingFlags(x1, z1, x2, z2, y, count)
+	local out = {}
+	for i = 0, count - 1 do
+		local t = (count == 1) and 0 or i / (count - 1)
+		out[#out + 1] = { x = x1 + (x2 - x1) * t, y = y, z = z1 + (z2 - z1) * t }
+	end
+	return out
+end
+
 return WorldLayout

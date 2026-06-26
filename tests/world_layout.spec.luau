@@ -109,4 +109,18 @@ do
 	print("worldlayout: festoonStrand OK")
 end
 
+-- buntingFlags(x1,z1,x2,z2, y, count): `count` evenly spaced points along the
+-- segment at constant height y.
+do
+	local f = WorldLayout.buntingFlags(-24, -64, 24, -64, 6, 5)
+	expect(#f == 5, "buntingFlags returns `count` points")
+	for _, p in ipairs(f) do expect(approx(p.y, 6), "bunting y is constant") end
+	expect(approx(f[1].x, -24) and approx(f[5].x, 24), "endpoints at the segment ends")
+	local g1 = f[2].x - f[1].x
+	for i = 2, #f - 1 do
+		expect(approx(f[i + 1].x - f[i].x, g1), "bunting points evenly spaced")
+	end
+	print("worldlayout: buntingFlags OK")
+end
+
 print("ALL WorldLayout TESTS PASSED")
