@@ -55,4 +55,44 @@ do
 	print("worldlayout: wispField OK")
 end
 
+-- tierRows(originX, originZ, baseY, halfX, halfZ, rows, rise, depth, perSide, spacing):
+-- U-wrap risers (back + 2 wings, front/+Z open). Per row: perSide back orbs +
+-- perSide left + perSide right => rows*3*perSide points. y climbs per row; rows
+-- recede outward; NOTHING reaches the front edge (z stays <= originZ).
+do
+	local ox, oz, baseY = 0, -64, 45
+	local halfX, halfZ = 24, 24
+	local rows, rise, depth, perSide, spacing = 3, 3.5, 3, 5, 7
+	local t = WorldLayout.tierRows(ox, oz, baseY, halfX, halfZ, rows, rise, depth, perSide, spacing)
+	expect(#t == rows * 3 * perSide, "tierRows count must be rows*3*perSide, got " .. #t)
+
+	-- front edge stays open: no point at/beyond the +Z railing line.
+	local maxZ = -math.huge
+	for _, p in ipairs(t) do maxZ = math.max(maxZ, p.z) end
+	expect(maxZ <= oz + 1e-6, "tierRows must leave the front (+Z) edge open (z <= originZ)")
+
+	-- y spans the 3 rows (rake): lowest = baseY+rise, highest = baseY+rows*rise.
+	local minY, maxY = math.huge, -math.huge
+	for _, p in ipairs(t) do minY = math.min(minY, p.y); maxY = math.max(maxY, p.y) end
+	expect(approx(minY, baseY + rise), "lowest row sits at baseY + rise")
+	expect(approx(maxY, baseY + rows * rise), "highest row sits at baseY + rows*rise")
+
+	-- outward recede: a back-row point in row 2 is further -Z than in row 1.
+	local backZ = { [1] = math.huge, [2] = math.huge, [3] = math.huge }
+	for _, p in ipairs(t) do
+		local r = approx(p.y, baseY + rise) and 1 or (approx(p.y, baseY + 2 * rise) and 2 or 3)
+		backZ[r] = math.min(backZ[r], p.z)
+	end
+	expect(backZ[1] > backZ[2] and backZ[2] > backZ[3], "outer rows recede further back (-Z)")
+
+	-- pairwise distinct
+	for i = 1, #t do
+		for j = i + 1, #t do
+			expect(not (approx(t[i].x, t[j].x) and approx(t[i].y, t[j].y) and approx(t[i].z, t[j].z)),
+				"tierRows points must be pairwise distinct")
+		end
+	end
+	print("worldlayout: tierRows OK")
+end
+
 print("ALL WorldLayout TESTS PASSED")
