@@ -91,4 +91,21 @@ function WorldLayout.tierRows(originX, originZ, baseY, halfX, halfZ, rows, rise,
 	return out
 end
 
+-- `count` bulb positions along the segment (x1,y1,z1)->(x2,y2,z2) with a parabolic
+-- droop: 0 at the endpoints, `sag` studs below the lerped height at mid-span
+-- (droop(t) = sag * 4t(1-t)). Approximates a hanging festoon strand.
+function WorldLayout.festoonStrand(x1, y1, z1, x2, y2, z2, count, sag)
+	local out = {}
+	for i = 0, count - 1 do
+		local t = (count == 1) and 0 or i / (count - 1)
+		local droop = sag * 4 * t * (1 - t)
+		out[#out + 1] = {
+			x = x1 + (x2 - x1) * t,
+			y = y1 + (y2 - y1) * t - droop,
+			z = z1 + (z2 - z1) * t,
+		}
+	end
+	return out
+end
+
 return WorldLayout
