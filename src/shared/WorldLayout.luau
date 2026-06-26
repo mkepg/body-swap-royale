@@ -62,4 +62,33 @@ function WorldLayout.wispField(cx, cy, cz, spread, height, count, paletteLen, se
 	return out
 end
 
+-- U-wrap crowd risers around a rectangle centered at (originX,originZ) with half-
+-- extents halfX/halfZ. Three dressed edges (back -Z + left -X + right +X); the
+-- front (+Z) edge is intentionally left open (pit view + victory cam). Row r
+-- (1..rows) sits at y = baseY + r*rise and recedes outward by r*depth. Back run:
+-- `perSide` points along X centered on originX, gap `spacing`. Wings: `perSide`
+-- points filling the BACK HALF of the Z range (never crossing originZ), so no
+-- point ever reaches the front. Returns { { x, y, z }, ... }.
+function WorldLayout.tierRows(originX, originZ, baseY, halfX, halfZ, rows, rise, depth, perSide, spacing)
+	local out = {}
+	for r = 1, rows do
+		local y = baseY + r * rise
+		local o = r * depth
+		-- back edge
+		local zBack = originZ - halfZ - o
+		for k = 0, perSide - 1 do
+			local x = originX + (k - (perSide - 1) / 2) * spacing
+			out[#out + 1] = { x = x, y = y, z = zBack }
+		end
+		-- wings: fill the back half along Z (z in (originZ-halfZ, originZ])
+		local step = halfZ / perSide
+		for k = 1, perSide do
+			local z = originZ - halfZ + k * step
+			out[#out + 1] = { x = originX - halfX - o, y = y, z = z } -- left wing
+			out[#out + 1] = { x = originX + halfX + o, y = y, z = z } -- right wing
+		end
+	end
+	return out
+end
+
 return WorldLayout
