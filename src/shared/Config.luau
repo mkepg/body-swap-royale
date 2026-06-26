@@ -218,21 +218,22 @@ Config.WORLD_CROWD_IDLE_SPEED = 0.5     -- idle bob cycles/sec
 Config.WORLD_CROWD_CHEER_SCALE = 0.6    -- orb size pop fraction at full cheer
 
 -- Layer 2 local dressing (parametric from the ArenaDescriptor).
-Config.WORLD_NEAR_ORB_RADIUS = 70       -- ring of close spectator orbs around the rim
-Config.WORLD_NEAR_ORB_COUNT = 12        -- ring per floor; reduced so 7 stacked rings aren't soup
-Config.WORLD_NEAR_ORB_Y = 6
-Config.WORLD_NEAR_ORB_SIZE = 4
-
--- Per-floor torches: short posts; Neon head = floor color on ALL floors; a real
--- PointLight + flame particles only on the top WORLD_TORCH_LIT_FLOORS floors
--- (perf dial -- avoids 28 dynamic lights / particle-budget blowout / cross-floor bleed).
-Config.WORLD_TORCH_MARGIN = 14          -- studs outward from the footprint corners
-Config.WORLD_TORCH_POST_HEIGHT = 12     -- short (< HEX_FLOOR_GAP 50 so it can't pierce the floor above)
-Config.WORLD_TORCH_HEAD_SIZE = 3
-Config.WORLD_TORCH_LIT_FLOORS = 3       -- top N floors get a real PointLight + flame particles
-Config.WORLD_TORCH_LIGHT_RANGE = 34     -- < HEX_FLOOR_GAP so light doesn't bleed across floors
-Config.WORLD_TORCH_LIGHT_BRIGHTNESS = 2
-Config.WORLD_TORCH_FLAME_RATE = 6       -- particles/sec per lit torch (low for the mobile budget)
+-- Per-floor EDGE TRIM: a floor-colored glowing rim hugging each floor's edge,
+-- built as WORLD_TRIM_SEGMENTS thin Neon tangent bars around a ring derived from
+-- the descriptor footprint (radius = footprint.X/2 + margin) -- one coherent rim
+-- per floor instead of scattered orbs. Replaces the old torches + orb rings.
+-- Placed OUTSIDE the outermost tiles so eroding tiles never reveal a glowing plate.
+Config.WORLD_TRIM_MARGIN = 6            -- studs outward from footprint half-extent (clears the tiles)
+Config.WORLD_TRIM_SEGMENTS = 16        -- tangent bars per floor (enough to read continuous)
+Config.WORLD_TRIM_Y = 1.5              -- studs above the floor surface the rim sits
+Config.WORLD_TRIM_HEIGHT = 0.8         -- bar vertical thickness
+Config.WORLD_TRIM_DEPTH = 1.4          -- bar radial thickness
+Config.WORLD_TRIM_LENGTH_SLACK = 1.06  -- segment length vs chord (slightly overlap so the rim closes)
+-- Top-floor uplights replace the torch lighting (the trim is the only floor light).
+Config.WORLD_TRIM_LIT_FLOORS = 3       -- top N floors get real PointLights (perf dial; deep floors glow only)
+Config.WORLD_TRIM_LIGHTS_PER_FLOOR = 4 -- evenly-spaced lit segments per lit floor (12 lights total, torch parity)
+Config.WORLD_TRIM_LIGHT_RANGE = 34     -- < HEX_FLOOR_GAP so light doesn't bleed across floors
+Config.WORLD_TRIM_LIGHT_BRIGHTNESS = 2
 
 -- Framed marquee header (banner) on support posts at the balcony's arena-facing edge.
 Config.WORLD_BANNER_TEXT = "BODY SWAP ROYALE"
@@ -258,22 +259,25 @@ Config.LOBBY_STAGE_DECK_COLOR = Color3.fromRGB(28, 26, 44)    -- dark broadcast 
 Config.LOBBY_STAGE_EDGE_COLOR = Color3.fromRGB(120, 230, 220) -- lit stage lip (cool accent)
 Config.LOBBY_STAGE_EDGE_THICKNESS = 0.6
 
--- U-wrap crowd tiers (back + 2 wings; front/+Z open). Neon orbs only (no per-orb
--- light) for mobile. Heights above the platform top.
-Config.LOBBY_STAGE_TIER_ROWS = 3
-Config.LOBBY_STAGE_TIER_RISE = 3.5          -- studs each row climbs
-Config.LOBBY_STAGE_TIER_DEPTH = 3           -- studs each row recedes outward
-Config.LOBBY_STAGE_TIER_PER_SIDE = 5        -- orbs per edge per row
-Config.LOBBY_STAGE_TIER_SPACING = 7         -- studs between back-row orbs
-Config.LOBBY_STAGE_TIER_BASE_LIFT = 2       -- studs above platform top the first row sits
-Config.LOBBY_STAGE_ORB_SIZE = 2.4
+-- Crowd: two small soul clusters at the pit-view edges (front ±X), not a U-wrap.
+-- Sized to where peripheral vision/cheer-pops register; the distant WorldShell
+-- crowd carries the rest. Neon orbs only (no per-orb light) for mobile.
+Config.LOBBY_STAGE_CLUSTER_PER_SIDE = 6     -- orbs per wing cluster (2 clusters => ~12 total)
+Config.LOBBY_STAGE_CLUSTER_SPACING = 2.6    -- studs between orbs in a cluster
+Config.LOBBY_STAGE_CLUSTER_INSET = 4        -- studs in from the pad ±X edge each cluster sits
+Config.LOBBY_STAGE_CLUSTER_FRONT = 0.34     -- fraction of half-Z toward the front (+Z) the clusters sit
+Config.LOBBY_STAGE_CLUSTER_LIFT = 2.5       -- studs above platform top
+Config.LOBBY_STAGE_ORB_SIZE = 2.2
 
--- Festoon string-lights: warm-gold Neon bulbs in a catenary sag; real PointLights
--- capped to LOBBY_STAGE_FESTOON_LIT total (mobile budget, like WORLD_TORCH_LIT_FLOORS).
+-- Festoon STRING-LIGHTS: warm-gold bulbs in a catenary sag, hung on a thin dark
+-- WIRE (the wire is what reads them as lights, not free-floating souls). Real
+-- PointLights capped to LOBBY_STAGE_FESTOON_LIT total (mobile budget).
 Config.LOBBY_STAGE_FESTOON_COLOR = Color3.fromRGB(255, 207, 107) -- warm gold
+Config.LOBBY_STAGE_FESTOON_WIRE_COLOR = Color3.fromRGB(24, 22, 30) -- near-black hung wire
+Config.LOBBY_STAGE_FESTOON_WIRE_THICKNESS = 0.16
 Config.LOBBY_STAGE_FESTOON_BULBS = 9        -- bulbs per strand
 Config.LOBBY_STAGE_FESTOON_SAG = 4          -- studs of mid-span droop
-Config.LOBBY_STAGE_FESTOON_BULB_SIZE = 0.7
+Config.LOBBY_STAGE_FESTOON_BULB_SIZE = 0.5  -- smaller than a soul orb so it reads as a bulb
 Config.LOBBY_STAGE_FESTOON_HEIGHT = 16      -- studs above platform top the strands hang
 Config.LOBBY_STAGE_FESTOON_LIT = 4          -- TOTAL real PointLights across all strands
 Config.LOBBY_STAGE_LIGHT_RANGE = 18

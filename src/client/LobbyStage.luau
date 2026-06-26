@@ -5,10 +5,11 @@
 	every part built here is non-colliding/non-querying/shadow-less, so nothing can
 	become a foothold over the railing.
 
-	"Magic-Hour Fair": warm-gold festoon lights + bunting against the cool dusk/aurora
-	sky. A U-wrap soul-orb crowd (back + 2 wings; front/+Z left open for the pit view +
-	victory cam) cheers on eliminations/wins, reusing WorldShell's decaying-impulse
-	pattern. Hybrid assets fall back to code when the Config asset fields are blank.
+	"Magic-Hour Fair": warm-gold festoon string-lights (bulbs on a hung wire) + bunting
+	against the cool dusk/aurora sky. Two small soul-orb clusters at the pit-view edges
+	cheer on eliminations/wins (reusing WorldShell's decaying-impulse pattern); the
+	distant WorldShell crowd carries the rest. Hybrid assets fall back to code when the
+	Config asset fields are blank.
 
 	Location: StarterPlayerScripts/Client/LobbyStage (ModuleScript)
 	Connections are session-lifetime (matches WorldShell/ArenaDressing).
@@ -82,40 +83,47 @@ local function buildStageDeck(folder)
 	lip.Name = "StageLip"
 end
 
--- U-wrap soul-orb crowd; one Heartbeat drives idle wobble + decaying cheer pop.
-local tierOrbs = {}
-local function buildCrowdTiers(folder)
-	table.clear(tierOrbs)
+-- Two small soul clusters at the pit-view edges (front ±X) -- the distant WorldShell
+-- crowd carries the rest. One Heartbeat drives idle wobble + decaying cheer pop.
+local crowdOrbs = {}
+local function buildCrowdClusters(folder)
+	table.clear(crowdOrbs)
 	local pad = Config.LOBBY_PAD_SIZE
 	local palette = Config.SOUL_PALETTE
-	local slots = WorldLayout.tierRows(
-		Config.LOBBY_ORIGIN.X, Config.LOBBY_ORIGIN.Z,
-		topY() + Config.LOBBY_STAGE_TIER_BASE_LIFT,
-		pad.X / 2, pad.Z / 2,
-		Config.LOBBY_STAGE_TIER_ROWS, Config.LOBBY_STAGE_TIER_RISE,
-		Config.LOBBY_STAGE_TIER_DEPTH, Config.LOBBY_STAGE_TIER_PER_SIDE,
-		Config.LOBBY_STAGE_TIER_SPACING)
-	for i, s in ipairs(slots) do
-		local color = palette[WorldLayout.paletteIndex(i, #palette)]
-		local sz = Config.LOBBY_STAGE_ORB_SIZE
-		local orb = rigPart(Vector3.new(sz, sz, sz), Vector3.new(s.x, s.y, s.z),
-			color, Enum.Material.Neon, folder)
-		orb.Shape = Enum.PartType.Ball
-		orb.Name = "CrowdOrb"
-		if Config.LOBBY_STAGE_ORB_MESH ~= "" then
-			local mesh = Instance.new("SpecialMesh")
-			mesh.MeshType = Enum.MeshType.FileMesh
-			mesh.MeshId = Config.LOBBY_STAGE_ORB_MESH
-			mesh.Parent = orb
+	local hx, hz = pad.X / 2, pad.Z / 2
+	local baseY = topY() + Config.LOBBY_STAGE_CLUSTER_LIFT
+	local clusterZ = Config.LOBBY_ORIGIN.Z + hz * Config.LOBBY_STAGE_CLUSTER_FRONT
+	local n, sp = Config.LOBBY_STAGE_CLUSTER_PER_SIDE, Config.LOBBY_STAGE_CLUSTER_SPACING
+	local inset = Config.LOBBY_STAGE_CLUSTER_INSET
+	local centers = {
+		Config.LOBBY_ORIGIN.X - (hx - inset), -- left wing
+		Config.LOBBY_ORIGIN.X + (hx - inset), -- right wing
+	}
+	local idx = 0
+	for _, cx in ipairs(centers) do
+		for _, s in ipairs(WorldLayout.cluster(cx, clusterZ, baseY, n, sp)) do
+			idx += 1
+			local color = palette[WorldLayout.paletteIndex(idx, #palette)]
+			local sz = Config.LOBBY_STAGE_ORB_SIZE
+			local orb = rigPart(Vector3.new(sz, sz, sz), Vector3.new(s.x, s.y, s.z),
+				color, Enum.Material.Neon, folder)
+			orb.Shape = Enum.PartType.Ball
+			orb.Name = "CrowdOrb"
+			if Config.LOBBY_STAGE_ORB_MESH ~= "" then
+				local mesh = Instance.new("SpecialMesh")
+				mesh.MeshType = Enum.MeshType.FileMesh
+				mesh.MeshId = Config.LOBBY_STAGE_ORB_MESH
+				mesh.Parent = orb
+			end
+			crowdOrbs[#crowdOrbs + 1] = {
+				part = orb, base = orb.Position, baseSize = sz,
+				phase = (s.x + s.z), cheer = 0,
+			}
 		end
-		tierOrbs[#tierOrbs + 1] = {
-			part = orb, base = orb.Position, baseSize = sz,
-			phase = (s.x + s.z), cheer = 0,
-		}
 	end
 	RunService.Heartbeat:Connect(function(dt)
 		local t = os.clock() * Config.LOBBY_STAGE_IDLE_SPEED * math.pi * 2
-		for _, e in ipairs(tierOrbs) do
+		for _, e in ipairs(crowdOrbs) do
 			local p = e.part
 			if p.Parent then
 				local idle = math.sin(t + e.phase) * Config.LOBBY_STAGE_IDLE_AMP
@@ -131,13 +139,25 @@ local function buildCrowdTiers(folder)
 	end)
 end
 
--- Festoon: warm-gold Neon bulbs in a catenary sag along the back + both wings.
--- Real PointLights are capped to LOBBY_STAGE_FESTOON_LIT total across all strands.
+-- Festoon STRING-LIGHTS: small warm-gold bulbs in a catenary sag, hung on a thin
+-- dark wire (the wire is what reads them as lights, not floating souls), along the
+-- back + both wings. Real PointLights capped to LOBBY_STAGE_FESTOON_LIT total.
 local litBudget = 0
 local function buildStrand(folder, x1, z1, x2, z2)
 	local y = topY() + Config.LOBBY_STAGE_FESTOON_HEIGHT
 	local pts = WorldLayout.festoonStrand(x1, y, z1, x2, y, z2,
 		Config.LOBBY_STAGE_FESTOON_BULBS, Config.LOBBY_STAGE_FESTOON_SAG)
+	-- hang a thin dark wire between consecutive bulbs so the strand reads as a line
+	local wt = Config.LOBBY_STAGE_FESTOON_WIRE_THICKNESS
+	for i = 1, #pts - 1 do
+		local a = Vector3.new(pts[i].x, pts[i].y, pts[i].z)
+		local b = Vector3.new(pts[i + 1].x, pts[i + 1].y, pts[i + 1].z)
+		local mid = (a + b) / 2
+		local seg = rigPart(Vector3.new(wt, wt, (b - a).Magnitude), mid,
+			Config.LOBBY_STAGE_FESTOON_WIRE_COLOR, Enum.Material.SmoothPlastic, folder)
+		seg.Name = "FestoonWire"
+		seg.CFrame = CFrame.lookAt(mid, b)
+	end
 	local sz = Config.LOBBY_STAGE_FESTOON_BULB_SIZE
 	for _, pt in ipairs(pts) do
 		local bulb = rigPart(Vector3.new(sz, sz, sz), Vector3.new(pt.x, pt.y, pt.z),
@@ -231,7 +251,7 @@ local function buildBackCrest(folder)
 end
 
 local function cheer()
-	for _, e in ipairs(tierOrbs) do
+	for _, e in ipairs(crowdOrbs) do
 		e.cheer = 0.6 + math.random() * 0.4
 	end
 end
@@ -239,7 +259,7 @@ end
 function LobbyStage.start()
 	local folder = newFolder()
 	buildStageDeck(folder)
-	buildCrowdTiers(folder)
+	buildCrowdClusters(folder)
 	buildFestoon(folder)
 	buildBunting(folder)
 	buildBackCrest(folder)
