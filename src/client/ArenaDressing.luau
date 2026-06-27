@@ -77,7 +77,7 @@ end
 -- facing the waiting players (-Z Front face). Raised above the railing and nudged
 -- toward the arena so it doesn't touch the lobby structure. Built from lobby Config.
 local function buildBanner(folder)
-	local mountZ = Config.LOBBY_ORIGIN.Z + Config.LOBBY_PAD_SIZE.Z / 2 + Config.WORLD_BANNER_FORWARD
+	local mountZ = Config.LOBBY_ORIGIN.Z + Config.LOBBY_DISC_RADIUS + Config.WORLD_BANNER_FORWARD
 	local y = Config.LOBBY_ORIGIN.Y + Config.WORLD_BANNER_HEIGHT
 	local panel = rigPart(Config.WORLD_BANNER_SIZE,
 		Vector3.new(0, y, mountZ),
