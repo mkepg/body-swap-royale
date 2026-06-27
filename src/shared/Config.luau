@@ -43,8 +43,11 @@ Config.ROUND_END_SECONDS = 5
 -- tunable). When false, floors build but never arm (stay solid), so swaps can be
 -- observed without bodies falling.
 Config.HAZARDS_ENABLED = true
-Config.HEX_RADIUS = 5            -- rings from center; tiles/floor = 1+3R(R+1) = 91 (fine honeycomb)
+Config.HEX_RADIUS = 5            -- rings from center; drives the spawn spiral (spawnSlots).
+                                 -- The pit FIELD is a CIRCLE now (see HEX_CIRCLE_RADIUS), not the hexagon.
 Config.HEX_SIZE = 4              -- LATTICE hex circumradius (tile centers + occupancy lookup); small
+Config.HEX_CIRCLE_RADIUS = 30   -- the pit is a TRUE CIRCLE: hex tiles clipped to this world
+                                 -- radius (HazardSystem) -> ~68 tiles/floor; the edge trim hugs it.
                                  -- tiles -> many distinct hexagons, ~one body per tile
 Config.HEX_GAP = 0.3            -- studs each tile is INSET from the lattice radius, so neighbors
                                  -- don't touch: a THIN grout seam between tiles + zero coincident

@@ -152,7 +152,10 @@ function HazardSystem.build()
 		folder.Parent = workspace
 	end
 
-	local coords = HexGrid.tiles(Config.HEX_RADIUS)
+	-- The pit is a TRUE CIRCLE: clip the hex lattice to HEX_CIRCLE_RADIUS. Over-generate
+	-- rings (genRings reaches well past the circle) so the circle is fully tiled.
+	local genRings = math.ceil(Config.HEX_CIRCLE_RADIUS / Config.HEX_SIZE) + 1
+	local coords = HexGrid.tilesInCircle(genRings, Config.HEX_SIZE, Config.HEX_CIRCLE_RADIUS)
 	for floor = 0, Config.HEX_FLOOR_COUNT - 1 do
 		local surfaceY = Config.TILE_SURFACE_Y - floor * Config.HEX_FLOOR_GAP
 		for _, c in ipairs(coords) do
