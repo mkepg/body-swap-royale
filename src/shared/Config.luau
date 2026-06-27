@@ -32,12 +32,7 @@ Config.GRACE_MOVE_EPSILON = 0.5
 -- ROUND_END_SECONDS: winner-display window before resetting to Lobby.
 Config.LOBBY_COUNTDOWN_SECONDS = 5
 Config.ROUND_END_SECONDS = 5
--- A controlled body whose root falls below this Y is eliminated (grace-gated, via
--- the void monitor). With the 7-floor hex arena (floors at 0 / -50 / ... / -300),
--- this sits just under the LOWEST floor, so only a body that falls off floor 7 dies
--- -- falling through an upper floor lands on the next floor down. Still far above
--- Workspace.FallenPartsDestroyHeight (default -500).
-Config.VOID_Y = -304
+-- (VOID_Y is defined with the hex floor params below, since it tracks the lowest floor.)
 
 -- Hex-A-Gone arena floor. Seven stacked hexagonal floors; a hex arms the instant a
 -- body stands on it, flashes the warning color for HEX_GONE_DELAY_SECONDS, then
@@ -55,7 +50,13 @@ Config.HEX_GAP = 0.3            -- studs each tile is INSET from the lattice rad
                                  -- don't touch: a THIN grout seam between tiles + zero coincident
                                  -- geometry (no z-fighting). Rendered/collided radius = HEX_SIZE - HEX_GAP.
 Config.HEX_FLOOR_COUNT = 7       -- stacked floors
-Config.HEX_FLOOR_GAP = 50        -- vertical studs between floors (floors at 0/-50/.../-300)
+Config.HEX_FLOOR_GAP = 90        -- vertical studs between floors (floors at 0/-90/.../-540)
+-- A controlled body whose root falls below this Y is eliminated (grace-gated, via the
+-- void monitor). Computed to sit 4 studs under the LOWEST floor, so only a body that
+-- falls off the bottom floor dies (an upper-floor fall lands on the next floor down).
+-- Workspace.FallenPartsDestroyHeight is set BELOW this (default.project.json) so the
+-- engine doesn't destroy a falling body before the monitor catches it.
+Config.VOID_Y = -(Config.HEX_FLOOR_COUNT - 1) * Config.HEX_FLOOR_GAP - 4
 Config.HEX_STAND_BAND = 6        -- root-height window above a floor that counts as "on" it
                                  -- (must be < HEX_FLOOR_GAP so floor bands don't overlap)
 Config.HEX_GONE_DELAY_SECONDS = 1.2 -- step -> gone delay (warning color shows the whole time)
@@ -112,14 +113,14 @@ Config.SPAWN_ORIGIN = Vector3.new(0, 5, 0) -- arena center (X,Z) + spawn height 
 -- so the rim BARRIER is LOAD-BEARING: a gap would let a controlled body walk/jump
 -- off and die between rounds.
 Config.LOBBY_ORIGIN = Vector3.new(0, 45, -64) -- disc top-surface center
-Config.LOBBY_DISC_RADIUS = 40   -- walkable disc radius (holds the 4x4 body grid + room to spare)
+Config.LOBBY_DISC_RADIUS = 54   -- walkable disc radius (large; holds the 4x4 body grid with lots of room)
 Config.LOBBY_DISC_THICKNESS = 2 -- disc vertical thickness (top face sits at LOBBY_ORIGIN.Y)
 Config.LOBBY_DISC_COLOR = Color3.fromRGB(40, 42, 58) -- dark metal top
 -- LOBBY_WALL_* now describe the INVISIBLE rim barrier. Height must exceed a jump so a
 -- body can't hop off (JUMP_HEIGHT = 7.2). The barrier is a gap-free ring of segments.
 Config.LOBBY_WALL_HEIGHT = 12 -- barrier height (> JUMP_HEIGHT)
 Config.LOBBY_WALL_THICKNESS = 1 -- barrier radial thickness
-Config.LOBBY_BARRIER_SEGMENTS = 18 -- ring segments (more = rounder fence)
+Config.LOBBY_BARRIER_SEGMENTS = 48 -- ring segments (high = a smooth, perfectly-round rim)
 Config.LOBBY_BARRIER_SLACK = 1.1   -- segment length vs chord (overlap => NO gaps)
 Config.LOBBY_CAPACITY = 16 -- grid sized for up to this many bodies
 Config.LOBBY_PER_ROW = 4 -- body grid columns (rows = ceil(CAPACITY/PER_ROW))

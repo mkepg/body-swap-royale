@@ -26,7 +26,8 @@
     "Workspace": {
       "$properties": {
         "FilteringEnabled": true,
-        "StreamingEnabled": false
+        "StreamingEnabled": false,
+        "FallenPartsDestroyHeight": -700
       }
     },
     "Lighting": {
