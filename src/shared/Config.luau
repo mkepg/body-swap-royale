@@ -107,25 +107,25 @@ Config.SPAWN_ORIGIN = Vector3.new(0, 5, 0) -- arena center (X,Z) + spawn height 
 -- Lobby staging area: an elevated balcony overlooking the arena. Players wait
 -- here between rounds and on join; LobbyArea builds the geometry and BodyManager
 -- places bodies on the grid slots (pure SpawnLayout). The arena spans X,Z in
--- [-32,32] at surface Y=0, so the balcony sits RAISED and SET BACK behind the
--- -Z edge, facing +Z toward the arena center -- standing bodies look down into
--- the pit. The perimeter barriers are LOAD-BEARING: the pad floats over the void,
--- so a gap would let a controlled body walk off and die between rounds.
-Config.LOBBY_ORIGIN = Vector3.new(0, 45, -64) -- balcony surface center
-Config.LOBBY_PAD_SIZE = Vector3.new(48, 1, 48) -- platform X, thickness(Y), Z
--- LOBBY_WALL_HEIGHT must comfortably exceed a jump so a body can't hop the railing
--- into the void (JUMP_HEIGHT = 7.2; feet clear roughly that high). 12 leaves a safe
--- margin -- the front railing is transparent, so a taller wall doesn't block the view.
-Config.LOBBY_WALL_HEIGHT = 12 -- perimeter barrier height (fall protection)
-Config.LOBBY_WALL_THICKNESS = 1
+-- [-32,32] at surface Y=0, so the lobby DISC sits RAISED and SET BACK behind the
+-- -Z edge; standing bodies look down into the pit. The disc floats over the void,
+-- so the rim BARRIER is LOAD-BEARING: a gap would let a controlled body walk/jump
+-- off and die between rounds.
+Config.LOBBY_ORIGIN = Vector3.new(0, 45, -64) -- disc top-surface center
+Config.LOBBY_DISC_RADIUS = 30   -- walkable disc radius (holds the 4x4 body grid + margin)
+Config.LOBBY_DISC_THICKNESS = 2 -- disc vertical thickness (top face sits at LOBBY_ORIGIN.Y)
+Config.LOBBY_DISC_COLOR = Color3.fromRGB(40, 42, 58) -- dark metal top
+-- LOBBY_WALL_* now describe the INVISIBLE rim barrier. Height must exceed a jump so a
+-- body can't hop off (JUMP_HEIGHT = 7.2). The barrier is a gap-free ring of segments.
+Config.LOBBY_WALL_HEIGHT = 12 -- barrier height (> JUMP_HEIGHT)
+Config.LOBBY_WALL_THICKNESS = 1 -- barrier radial thickness
+Config.LOBBY_BARRIER_SEGMENTS = 18 -- ring segments (more = rounder fence)
+Config.LOBBY_BARRIER_SLACK = 1.1   -- segment length vs chord (overlap => NO gaps)
 Config.LOBBY_CAPACITY = 16 -- grid sized for up to this many bodies
-Config.LOBBY_PER_ROW = 4 -- balcony grid columns (rows = ceil(CAPACITY/PER_ROW))
+Config.LOBBY_PER_ROW = 4 -- body grid columns (rows = ceil(CAPACITY/PER_ROW))
 Config.LOBBY_SPACING = 10 -- studs between grid slots
-Config.LOBBY_SPAWN_DROP = 5 -- studs above the pad a body spawns at (settles down)
+Config.LOBBY_SPAWN_DROP = 5 -- studs above the disc a body spawns at (settles down)
 Config.LOBBY_FACE_TARGET = Vector3.new(0, 0, 0) -- bodies face this (arena center)
-Config.LOBBY_COLOR_PAD = Color3.fromRGB(120, 170, 230) -- soft blue (echoes lobby banner)
-Config.LOBBY_COLOR_WALL = Color3.fromRGB(90, 130, 190) -- slightly darker walls
-Config.LOBBY_RAILING_TRANSPARENCY = 0.6 -- arena-facing glass railing (CanCollide, see-through)
 
 -- Default R15 animation asset IDs, consumed by the client animation driver.
 -- Bodies aren't player Characters, so the engine's Animate script can't drive
@@ -248,63 +248,51 @@ Config.WORLD_BANNER_TEXT_COLOR = Color3.fromRGB(255, 216, 77)
 -- server-owned and untouched). "Magic-Hour Fair": warm festoon lights against the
 -- cool dusk/aurora. All heights are relative to the platform top (= LOBBY_ORIGIN.Y).
 
--- Stage deck: a thin cosmetic slab skinning the platform top + a lit pit-facing lip.
-Config.LOBBY_STAGE_DECK_INSET = 0.5         -- shrink from pad edges so it reads as a skin
-Config.LOBBY_STAGE_DECK_THICKNESS = 0.4
-Config.LOBBY_STAGE_DECK_LIFT = 0.3          -- studs above the platform top face
-Config.LOBBY_STAGE_DECK_COLOR = Color3.fromRGB(28, 26, 44)    -- dark broadcast deck
-Config.LOBBY_STAGE_EDGE_COLOR = Color3.fromRGB(120, 230, 220) -- lit stage lip (cool accent)
-Config.LOBBY_STAGE_EDGE_THICKNESS = 0.6
+-- ============ Beyblade lobby cosmetic (client LobbyStage) ============
+-- The server LobbyArea builds the load-bearing disc + invisible rim barrier; this
+-- block dresses it as a spinning top. All cosmetic parts are non-colliding. Heights
+-- are relative to the disc top (= LOBBY_ORIGIN.Y).
 
--- Crowd: two small soul clusters at the pit-view edges (front ±X), not a U-wrap.
--- Sized to where peripheral vision/cheer-pops register; the distant WorldShell
--- crowd carries the rest. Neon orbs only (no per-orb light) for mobile.
-Config.LOBBY_STAGE_CLUSTER_PER_SIDE = 6     -- orbs per wing cluster (2 clusters => ~12 total)
-Config.LOBBY_STAGE_CLUSTER_SPACING = 2.6    -- studs between orbs in a cluster
-Config.LOBBY_STAGE_CLUSTER_INSET = 4        -- studs in from the pad ±X edge each cluster sits
-Config.LOBBY_STAGE_CLUSTER_FRONT = 0.34     -- fraction of half-Z toward the front (+Z) the clusters sit
-Config.LOBBY_STAGE_CLUSTER_LIFT = 2.5       -- studs above platform top
+-- Energy rings: Neon discs WIDER than the server disc, centered at its mid-height so
+-- their rim glows around the disc edge (the opaque disc occludes the center). Ring A
+-- (cool) is the visible half of the hybrid fall ring; ring B (warm) is lower + wider.
+Config.LOBBY_BEY_RING_COLOR_A = Color3.fromRGB(120, 230, 220)
+Config.LOBBY_BEY_RING_COLOR_B = Color3.fromRGB(255, 207, 107)
+Config.LOBBY_BEY_RING_OVERHANG_A = 1.4   -- studs ring A extends past the disc radius
+Config.LOBBY_BEY_RING_OVERHANG_B = 3.0   -- studs ring B extends past the disc radius
+Config.LOBBY_BEY_RING_DROP_B = 1.6       -- studs ring B sits below ring A
+Config.LOBBY_BEY_RING_THICKNESS = 0.6
+
+-- Stepped taper body below the disc, down to a tip. Each entry { radiusFrac, depth
+-- below the disc top (studs), thickness }. Metal discs of decreasing radius.
+Config.LOBBY_BEY_STEP_COLOR = Color3.fromRGB(54, 56, 74)
+Config.LOBBY_BEY_STEPS = {
+	{ 0.82, 4, 3 },
+	{ 0.55, 9, 3 },
+	{ 0.30, 14, 3 },
+}
+-- Tip: a thin vertical Neon spike at the bottom center.
+Config.LOBBY_BEY_TIP_COLOR = Color3.fromRGB(120, 230, 220)
+Config.LOBBY_BEY_TIP_DIAMETER = 2.4
+Config.LOBBY_BEY_TIP_HEIGHT = 7
+Config.LOBBY_BEY_TIP_DEPTH = 19          -- studs below the disc top the tip CENTER sits
+
+-- Spectator souls: two cheer-reactive soul-orb clusters at the rim (+/-X).
+Config.LOBBY_BEY_CLUSTER_RADIUS = 0.8    -- fraction of disc radius the clusters sit at
+Config.LOBBY_BEY_CLUSTER_LIFT = 2.5      -- studs above the disc top
+
+-- Crowd cluster shape + cheer (reused by the spectator souls).
+Config.LOBBY_STAGE_CLUSTER_PER_SIDE = 6  -- orbs per cluster (2 => ~12 total)
+Config.LOBBY_STAGE_CLUSTER_SPACING = 2.6 -- studs between orbs in a cluster
 Config.LOBBY_STAGE_ORB_SIZE = 2.2
-
--- Festoon STRING-LIGHTS: warm-gold bulbs in a catenary sag, hung on a thin dark
--- WIRE (the wire is what reads them as lights, not free-floating souls). Real
--- PointLights capped to LOBBY_STAGE_FESTOON_LIT total (mobile budget).
-Config.LOBBY_STAGE_FESTOON_COLOR = Color3.fromRGB(255, 207, 107) -- warm gold
-Config.LOBBY_STAGE_FESTOON_WIRE_COLOR = Color3.fromRGB(24, 22, 30) -- near-black hung wire
-Config.LOBBY_STAGE_FESTOON_WIRE_THICKNESS = 0.16
-Config.LOBBY_STAGE_FESTOON_BULBS = 9        -- bulbs per strand
-Config.LOBBY_STAGE_FESTOON_SAG = 4          -- studs of mid-span droop
-Config.LOBBY_STAGE_FESTOON_BULB_SIZE = 0.5  -- smaller than a soul orb so it reads as a bulb
-Config.LOBBY_STAGE_FESTOON_HEIGHT = 16      -- studs above platform top the strands hang
-Config.LOBBY_STAGE_FESTOON_LIT = 4          -- TOTAL real PointLights across all strands
-Config.LOBBY_STAGE_LIGHT_RANGE = 18
-Config.LOBBY_STAGE_LIGHT_BRIGHTNESS = 1.4
-
--- Bunting pennants along the back tier front.
-Config.LOBBY_STAGE_BUNTING_COUNT = 10
-Config.LOBBY_STAGE_BUNTING_SIZE = Vector3.new(1.6, 1.8, 0.2)
-Config.LOBBY_STAGE_BUNTING_HEIGHT = 6       -- studs above platform top
-
--- Back crest: small festival header crowning the back tier (distinct from the kept
--- front marquee in ArenaDressing -- no duplicate title).
-Config.LOBBY_STAGE_CREST_SIZE = Vector3.new(20, 5, 0.5)
-Config.LOBBY_STAGE_CREST_HEIGHT = 17        -- studs above platform top
-Config.LOBBY_STAGE_CREST_TEXT = "★ SOUL FESTIVAL ★"
-Config.LOBBY_STAGE_CREST_BG = Color3.fromRGB(58, 42, 92)
-Config.LOBBY_STAGE_CREST_TEXT_COLOR = Color3.fromRGB(255, 227, 166)
-
--- Crowd cheer (mirror WORLD_CROWD_* so the grandstand reacts like the distant crowd).
 Config.LOBBY_STAGE_IDLE_SPEED = 0.5
 Config.LOBBY_STAGE_IDLE_AMP = 0.4
-Config.LOBBY_STAGE_CHEER_BOB = 6            -- studs an orb pops up on a cheer
-Config.LOBBY_STAGE_CHEER_SCALE = 0.5        -- orb size pop fraction at full cheer
-Config.LOBBY_STAGE_CHEER_SECONDS = 0.5      -- cheer decay time
+Config.LOBBY_STAGE_CHEER_BOB = 6         -- studs an orb pops up on a cheer
+Config.LOBBY_STAGE_CHEER_SCALE = 0.5     -- orb size pop fraction at full cheer
+Config.LOBBY_STAGE_CHEER_SECONDS = 0.5   -- cheer decay time
 
--- Hybrid asset fields (blank "" ⇒ code fallback, per the WORLD_SKYBOX idiom). Set
--- by Studio MCP sourcing in the final task; the slice ships fully on fallbacks.
-Config.LOBBY_STAGE_DECK_TEXTURE = ""        -- Texture id for the deck top
-Config.LOBBY_STAGE_ORB_MESH = ""            -- MeshId for crowd orbs
-Config.LOBBY_STAGE_FESTOON_MESH = ""        -- MeshId for festoon bulbs
-Config.LOBBY_STAGE_BUNTING_TEXTURE = ""     -- Texture id for pennant flags
+-- Hybrid asset field (blank "" => code fallback). Crowd-orb mesh only; the rest of
+-- the beyblade ships as code.
+Config.LOBBY_STAGE_ORB_MESH = ""
 
 return Config
