@@ -256,6 +256,10 @@ Config.WORLD_BANNER_TEXT_COLOR = Color3.fromRGB(255, 216, 77)
 -- block dresses it as a spinning top. All cosmetic parts are non-colliding. Heights
 -- are relative to the disc top (= LOBBY_ORIGIN.Y).
 
+-- Round lobby parts (disc, energy rings, taper) are drawn as high-N EditableMesh
+-- cylinders on the client -- primitive Part Cylinders facet visibly at this scale.
+Config.LOBBY_BEY_SMOOTH_SIDES = 96 -- mesh sides (high = perfectly smooth circle)
+
 -- Energy rings: Neon discs WIDER than the server disc, centered at its mid-height so
 -- their rim glows around the disc edge (the opaque disc occludes the center). Ring A
 -- (cool) is the visible half of the hybrid fall ring; ring B (warm) is lower + wider.

@@ -16,6 +16,7 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local AssetService = game:GetService("AssetService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
@@ -63,21 +64,79 @@ local function rigCyl(name, diameter, length, centerY, color, material, parent)
 	return p
 end
 
+-- A PERFECTLY SMOOTH vertical-axis cylinder: a high-N EditableMesh disc built on the
+-- client (primitive Part Cylinders facet visibly at this scale). The mesh lies flat
+-- with Y as the thickness axis, so no rotation is needed. Falls back to the primitive
+-- rigCyl if EditableMesh is unavailable on this client.
+local SMOOTH_SIDES = Config.LOBBY_BEY_SMOOTH_SIDES
+
+local function buildEditableCyl(diameter, length)
+	local em = AssetService:CreateEditableMesh()
+	local R, H, N = diameter / 2, length, SMOOTH_SIDES
+	local topC = em:AddVertex(Vector3.new(0, H / 2, 0))
+	local botC = em:AddVertex(Vector3.new(0, -H / 2, 0))
+	local top, bot = {}, {}
+	for i = 0, N - 1 do
+		local ang = (2 * math.pi * i) / N
+		local x, z = R * math.cos(ang), R * math.sin(ang)
+		top[i] = em:AddVertex(Vector3.new(x, H / 2, z))
+		bot[i] = em:AddVertex(Vector3.new(x, -H / 2, z))
+	end
+	for i = 0, N - 1 do
+		local j = (i + 1) % N
+		em:AddTriangle(topC, top[j], top[i])   -- top face (+Y)
+		em:AddTriangle(botC, bot[i], bot[j])   -- bottom face (-Y)
+		em:AddTriangle(top[i], top[j], bot[i]) -- side
+		em:AddTriangle(top[j], bot[j], bot[i]) -- side
+	end
+	local mp = AssetService:CreateMeshPartAsync(Content.fromObject(em),
+		{ CollisionFidelity = Enum.CollisionFidelity.Box })
+	mp.Size = Vector3.new(diameter, length, diameter)
+	return mp
+end
+
+local function smoothCyl(name, diameter, length, centerY, color, material, parent)
+	local o = Config.LOBBY_ORIGIN
+	local ok, mp = pcall(buildEditableCyl, diameter, length)
+	if ok and mp then
+		mp.CFrame = CFrame.new(o.X, centerY, o.Z) -- mesh already lies flat (Y = thickness)
+		mp.Anchored = true
+		mp.CanCollide = false
+		mp.CanQuery = false
+		mp.CanTouch = false
+		mp.CastShadow = false
+		mp.Material = material
+		mp.Color = color
+		mp.Name = name
+		mp.Parent = parent
+		return mp
+	end
+	return rigCyl(name, diameter, length, centerY, color, material, parent) -- primitive fallback
+end
+
 -- top face of the server disc (= LOBBY_ORIGIN.Y).
 local function topY()
 	return Config.LOBBY_ORIGIN.Y
 end
 
--- Glowing energy rings around the disc rim. Each is a Neon disc WIDER than the
--- server disc, centered at the disc's mid-height; the opaque server disc occludes
--- the centre, so only the protruding rim glows.
+-- The smooth visual disc players see (the server LobbyArea disc is invisible
+-- collision). Top face at LOBBY_ORIGIN.Y, matching the collision disc exactly.
+local function buildDeck(folder)
+	local th = Config.LOBBY_DISC_THICKNESS
+	smoothCyl("Deck", Config.LOBBY_DISC_RADIUS * 2, th, topY() - th / 2,
+		Config.LOBBY_DISC_COLOR, Enum.Material.Metal, folder)
+end
+
+-- Glowing energy rings around the disc rim. Each is a Neon disc WIDER than the disc,
+-- centered at its mid-height; the opaque deck occludes the centre, so only the
+-- protruding rim glows.
 local function buildEnergyRings(folder)
 	local r = Config.LOBBY_DISC_RADIUS
 	local midY = topY() - Config.LOBBY_DISC_THICKNESS / 2
 	local t = Config.LOBBY_BEY_RING_THICKNESS
-	local a = rigCyl("EnergyRing", (r + Config.LOBBY_BEY_RING_OVERHANG_A) * 2, t, midY,
+	local a = smoothCyl("EnergyRing", (r + Config.LOBBY_BEY_RING_OVERHANG_A) * 2, t, midY,
 		Config.LOBBY_BEY_RING_COLOR_A, Enum.Material.Neon, folder)
-	local b = rigCyl("EnergyRing", (r + Config.LOBBY_BEY_RING_OVERHANG_B) * 2, t,
+	local b = smoothCyl("EnergyRing", (r + Config.LOBBY_BEY_RING_OVERHANG_B) * 2, t,
 		midY - Config.LOBBY_BEY_RING_DROP_B, Config.LOBBY_BEY_RING_COLOR_B, Enum.Material.Neon, folder)
 	-- soften the rim glow
 	a.Transparency = Config.LOBBY_BEY_GLOW_TRANSPARENCY
@@ -89,7 +148,7 @@ local function buildBody(folder)
 	local r = Config.LOBBY_DISC_RADIUS
 	for _, step in ipairs(Config.LOBBY_BEY_STEPS) do
 		local radiusFrac, depth, thickness = step[1], step[2], step[3]
-		rigCyl("BeyStep", r * 2 * radiusFrac, thickness, topY() - depth,
+		smoothCyl("BeyStep", r * 2 * radiusFrac, thickness, topY() - depth,
 			Config.LOBBY_BEY_STEP_COLOR, Enum.Material.Metal, folder)
 	end
 end
@@ -156,6 +215,7 @@ function LobbyStage.start()
 	local folder = newFolder()
 	buildBody(folder)
 	buildEnergyRings(folder)
+	buildDeck(folder)
 	buildSpectatorSouls(folder)
 
 	-- Reuse WorldShell's cheer triggers: the spectator souls pulse on any elimination

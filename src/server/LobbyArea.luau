@@ -49,6 +49,9 @@ function LobbyArea.build()
 	disc.CFrame = CFrame.new(origin.X, origin.Y - th / 2, origin.Z) * CFrame.Angles(0, 0, math.rad(90))
 	disc.Color = Config.LOBBY_DISC_COLOR
 	disc.Material = Enum.Material.Metal
+	-- Invisible: this is COLLISION only. The client (LobbyStage) draws the smooth
+	-- visual disc as a high-N EditableMesh (a primitive Cylinder facets at this size).
+	disc.Transparency = 1
 	disc.TopSurface = Enum.SurfaceType.Smooth
 	disc.BottomSurface = Enum.SurfaceType.Smooth
 	disc.Parent = folder
