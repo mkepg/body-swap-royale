@@ -229,11 +229,8 @@ Config.WORLD_TRIM_Y = 1.5              -- studs above the floor surface the rim 
 Config.WORLD_TRIM_HEIGHT = 0.8         -- bar vertical thickness
 Config.WORLD_TRIM_DEPTH = 1.4          -- bar radial thickness
 Config.WORLD_TRIM_LENGTH_SLACK = 1.06  -- segment length vs chord (slightly overlap so the rim closes)
--- Top-floor uplights replace the torch lighting (the trim is the only floor light).
-Config.WORLD_TRIM_LIT_FLOORS = 3       -- top N floors get real PointLights (perf dial; deep floors glow only)
-Config.WORLD_TRIM_LIGHTS_PER_FLOOR = 4 -- evenly-spaced lit segments per lit floor (12 lights total, torch parity)
-Config.WORLD_TRIM_LIGHT_RANGE = 34     -- < HEX_FLOOR_GAP so light doesn't bleed across floors
-Config.WORLD_TRIM_LIGHT_BRIGHTNESS = 2
+-- Every floor glows by Neon trim alone (no real PointLights) -- uniform lighting
+-- across all floors; the dusk ambient (WorldShell) provides the rest.
 
 -- Framed marquee header (banner) on support posts at the balcony's arena-facing edge.
 Config.WORLD_BANNER_TEXT = "BODY SWAP ROYALE"
