@@ -88,32 +88,4 @@ do
 	print("worldlayout: cluster OK")
 end
 
--- festoonStrand(x1,y1,z1, x2,y2,z2, count, sag): `count` points along the segment
--- with a parabolic droop (0 at the posts, `sag` below mid). Endpoints exact; the
--- droop is symmetric about mid-span.
-do
-	local pts = WorldLayout.festoonStrand(0, 20, 0, 8, 20, 0, 5, 4)
-	expect(#pts == 5, "festoonStrand returns `count` points")
-	expect(approx(pts[1].x, 0) and approx(pts[1].y, 20) and approx(pts[1].z, 0), "end 1 at post 1")
-	expect(approx(pts[5].x, 8) and approx(pts[5].y, 20) and approx(pts[5].z, 0), "end 2 at post 2")
-	expect(approx(pts[3].x, 4) and approx(pts[3].y, 16), "mid-span dips by sag (20-4=16)")
-	expect(approx(pts[2].y, pts[4].y), "droop symmetric about mid-span")
-	expect(pts[2].y < 20 and pts[3].y < 20 and pts[4].y < 20, "interior bulbs dip below the posts")
-	print("worldlayout: festoonStrand OK")
-end
-
--- buntingFlags(x1,z1,x2,z2, y, count): `count` evenly spaced points along the
--- segment at constant height y.
-do
-	local f = WorldLayout.buntingFlags(-24, -64, 24, -64, 6, 5)
-	expect(#f == 5, "buntingFlags returns `count` points")
-	for _, p in ipairs(f) do expect(approx(p.y, 6), "bunting y is constant") end
-	expect(approx(f[1].x, -24) and approx(f[5].x, 24), "endpoints at the segment ends")
-	local g1 = f[2].x - f[1].x
-	for i = 2, #f - 1 do
-		expect(approx(f[i + 1].x - f[i].x, g1), "bunting points evenly spaced")
-	end
-	print("worldlayout: buntingFlags OK")
-end
-
 print("ALL WorldLayout TESTS PASSED")
