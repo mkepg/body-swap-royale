@@ -62,6 +62,11 @@ After the orb-vocabulary reassessment, re-inspected in Play:
   - Barrier: 18 segments, `CanCollide=true`, `Transparency=1`, height 12 (> jump 7.2); chord 10.42 × slack 1.1 = 11.46 ⇒ **~1.04-stud overlap at every junction (gap-free)**; base flush with the disc top.
 - **Still required (manual / after a Rojo re-sync):** live MCP/visual confirmation that `workspace.LobbyArea` builds the new `Disc`+`Barrier` (not the old box) and `workspace.LobbyStage` the beyblade parts, plus the **walk/jump-off** load-bearing checks in section 2 and the look in section 1.
 
+### 2026-06-28 — lobby distance + circular pit (needs a Rojo re-sync to verify)
+These changed gameplay-adjacent geometry; lune is green but live checks are pending (Studio was on a stale Rojo sync). After re-syncing, verify:
+- **Lobby distance:** lobby moved to `(0, 64, -120)` — standing on the disc you can see ~half-to-all of the pit ahead; the disc no longer overhangs the pit.
+- **Circular pit (gameplay):** the hex field is a **true circle** (`HEX_CIRCLE_RADIUS = 30`, ~68 tiles/floor) — confirm it reads round, the **edge trim hugs the circle**, **bodies still spawn on tiles** (≤16, central), tiles **still erode**, and **void elimination still triggers** off the bottom floor (floor gap reverted to 50, `VOID_Y` computed = −304).
+
 ### Manual pass
 - Date run / client(s) / outcome:
 - Tuning notes (Config values changed):
