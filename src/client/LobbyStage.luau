@@ -75,13 +75,16 @@ local function buildEnergyRings(folder)
 	local r = Config.LOBBY_DISC_RADIUS
 	local midY = topY() - Config.LOBBY_DISC_THICKNESS / 2
 	local t = Config.LOBBY_BEY_RING_THICKNESS
-	rigCyl("EnergyRing", (r + Config.LOBBY_BEY_RING_OVERHANG_A) * 2, t, midY,
+	local a = rigCyl("EnergyRing", (r + Config.LOBBY_BEY_RING_OVERHANG_A) * 2, t, midY,
 		Config.LOBBY_BEY_RING_COLOR_A, Enum.Material.Neon, folder)
-	rigCyl("EnergyRing", (r + Config.LOBBY_BEY_RING_OVERHANG_B) * 2, t,
+	local b = rigCyl("EnergyRing", (r + Config.LOBBY_BEY_RING_OVERHANG_B) * 2, t,
 		midY - Config.LOBBY_BEY_RING_DROP_B, Config.LOBBY_BEY_RING_COLOR_B, Enum.Material.Neon, folder)
+	-- soften the rim glow
+	a.Transparency = Config.LOBBY_BEY_GLOW_TRANSPARENCY
+	b.Transparency = Config.LOBBY_BEY_GLOW_TRANSPARENCY
 end
 
--- Stepped taper body below the disc + a tip spike.
+-- Stepped taper body below the disc (down to a small base; no tip spike).
 local function buildBody(folder)
 	local r = Config.LOBBY_DISC_RADIUS
 	for _, step in ipairs(Config.LOBBY_BEY_STEPS) do
@@ -89,8 +92,6 @@ local function buildBody(folder)
 		rigCyl("BeyStep", r * 2 * radiusFrac, thickness, topY() - depth,
 			Config.LOBBY_BEY_STEP_COLOR, Enum.Material.Metal, folder)
 	end
-	rigCyl("BeyTip", Config.LOBBY_BEY_TIP_DIAMETER, Config.LOBBY_BEY_TIP_HEIGHT,
-		topY() - Config.LOBBY_BEY_TIP_DEPTH, Config.LOBBY_BEY_TIP_COLOR, Enum.Material.Neon, folder)
 end
 
 -- Two cheer-reactive soul-orb clusters at the rim (±X); one Heartbeat drives idle
@@ -113,6 +114,7 @@ local function buildSpectatorSouls(folder)
 			local orb = rigPart(Vector3.new(sz, sz, sz), Vector3.new(s.x, s.y, s.z),
 				color, Enum.Material.Neon, folder)
 			orb.Shape = Enum.PartType.Ball
+			orb.Transparency = Config.LOBBY_BEY_GLOW_TRANSPARENCY -- soften the soul glow
 			orb.Name = "CrowdOrb"
 			if Config.LOBBY_STAGE_ORB_MESH ~= "" then
 				local mesh = Instance.new("SpecialMesh")
