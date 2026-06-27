@@ -34,6 +34,27 @@ function HexGrid.tiles(radius)
 	return out
 end
 
+-- Hex tiles whose WORLD center is within `worldRadius` studs of the field center --
+-- a CIRCULAR field clipped from the hex lattice. Generate `ringRadius` rings (pick it
+-- large enough to cover the circle), then keep only the inscribed tiles. Pure; uses
+-- the same flat-top math as toWorld so the clip is exact.
+function HexGrid.tilesInCircle(ringRadius, size, worldRadius)
+	local out = {}
+	local r2 = worldRadius * worldRadius
+	for q = -ringRadius, ringRadius do
+		local rLo = math.max(-ringRadius, -q - ringRadius)
+		local rHi = math.min(ringRadius, -q + ringRadius)
+		for r = rLo, rHi do
+			local dx = size * 1.5 * q
+			local dz = size * SQRT3 * (r + q / 2)
+			if dx * dx + dz * dz <= r2 then
+				out[#out + 1] = { q = q, r = r }
+			end
+		end
+	end
+	return out
+end
+
 -- Flat-top axial -> world center offset (dx, dz studs) from the field center.
 function HexGrid.toWorld(q, r, size)
 	local dx = size * 1.5 * q

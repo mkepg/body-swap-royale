@@ -105,4 +105,27 @@ do
 	print("hexgrid: floorAt banding OK")
 end
 
+-- tilesInCircle(ringRadius, size, worldRadius): hex tiles whose WORLD center is within
+-- worldRadius -> a circular field clipped from the hex lattice.
+do
+	local SQRT3 = math.sqrt(3)
+	local size, R = 4, 30
+	local c = HexGrid.tilesInCircle(9, size, R)
+	expect(#c > 0, "tilesInCircle returns tiles")
+	for _, t in ipairs(c) do
+		local dx = size * 1.5 * t.q
+		local dz = size * SQRT3 * (t.r + t.q / 2)
+		expect(dx * dx + dz * dz <= R * R + 1e-6, "every tile within worldRadius (got q=" .. t.q .. " r=" .. t.r .. ")")
+	end
+	local hasCenter, hasFar = false, false
+	for _, t in ipairs(c) do
+		if t.q == 0 and t.r == 0 then hasCenter = true end
+		if t.q == 9 and t.r == 0 then hasFar = true end -- dx=54 > 30, must be clipped
+	end
+	expect(hasCenter, "center tile (0,0) is included")
+	expect(not hasFar, "a far corner outside the circle is excluded")
+	expect(#c < #HexGrid.tiles(9), "the circle clips the hex-field corners")
+	print("hexgrid: tilesInCircle OK")
+end
+
 print("ALL HexGrid TESTS PASSED")

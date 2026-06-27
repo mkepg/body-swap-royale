@@ -19,11 +19,12 @@ local Config = require(Shared.Config)
 
 local ArenaDescriptor = {}
 
--- The Hex-A-Gone arena's descriptor, derived from the hex Config. The flat-top
--- field's world half-width is ~ HEX_SIZE * 1.5 * HEX_RADIUS; pad by one tile so
--- the dressing clears the outermost tiles. depth = floor span below the top.
+-- The Hex-A-Gone arena's descriptor, derived from the hex Config. The pit is a
+-- CIRCULAR field of radius HEX_CIRCLE_RADIUS; the footprint is that circle's bounding
+-- box, so the dressing (edge trim) hugs the circle via WORLD_TRIM_MARGIN. depth =
+-- floor span below the top.
 function ArenaDescriptor.hex()
-	local halfWidth = Config.HEX_SIZE * 1.5 * Config.HEX_RADIUS + Config.HEX_SIZE
+	local halfWidth = Config.HEX_CIRCLE_RADIUS
 	local extent = halfWidth * 2
 	-- One dressable level per hex floor, top -> bottom, each carrying its floor color.
 	local levels = {}
