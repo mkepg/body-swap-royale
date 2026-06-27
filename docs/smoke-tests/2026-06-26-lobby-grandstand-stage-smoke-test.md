@@ -5,25 +5,26 @@
 
 Keep `Config.HAZARDS_ENABLED = false` so the floor stays safe while observing the lobby.
 
-> **Reassessment (2026-06-26):** the orb-vocabulary cleanup is folded in — lobby crowd is now two small clusters (not a U-wrap), festoon is string-lights on a wire, and the hex floors use a colored edge trim (not torches/orb rings). See `docs/superpowers/specs/2026-06-26-orb-vocabulary-reassessment-design.md`. Checks below reflect that.
+> **Reassessment (2026-06-26):** orb-vocabulary cleanup — hex floors use a colored edge trim (not torches/orb rings), all floors lit uniformly by Neon (no real PointLights). See `docs/superpowers/specs/2026-06-26-orb-vocabulary-reassessment-design.md`.
+> **Beyblade lobby (2026-06-27):** the lobby is **redesigned from a box into a beyblade** — a round walkable disc + invisible rim barrier, dressed as a spinning top (energy rings, stepped taper, tip, rim spectator-soul clusters). This SUPERSEDES the festival-grandstand lobby (no more box walls / festoon / bunting / back crest). See `docs/superpowers/specs/2026-06-27-beyblade-lobby-design.md`. Sections 1 + 2 reflect the beyblade.
 
-## 1. Look & feel (single client)
-- Join and stand on the balcony. Confirm the redress is present:
-  - [ ] **Stage deck** skinning the platform with a lit pit-facing **lip**.
-  - [ ] **Two small soul clusters** at the pit-view edges (front ±X); **no crowd behind/around** blocking the view. The bulk of the crowd is the distant WorldShell ring out around the pit.
-  - [ ] **Festoon string-lights**: small warm bulbs on a visible **thin dark wire** with a droop — they read as *lights*, not floating soul-orbs.
-  - [ ] **Bunting** pennants along the back, in player-palette colors.
-  - [ ] **Back crest** ("★ SOUL FESTIVAL ★") crowning the back.
-  - [ ] The **front marquee** (Slice 1b) is still present and unchanged over the pit.
-- [ ] **Magic-Hour read:** the warm lights/bunting sit against the unchanged **cool dusk + teal/violet aurora** sky (warm vs cool contrast).
+## 1. Beyblade lobby — look & feel (single client)
+- Join and stand on the lobby. Confirm:
+  - [ ] You stand on a **round disc** (no box walls); the lobby silhouette is a **beyblade** — a wide top, a **stepped taper** narrowing below, down to a **tip**.
+  - [ ] **Glowing energy rings** hug the disc rim (cool ring at the edge, a warmer wider ring just below).
+  - [ ] **Two cheer-reactive soul-orb clusters** ("spectator souls") sit at the rim (±X). The bulk of the crowd is the distant WorldShell ring around the pit.
+  - [ ] The **front marquee** is still present over the front edge.
+- [ ] The beyblade reads against the unchanged **cool dusk + aurora** sky; nothing blocks the downward pit view.
 
 ## 1b. Hex floor edge trim (single client, looking into the pit)
 - [ ] Each hex floor wears a **floor-colored glowing rim** hugging its edge (a continuous-looking band, not scattered orbs). **No torches and no orb rings** remain.
-- [ ] The **top floors are lit** (you can see the erosion); deeper floors glow via the trim color only.
+- [ ] **All floors glow uniformly by Neon** (no real PointLights on any floor) — the top floors look the same style as the deep ones.
 - [ ] With `HAZARDS_ENABLED = true`, as tiles erode the holes are **empty** — the trim sits outside the tiles, so a hole never reveals a solid glowing plate that could read as walkable.
 
-## 2. Load-bearing invariant (single client)
-- [ ] Walk the controlled body into the railing and into every cluster/deck/light — it **cannot** walk through onto anything or off the edge.
+## 2. Load-bearing invariant (single client) — CRITICAL for the beyblade
+- [ ] Walk the controlled body to the **disc rim from several directions (front, back, both sides)** — it **cannot** walk off the edge into the void (the invisible barrier stops it).
+- [ ] **Jump** at the rim from several angles and against the energy rings — no part is a foothold; the body **cannot get over** the barrier into the void. (Barrier is 12 high > jump 7.2; cosmetic parts are non-colliding.)
+- [ ] Bodies **spawn on the disc** on join, **teleport down** into the arena at round start, and **return to the disc** at round end / on elimination — same as before.
 - [ ] **Jump** at the railing and under the festoon — no added part is a foothold; the body cannot get over the railing into the void. (All LobbyStage parts are non-colliding.)
 
 ## 3. Cheer reactivity (2 clients, or forced)
@@ -53,6 +54,13 @@ After the orb-vocabulary reassessment, re-inspected in Play:
 - **`workspace.LobbyStage`:** exactly **12 CrowdOrb** (two 6-orb clusters), plus **FestoonWire** segments and smaller **FestoonBulb**s; no back-tier crowd.
 - Lune `tests/world_layout.spec` green (`cluster` covers the new helper; `tierRows` removed).
 - **Still needs the manual pass:** the *aesthetic* read (floors as clean colored rims, festoon reading as lights, clusters only at the edges) and the erosion-vs-trim check (1b) — `screen_capture` timed out, so a human/2-client run is still required.
+
+### 2026-06-27 — beyblade lobby (static verification; live MCP deferred)
+- Lune `tests/world_layout.spec` green (removed the now-unused `festoonStrand`/`buntingFlags`).
+- **Static geometry review (the disc/barrier could not be live-inspected — Studio's Rojo sync was stale this session, still showing the old box lobby):**
+  - Disc: `Cylinder`, `CanCollide=true`, `Anchored`, rotated so the axis is vertical; center Y = `LOBBY_ORIGIN.Y − thickness/2` ⇒ **top face exactly at `LOBBY_ORIGIN.Y = 45`**. Radius 30 holds the 4×4 grid (corner slot ≈ 21).
+  - Barrier: 18 segments, `CanCollide=true`, `Transparency=1`, height 12 (> jump 7.2); chord 10.42 × slack 1.1 = 11.46 ⇒ **~1.04-stud overlap at every junction (gap-free)**; base flush with the disc top.
+- **Still required (manual / after a Rojo re-sync):** live MCP/visual confirmation that `workspace.LobbyArea` builds the new `Disc`+`Barrier` (not the old box) and `workspace.LobbyStage` the beyblade parts, plus the **walk/jump-off** load-bearing checks in section 2 and the look in section 1.
 
 ### Manual pass
 - Date run / client(s) / outcome:

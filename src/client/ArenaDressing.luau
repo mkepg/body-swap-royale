@@ -73,8 +73,8 @@ local function buildFloorTrim(folder, desc)
 	end
 end
 
--- Framed marquee header floating clear above the balcony's arena-facing edge,
--- facing the waiting players (-Z Front face). Raised above the railing and nudged
+-- Framed marquee header floating clear above the lobby disc's arena-facing edge,
+-- facing the waiting players (-Z Front face). Raised above the rim barrier and nudged
 -- toward the arena so it doesn't touch the lobby structure. Built from lobby Config.
 local function buildBanner(folder)
 	local mountZ = Config.LOBBY_ORIGIN.Z + Config.LOBBY_DISC_RADIUS + Config.WORLD_BANNER_FORWARD
