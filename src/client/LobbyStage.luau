@@ -1,15 +1,14 @@
 --[[
-	LobbyStage (client) -- World Slice 2: redresses the between-round lobby balcony
-	into a festival grandstand stage. 100% local cosmetic, ADD-ONLY: the load-bearing
-	LobbyArea geometry (platform / walls / glass railing) is server-owned and untouched;
-	every part built here is non-colliding/non-querying/shadow-less, so nothing can
-	become a foothold over the railing.
+	LobbyStage (client) -- the beyblade lobby's cosmetic dressing. 100% local
+	cosmetic, ADD-ONLY: the load-bearing LobbyArea geometry (the walkable disc + the
+	invisible rim barrier) is server-owned and untouched; every part built here is
+	non-colliding/non-querying/shadow-less.
 
-	"Magic-Hour Fair": warm-gold festoon string-lights (bulbs on a hung wire) + bunting
-	against the cool dusk/aurora sky. Two small soul-orb clusters at the pit-view edges
-	cheer on eliminations/wins (reusing WorldShell's decaying-impulse pattern); the
-	distant WorldShell crowd carries the rest. Hybrid assets fall back to code when the
-	Config asset fields are blank.
+	The lobby is shaped like a beyblade (spinning top): glowing rim ENERGY RINGS
+	around the server disc (the old festival "lights", reinterpreted; the topmost is
+	the visible half of the hybrid fall ring), a STEPPED TAPER body down to a TIP, and
+	two cheer-reactive SOUL-ORB clusters ("spectator souls") at the rim that pulse on
+	eliminations/wins (reusing WorldShell's decaying-impulse pattern).
 
 	Location: StarterPlayerScripts/Client/LobbyStage (ModuleScript)
 	Connections are session-lifetime (matches WorldShell/ArenaDressing).
@@ -52,56 +51,62 @@ local function rigPart(size, pos, color, material, parent)
 	return p
 end
 
--- platform top face (LOBBY_ORIGIN is the pad surface center, so top = its Y).
+-- A vertical-axis Cylinder centered on the lobby, with its CENTER at world height
+-- `centerY`. `length` is the vertical extent; `diameter` the round cross-section.
+local function rigCyl(name, diameter, length, centerY, color, material, parent)
+	local o = Config.LOBBY_ORIGIN
+	local p = rigPart(Vector3.new(length, diameter, diameter),
+		Vector3.new(o.X, centerY, o.Z), color, material, parent)
+	p.Shape = Enum.PartType.Cylinder
+	p.CFrame = CFrame.new(o.X, centerY, o.Z) * CFrame.Angles(0, 0, math.rad(90))
+	p.Name = name
+	return p
+end
+
+-- top face of the server disc (= LOBBY_ORIGIN.Y).
 local function topY()
 	return Config.LOBBY_ORIGIN.Y
 end
 
--- Cosmetic deck skin over the platform + a lit pit-facing lip.
-local function buildStageDeck(folder)
-	local pad = Config.LOBBY_PAD_SIZE
-	local inset = Config.LOBBY_STAGE_DECK_INSET
-	local deck = rigPart(
-		Vector3.new(pad.X - inset * 2, Config.LOBBY_STAGE_DECK_THICKNESS, pad.Z - inset * 2),
-		Config.LOBBY_ORIGIN + Vector3.new(0, Config.LOBBY_STAGE_DECK_LIFT, 0),
-		Config.LOBBY_STAGE_DECK_COLOR, Enum.Material.SmoothPlastic, folder)
-	deck.Name = "StageDeck"
-	if Config.LOBBY_STAGE_DECK_TEXTURE ~= "" then
-		local tex = Instance.new("Texture")
-		tex.Face = Enum.NormalId.Top
-		tex.Texture = Config.LOBBY_STAGE_DECK_TEXTURE
-		tex.StudsPerTileU = 8
-		tex.StudsPerTileV = 8
-		tex.Parent = deck
-	end
-	-- warm/lit lip along the +Z (pit-facing) edge
-	local lip = rigPart(
-		Vector3.new(pad.X - inset * 2, Config.LOBBY_STAGE_DECK_THICKNESS * 1.2, Config.LOBBY_STAGE_EDGE_THICKNESS),
-		Config.LOBBY_ORIGIN + Vector3.new(0, Config.LOBBY_STAGE_DECK_LIFT + Config.LOBBY_STAGE_DECK_THICKNESS * 0.25,
-			pad.Z / 2 - inset - Config.LOBBY_STAGE_EDGE_THICKNESS),
-		Config.LOBBY_STAGE_EDGE_COLOR, Enum.Material.Neon, folder)
-	lip.Name = "StageLip"
+-- Glowing energy rings around the disc rim. Each is a Neon disc WIDER than the
+-- server disc, centered at the disc's mid-height; the opaque server disc occludes
+-- the centre, so only the protruding rim glows.
+local function buildEnergyRings(folder)
+	local r = Config.LOBBY_DISC_RADIUS
+	local midY = topY() - Config.LOBBY_DISC_THICKNESS / 2
+	local t = Config.LOBBY_BEY_RING_THICKNESS
+	rigCyl("EnergyRing", (r + Config.LOBBY_BEY_RING_OVERHANG_A) * 2, t, midY,
+		Config.LOBBY_BEY_RING_COLOR_A, Enum.Material.Neon, folder)
+	rigCyl("EnergyRing", (r + Config.LOBBY_BEY_RING_OVERHANG_B) * 2, t,
+		midY - Config.LOBBY_BEY_RING_DROP_B, Config.LOBBY_BEY_RING_COLOR_B, Enum.Material.Neon, folder)
 end
 
--- Two small soul clusters at the pit-view edges (front ±X) -- the distant WorldShell
--- crowd carries the rest. One Heartbeat drives idle wobble + decaying cheer pop.
+-- Stepped taper body below the disc + a tip spike.
+local function buildBody(folder)
+	local r = Config.LOBBY_DISC_RADIUS
+	for _, step in ipairs(Config.LOBBY_BEY_STEPS) do
+		local radiusFrac, depth, thickness = step[1], step[2], step[3]
+		rigCyl("BeyStep", r * 2 * radiusFrac, thickness, topY() - depth,
+			Config.LOBBY_BEY_STEP_COLOR, Enum.Material.Metal, folder)
+	end
+	rigCyl("BeyTip", Config.LOBBY_BEY_TIP_DIAMETER, Config.LOBBY_BEY_TIP_HEIGHT,
+		topY() - Config.LOBBY_BEY_TIP_DEPTH, Config.LOBBY_BEY_TIP_COLOR, Enum.Material.Neon, folder)
+end
+
+-- Two cheer-reactive soul-orb clusters at the rim (±X); one Heartbeat drives idle
+-- wobble + a decaying cheer pop (same pattern as WorldShell's crowd).
 local crowdOrbs = {}
-local function buildCrowdClusters(folder)
+local function buildSpectatorSouls(folder)
 	table.clear(crowdOrbs)
-	local pad = Config.LOBBY_PAD_SIZE
 	local palette = Config.SOUL_PALETTE
-	local hx, hz = pad.X / 2, pad.Z / 2
-	local baseY = topY() + Config.LOBBY_STAGE_CLUSTER_LIFT
-	local clusterZ = Config.LOBBY_ORIGIN.Z + hz * Config.LOBBY_STAGE_CLUSTER_FRONT
+	local o = Config.LOBBY_ORIGIN
+	local rimX = Config.LOBBY_DISC_RADIUS * Config.LOBBY_BEY_CLUSTER_RADIUS
+	local baseY = topY() + Config.LOBBY_BEY_CLUSTER_LIFT
 	local n, sp = Config.LOBBY_STAGE_CLUSTER_PER_SIDE, Config.LOBBY_STAGE_CLUSTER_SPACING
-	local inset = Config.LOBBY_STAGE_CLUSTER_INSET
-	local centers = {
-		Config.LOBBY_ORIGIN.X - (hx - inset), -- left wing
-		Config.LOBBY_ORIGIN.X + (hx - inset), -- right wing
-	}
+	local centers = { o.X - rimX, o.X + rimX }
 	local idx = 0
 	for _, cx in ipairs(centers) do
-		for _, s in ipairs(WorldLayout.cluster(cx, clusterZ, baseY, n, sp)) do
+		for _, s in ipairs(WorldLayout.cluster(cx, o.Z, baseY, n, sp)) do
 			idx += 1
 			local color = palette[WorldLayout.paletteIndex(idx, #palette)]
 			local sz = Config.LOBBY_STAGE_ORB_SIZE
@@ -139,117 +144,6 @@ local function buildCrowdClusters(folder)
 	end)
 end
 
--- Festoon STRING-LIGHTS: small warm-gold bulbs in a catenary sag, hung on a thin
--- dark wire (the wire is what reads them as lights, not floating souls), along the
--- back + both wings. Real PointLights capped to LOBBY_STAGE_FESTOON_LIT total.
-local litBudget = 0
-local function buildStrand(folder, x1, z1, x2, z2)
-	local y = topY() + Config.LOBBY_STAGE_FESTOON_HEIGHT
-	local pts = WorldLayout.festoonStrand(x1, y, z1, x2, y, z2,
-		Config.LOBBY_STAGE_FESTOON_BULBS, Config.LOBBY_STAGE_FESTOON_SAG)
-	-- hang a thin dark wire between consecutive bulbs so the strand reads as a line
-	local wt = Config.LOBBY_STAGE_FESTOON_WIRE_THICKNESS
-	for i = 1, #pts - 1 do
-		local a = Vector3.new(pts[i].x, pts[i].y, pts[i].z)
-		local b = Vector3.new(pts[i + 1].x, pts[i + 1].y, pts[i + 1].z)
-		local mid = (a + b) / 2
-		local seg = rigPart(Vector3.new(wt, wt, (b - a).Magnitude), mid,
-			Config.LOBBY_STAGE_FESTOON_WIRE_COLOR, Enum.Material.SmoothPlastic, folder)
-		seg.Name = "FestoonWire"
-		seg.CFrame = CFrame.lookAt(mid, b)
-	end
-	local sz = Config.LOBBY_STAGE_FESTOON_BULB_SIZE
-	for _, pt in ipairs(pts) do
-		local bulb = rigPart(Vector3.new(sz, sz, sz), Vector3.new(pt.x, pt.y, pt.z),
-			Config.LOBBY_STAGE_FESTOON_COLOR, Enum.Material.Neon, folder)
-		bulb.Shape = Enum.PartType.Ball
-		bulb.Name = "FestoonBulb"
-		if Config.LOBBY_STAGE_FESTOON_MESH ~= "" then
-			local mesh = Instance.new("SpecialMesh")
-			mesh.MeshType = Enum.MeshType.FileMesh
-			mesh.MeshId = Config.LOBBY_STAGE_FESTOON_MESH
-			mesh.Parent = bulb
-		end
-		if litBudget < Config.LOBBY_STAGE_FESTOON_LIT then
-			litBudget += 1
-			local light = Instance.new("PointLight")
-			light.Color = Config.LOBBY_STAGE_FESTOON_COLOR
-			light.Range = Config.LOBBY_STAGE_LIGHT_RANGE
-			light.Brightness = Config.LOBBY_STAGE_LIGHT_BRIGHTNESS
-			light.Parent = bulb
-		end
-	end
-end
-
-local function buildFestoon(folder)
-	litBudget = 0
-	local pad = Config.LOBBY_PAD_SIZE
-	local hx, hz = pad.X / 2, pad.Z / 2
-	local ox, oz = Config.LOBBY_ORIGIN.X, Config.LOBBY_ORIGIN.Z
-	buildStrand(folder, ox - hx, oz - hz, ox + hx, oz - hz) -- back (-Z)
-	buildStrand(folder, ox - hx, oz - hz, ox - hx, oz + hz) -- left wing (-X)
-	buildStrand(folder, ox + hx, oz - hz, ox + hx, oz + hz) -- right wing (+X)
-end
-
--- Bunting pennants hanging along the back tier front (player-palette triangles).
-local function buildBunting(folder)
-	local pad = Config.LOBBY_PAD_SIZE
-	local hx, hz = pad.X / 2, pad.Z / 2
-	local ox, oz = Config.LOBBY_ORIGIN.X, Config.LOBBY_ORIGIN.Z
-	local palette = Config.SOUL_PALETTE
-	local y = topY() + Config.LOBBY_STAGE_BUNTING_HEIGHT
-	local flags = WorldLayout.buntingFlags(ox - hx, oz - hz, ox + hx, oz - hz, y, Config.LOBBY_STAGE_BUNTING_COUNT)
-	for i, fl in ipairs(flags) do
-		local color = palette[WorldLayout.paletteIndex(i, #palette)]
-		if Config.LOBBY_STAGE_BUNTING_TEXTURE ~= "" then
-			local flag = rigPart(Config.LOBBY_STAGE_BUNTING_SIZE, Vector3.new(fl.x, fl.y, fl.z),
-				color, Enum.Material.SmoothPlastic, folder)
-			flag.Name = "BuntingFlag"
-			local tex = Instance.new("Texture")
-			tex.Face = Enum.NormalId.Front
-			tex.Texture = Config.LOBBY_STAGE_BUNTING_TEXTURE
-			tex.Parent = flag
-		else
-			local flag = Instance.new("WedgePart")
-			flag.Anchored = true
-			flag.CanCollide = false
-			flag.CanQuery = false
-			flag.CanTouch = false
-			flag.CastShadow = false
-			flag.Material = Enum.Material.SmoothPlastic
-			flag.Size = Config.LOBBY_STAGE_BUNTING_SIZE
-			flag.Color = color
-			flag.CFrame = CFrame.new(fl.x, fl.y, fl.z) * CFrame.Angles(math.pi, 0, 0) -- point the flag down
-			flag.Name = "BuntingFlag"
-			flag.Parent = folder
-		end
-	end
-end
-
--- Small festival crest crowning the back tier; faces into the stage (+Z / Back).
-local function buildBackCrest(folder)
-	local pad = Config.LOBBY_PAD_SIZE
-	local pos = Config.LOBBY_ORIGIN + Vector3.new(0, Config.LOBBY_STAGE_CREST_HEIGHT, -pad.Z / 2)
-	local panel = rigPart(Config.LOBBY_STAGE_CREST_SIZE, pos,
-		Config.LOBBY_STAGE_CREST_BG, Enum.Material.SmoothPlastic, folder)
-	panel.Name = "BackCrest"
-
-	local gui = Instance.new("SurfaceGui")
-	gui.Face = Enum.NormalId.Back -- NormalId.Back is the +Z face; the panel sits on the -Z back wall, so +Z faces inward toward the stage (note: ArenaDressing's front marquee instead uses Front = -Z to face out toward players)
-	gui.CanvasSize = Vector2.new(400, 100)
-	gui.LightInfluence = 0
-	gui.Parent = panel
-
-	local label = Instance.new("TextLabel")
-	label.Size = UDim2.fromScale(1, 1)
-	label.BackgroundTransparency = 1
-	label.Text = Config.LOBBY_STAGE_CREST_TEXT
-	label.Font = Enum.Font.FredokaOne
-	label.TextScaled = true
-	label.TextColor3 = Config.LOBBY_STAGE_CREST_TEXT_COLOR
-	label.Parent = gui
-end
-
 local function cheer()
 	for _, e in ipairs(crowdOrbs) do
 		e.cheer = 0.6 + math.random() * 0.4
@@ -258,14 +152,12 @@ end
 
 function LobbyStage.start()
 	local folder = newFolder()
-	buildStageDeck(folder)
-	buildCrowdClusters(folder)
-	buildFestoon(folder)
-	buildBunting(folder)
-	buildBackCrest(folder)
+	buildBody(folder)
+	buildEnergyRings(folder)
+	buildSpectatorSouls(folder)
 
-	-- Reuse WorldShell's cheer triggers: the grandstand cheers on any elimination
-	-- and on a winner being named (with a second pop), additive to the distant crowd.
+	-- Reuse WorldShell's cheer triggers: the spectator souls pulse on any elimination
+	-- and on a winner being named (second pop), additive to the distant crowd.
 	EliminationEvent.OnClientEvent:Connect(function() cheer() end)
 	RoundStateChanged.OnClientEvent:Connect(function(state)
 		if state and state.phase == "Ended" and state.winnerName then
