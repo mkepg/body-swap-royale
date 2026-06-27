@@ -112,7 +112,7 @@ Config.SPAWN_ORIGIN = Vector3.new(0, 5, 0) -- arena center (X,Z) + spawn height 
 -- so the rim BARRIER is LOAD-BEARING: a gap would let a controlled body walk/jump
 -- off and die between rounds.
 Config.LOBBY_ORIGIN = Vector3.new(0, 45, -64) -- disc top-surface center
-Config.LOBBY_DISC_RADIUS = 30   -- walkable disc radius (holds the 4x4 body grid + margin)
+Config.LOBBY_DISC_RADIUS = 40   -- walkable disc radius (holds the 4x4 body grid + room to spare)
 Config.LOBBY_DISC_THICKNESS = 2 -- disc vertical thickness (top face sits at LOBBY_ORIGIN.Y)
 Config.LOBBY_DISC_COLOR = Color3.fromRGB(40, 42, 58) -- dark metal top
 -- LOBBY_WALL_* now describe the INVISIBLE rim barrier. Height must exceed a jump so a
@@ -262,20 +262,18 @@ Config.LOBBY_BEY_RING_OVERHANG_A = 1.4   -- studs ring A extends past the disc r
 Config.LOBBY_BEY_RING_OVERHANG_B = 3.0   -- studs ring B extends past the disc radius
 Config.LOBBY_BEY_RING_DROP_B = 1.6       -- studs ring B sits below ring A
 Config.LOBBY_BEY_RING_THICKNESS = 0.6
+-- Dim ALL the lobby's neon glow (energy rings + spectator orbs) to a soft level via
+-- partial transparency -- higher = dimmer/softer (Neon emits less when see-through).
+Config.LOBBY_BEY_GLOW_TRANSPARENCY = 0.5
 
--- Stepped taper body below the disc, down to a tip. Each entry { radiusFrac, depth
--- below the disc top (studs), thickness }. Metal discs of decreasing radius.
+-- Stepped taper body below the disc. Each entry { radiusFrac, depth below the disc
+-- top (studs), thickness }. Metal discs of decreasing radius down to a small base.
 Config.LOBBY_BEY_STEP_COLOR = Color3.fromRGB(54, 56, 74)
 Config.LOBBY_BEY_STEPS = {
 	{ 0.82, 4, 3 },
 	{ 0.55, 9, 3 },
 	{ 0.30, 14, 3 },
 }
--- Tip: a thin vertical Neon spike at the bottom center.
-Config.LOBBY_BEY_TIP_COLOR = Color3.fromRGB(120, 230, 220)
-Config.LOBBY_BEY_TIP_DIAMETER = 2.4
-Config.LOBBY_BEY_TIP_HEIGHT = 7
-Config.LOBBY_BEY_TIP_DEPTH = 19          -- studs below the disc top the tip CENTER sits
 
 -- Spectator souls: two cheer-reactive soul-orb clusters at the rim (+/-X).
 Config.LOBBY_BEY_CLUSTER_RADIUS = 0.8    -- fraction of disc radius the clusters sit at
