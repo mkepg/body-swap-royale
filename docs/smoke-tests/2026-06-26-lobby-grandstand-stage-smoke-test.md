@@ -67,6 +67,9 @@ These changed gameplay-adjacent geometry; lune is green but live checks are pend
 - **Lobby distance:** lobby moved to `(0, 64, -120)` — standing on the disc you can see ~half-to-all of the pit ahead; the disc no longer overhangs the pit.
 - **Circular pit (gameplay):** the hex field is a **true circle** (`HEX_CIRCLE_RADIUS = 30`, ~68 tiles/floor) — confirm it reads round, the **edge trim hugs the circle**, **bodies still spawn on tiles** (≤16, central), tiles **still erode**, and **void elimination still triggers** off the bottom floor (floor gap reverted to 50, `VOID_Y` computed = −304).
 
+### 2026-06-28 — smooth disc (EditableMesh) — MCP-verified
+Primitive `Part` Cylinders facet visibly at radius 54. The round lobby visuals (deck, energy rings, taper) are now high-N (`LOBBY_BEY_SMOOTH_SIDES = 96`) **client-side `EditableMesh`** cylinders (smooth at any size), with a primitive-cylinder fallback; the server `LobbyArea.Disc` is now **invisible collision** under them. Verified smooth in Studio from the previously-faceted angle. Manual-pass checks: confirm the disc/rim read perfectly round up close from a player's eye level, and that EditableMesh built (the `Deck` is a `MeshPart`, not a fallback `Part`).
+
 ### Manual pass
 - Date run / client(s) / outcome:
 - Tuning notes (Config values changed):
