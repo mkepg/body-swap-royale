@@ -4,9 +4,9 @@
 	future arena gets dressed by publishing its own descriptor. 100% local cosmetic.
 
 	Per-floor dressing: a floor-colored glowing EDGE TRIM hugging each floor's rim
-	(WORLD_TRIM_SEGMENTS Neon tangent bars on a footprint-derived ring; a real
-	PointLight on a few segments only on the top WORLD_TRIM_LIT_FLOORS floors), and
-	a framed "BODY SWAP ROYALE" marquee header at the balcony's arena-facing edge.
+	(WORLD_TRIM_SEGMENTS Neon tangent bars on a footprint-derived ring; every floor
+	glows by Neon alone, uniformly -- no real PointLights), and a framed
+	"BODY SWAP ROYALE" marquee header at the balcony's arena-facing edge.
 
 	Location: StarterPlayerScripts/Client/ArenaDressing (ModuleScript)
 --]]
@@ -49,8 +49,8 @@ end
 -- the descriptor footprint (radius = footprint.X/2 + margin) -- one coherent rim
 -- per floor (replaces the old corner torches + soul-orb rings). The ring sits
 -- OUTSIDE the outermost tiles, so eroding tiles never reveal a glowing plate.
--- Only the top WORLD_TRIM_LIT_FLOORS floors get real PointLights (the trim is the
--- only floor light); deeper floors glow via Neon only (mobile budget).
+-- Every floor glows by Neon alone -- uniform across all floors, no real
+-- PointLights (matches the deeper floors' style; mobile-friendly).
 local function buildFloorTrim(folder, desc)
 	local segs = Config.WORLD_TRIM_SEGMENTS
 	local radius = desc.footprint.X / 2 + Config.WORLD_TRIM_MARGIN
@@ -58,9 +58,7 @@ local function buildFloorTrim(folder, desc)
 	-- bar length from the chord between adjacent ring points (slack closes the rim)
 	local chord = 2 * radius * math.sin(math.pi / segs)
 	local barLen = chord * Config.WORLD_TRIM_LENGTH_SLACK
-	local lightEvery = math.max(1, math.floor(segs / Config.WORLD_TRIM_LIGHTS_PER_FLOOR))
-	for fi, lv in ipairs(desc.levels) do
-		local lit = fi <= Config.WORLD_TRIM_LIT_FLOORS
+	for _, lv in ipairs(desc.levels) do
 		local y = lv.y + Config.WORLD_TRIM_Y
 		for i, pt in ipairs(pts) do
 			local nxt = pts[(i % segs) + 1]
@@ -71,13 +69,6 @@ local function buildFloorTrim(folder, desc)
 			bar.Name = "FloorTrim"
 			-- point the bar's long (Z) axis along the tangent toward the next point
 			bar.CFrame = CFrame.lookAt(here, Vector3.new(nxt.x, y, nxt.z))
-			if lit and (i - 1) % lightEvery == 0 then
-				local light = Instance.new("PointLight")
-				light.Color = lv.color
-				light.Range = Config.WORLD_TRIM_LIGHT_RANGE
-				light.Brightness = Config.WORLD_TRIM_LIGHT_BRIGHTNESS
-				light.Parent = bar
-			end
 		end
 	end
 end
