@@ -50,12 +50,11 @@ Config.HEX_GAP = 0.3            -- studs each tile is INSET from the lattice rad
                                  -- don't touch: a THIN grout seam between tiles + zero coincident
                                  -- geometry (no z-fighting). Rendered/collided radius = HEX_SIZE - HEX_GAP.
 Config.HEX_FLOOR_COUNT = 7       -- stacked floors
-Config.HEX_FLOOR_GAP = 90        -- vertical studs between floors (floors at 0/-90/.../-540)
+Config.HEX_FLOOR_GAP = 50        -- vertical studs between floors (floors at 0/-50/.../-300)
 -- A controlled body whose root falls below this Y is eliminated (grace-gated, via the
 -- void monitor). Computed to sit 4 studs under the LOWEST floor, so only a body that
 -- falls off the bottom floor dies (an upper-floor fall lands on the next floor down).
--- Workspace.FallenPartsDestroyHeight is set BELOW this (default.project.json) so the
--- engine doesn't destroy a falling body before the monitor catches it.
+-- Stays above Workspace.FallenPartsDestroyHeight (default -500).
 Config.VOID_Y = -(Config.HEX_FLOOR_COUNT - 1) * Config.HEX_FLOOR_GAP - 4
 Config.HEX_STAND_BAND = 6        -- root-height window above a floor that counts as "on" it
                                  -- (must be < HEX_FLOOR_GAP so floor bands don't overlap)
@@ -112,7 +111,7 @@ Config.SPAWN_ORIGIN = Vector3.new(0, 5, 0) -- arena center (X,Z) + spawn height 
 -- -Z edge; standing bodies look down into the pit. The disc floats over the void,
 -- so the rim BARRIER is LOAD-BEARING: a gap would let a controlled body walk/jump
 -- off and die between rounds.
-Config.LOBBY_ORIGIN = Vector3.new(0, 45, -64) -- disc top-surface center
+Config.LOBBY_ORIGIN = Vector3.new(0, 64, -120) -- disc top-surface center (set well back + elevated so the whole pit is in view)
 Config.LOBBY_DISC_RADIUS = 54   -- walkable disc radius (large; holds the 4x4 body grid with lots of room)
 Config.LOBBY_DISC_THICKNESS = 2 -- disc vertical thickness (top face sits at LOBBY_ORIGIN.Y)
 Config.LOBBY_DISC_COLOR = Color3.fromRGB(40, 42, 58) -- dark metal top
