@@ -93,6 +93,7 @@ local function build()
 	-- share of the panel height (and keep the bottom pill smaller) so the outcome
 	-- word clearly dominates "Next round in N".
 	title = panelLabel(bannerHandle.panel, "Title", 0.54, 1, "title")      -- VICTORY/DEFEATED/Round over, or lobby status
+	title.RichText = true -- lets the dot animation reserve invisible trailing dots
 	subtitle = panelLabel(bannerHandle.panel, "Subtitle", 0.20, 2, "body") -- winner/loser name line, or "X / N players"
 
 	-- Bottom line: fixed dark pill in the BOTTOM zone ("Next round in N").
@@ -124,6 +125,44 @@ local function build()
 	elim.Parent = gui
 end
 
+-- Animated trailing "..." for the lobby wait line. The unlit dots are kept in the
+-- string (so the title's width never changes) but rendered fully transparent --
+-- fill AND stroke, since the title carries a UIStroke -- via RichText. Because the
+-- centered title is TextScaled, reserving the full "..." width every frame is what
+-- keeps it from resizing, shifting, or jittering as the dots cycle.
+local DOT_STEP = 0.45 -- seconds between dot frames (0 -> . -> .. -> ... -> loop)
+local INVIS_OPEN = '<font transparency="1"><stroke transparency="1">'
+local INVIS_CLOSE = "</stroke></font>"
+
+local dotThread -- running animation coroutine, or nil
+local dotBase -- the base text currently being animated, or nil (de-dupes restarts)
+
+local function stopDotAnim()
+	if dotThread then
+		task.cancel(dotThread)
+		dotThread = nil
+	end
+	dotBase = nil
+end
+
+local function startDotAnim(baseText)
+	if dotBase == baseText then
+		return -- already animating this exact line; don't reset the cycle
+	end
+	stopDotAnim()
+	dotBase = baseText
+	dotThread = task.spawn(function()
+		local shown = 0
+		while true do
+			local lit = string.rep(".", shown)
+			local reserved = string.rep(".", 3 - shown)
+			title.Text = baseText .. lit .. INVIS_OPEN .. reserved .. INVIS_CLOSE
+			shown = (shown + 1) % 4
+			task.wait(DOT_STEP)
+		end
+	end)
+end
+
 local function applyDisplay(d)
 	-- Banner + bottom pill: set visibility, pop in on the hidden->visible edge.
 	setVisible(bannerHandle.root, d.visible)
@@ -141,8 +180,15 @@ local function applyDisplay(d)
 	HudTheme.setPanelAccent(bannerHandle, d.accent)
 
 	-- Hero line: the outcome word (Victory/Defeated/Round over) or lobby status.
+	-- The below-minimum lobby wait animates a trailing "..."; every other line is
+	-- static, so stop any running animation before setting plain text.
 	title.Visible = d.titleText ~= nil
-	title.Text = d.titleText or ""
+	if d.titleAnimateDots and d.titleText ~= nil then
+		startDotAnim(d.titleText)
+	else
+		stopDotAnim()
+		title.Text = d.titleText or ""
+	end
 
 	-- Sub line: on a results banner, the name -- your own name on a win,
 	-- "Winner: X" on a loss; otherwise the lobby's player count.

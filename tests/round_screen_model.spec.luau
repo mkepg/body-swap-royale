@@ -10,24 +10,43 @@ end
 
 local CTX = { localPlayerName = "Mikhael", connectedCount = 2, minPlayers = 2 }
 
--- Lobby, not enough players yet (no countdown): "Waiting for players" + count.
+-- Lobby, below the minimum: a friendly wait message and NO raw count line.
 do
-	local d = RoundScreenModel.display({ phase = "Lobby", secondsRemaining = nil }, CTX)
+	local ctx = { localPlayerName = "Mikhael", connectedCount = 1, minPlayers = 2 }
+	local d = RoundScreenModel.display({ phase = "Lobby", secondsRemaining = nil }, ctx)
 	expect(d.visible == true, "lobby banner is visible")
-	expect(d.titleText == "Waiting for players", "got title: " .. tostring(d.titleText))
-	expect(d.subtitleText == "2 / 2 players", "got subtitle: " .. tostring(d.subtitleText))
+	expect(d.titleText == "Waiting for other players", "got title: " .. tostring(d.titleText))
+	expect(d.titleAnimateDots == true, "wait message animates its trailing dots")
+	expect(d.subtitleText == nil, "no count line below the minimum, got: " .. tostring(d.subtitleText))
 	expect(d.bottomText == nil, "no bottom line in lobby")
 	expect(d.winnerName == nil, "no winner in lobby")
 	expect(d.accent == "neutral", "lobby accent is neutral")
-	print("round-screen: lobby-waiting OK")
+	print("round-screen: lobby-below-minimum OK")
 end
 
--- Lobby, counting down: title carries the seconds.
+-- Lobby, minimum reached but no countdown yet: clean player count.
+do
+	local d = RoundScreenModel.display({ phase = "Lobby", secondsRemaining = nil }, CTX)
+	expect(d.titleText == "Players ready", "got title: " .. tostring(d.titleText))
+	expect(not d.titleAnimateDots, "ready state does not animate dots")
+	expect(d.subtitleText == "2 players", "got subtitle: " .. tostring(d.subtitleText))
+	print("round-screen: lobby-ready OK")
+end
+
+-- Lobby, counting down (minimum met): title carries the seconds, count stays clean.
 do
 	local d = RoundScreenModel.display({ phase = "Lobby", secondsRemaining = 4 }, CTX)
 	expect(d.titleText == "Round starting in 4", "got title: " .. tostring(d.titleText))
-	expect(d.subtitleText == "2 / 2 players", "got subtitle: " .. tostring(d.subtitleText))
+	expect(d.subtitleText == "2 players", "got subtitle: " .. tostring(d.subtitleText))
 	print("round-screen: lobby-countdown OK")
+end
+
+-- Lobby, single player above a minimum of 1: count line is singular.
+do
+	local ctx = { localPlayerName = "Mikhael", connectedCount = 1, minPlayers = 1 }
+	local d = RoundScreenModel.display({ phase = "Lobby", secondsRemaining = nil }, ctx)
+	expect(d.subtitleText == "1 player", "got subtitle: " .. tostring(d.subtitleText))
+	print("round-screen: lobby-singular-count OK")
 end
 
 -- Active: banner hidden, texts irrelevant.
