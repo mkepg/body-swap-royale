@@ -476,8 +476,15 @@ function RoundManager.start()
 	LobbyArea.build() -- construct the elevated lobby balcony once
 	task.spawn(function()
 		while true do
-			broadcastState() -- Lobby
+			-- Re-broadcast the Lobby state on every poll, not just once. FireAllClients
+			-- is fire-and-forget: the single up-front send raced the client's listener
+			-- (which connects after server boot) and was lost. With 2+ players the
+			-- countdown's per-second broadcasts masked it, but a lone player -- for whom
+			-- readyToStart() is never true -- got no further state and so never saw the
+			-- lobby banner. Re-sending each poll syncs late/lone clients reliably; the
+			-- client renders it idempotently (no pop-in re-trigger, no dot-anim reset).
 			while not readyToStart() do
+				broadcastState() -- Lobby
 				task.wait(0.25)
 			end
 			local aborted = runCountdown()

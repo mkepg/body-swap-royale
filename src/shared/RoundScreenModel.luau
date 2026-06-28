@@ -11,12 +11,15 @@
 	ctx   = { localPlayerName, connectedCount, minPlayers }
 
 	Returns:
-	  visible       : false during Active (banner hidden); true for Lobby/Ended
-	  titleText     : the big line (or nil)
-	  subtitleText  : the small line under it (or nil)
-	  bottomText    : the bottom line (or nil)
-	  winnerName    : name for the fixed WINNER label slot (or nil)
-	  accent        : "neutral" | "win" | "lose"  (renderer maps to a Color3)
+	  visible          : false during Active (banner hidden); true for Lobby/Ended
+	  titleText        : the big line (or nil)
+	  titleAnimateDots : true if the renderer should animate a trailing "..." on the
+	                     title (only the below-minimum lobby wait); the renderer owns
+	                     the timing, this module just flags which state animates
+	  subtitleText     : the small line under it (or nil)
+	  bottomText       : the bottom line (or nil)
+	  winnerName       : name for the fixed WINNER label slot (or nil)
+	  accent           : "neutral" | "win" | "lose"  (renderer maps to a Color3)
 --]]
 
 local RoundScreenModel = {}
@@ -25,10 +28,27 @@ function RoundScreenModel.display(state, ctx)
 	local phase = state.phase
 
 	if phase == "Lobby" then
-		local count = string.format("%d / %d players", ctx.connectedCount, ctx.minPlayers)
+		-- Below the minimum, the count ("1 / 2") just reads as "not enough yet",
+		-- so show a friendly wait message instead and drop the raw count line.
+		if ctx.connectedCount < ctx.minPlayers then
+			return {
+				visible = true,
+				titleText = "Waiting for other players",
+				titleAnimateDots = true,
+				subtitleText = nil,
+				bottomText = nil,
+				winnerName = nil,
+				accent = "neutral",
+			}
+		end
+
+		-- Minimum met: lead with a clean player count, and let the title carry
+		-- the countdown once it starts (otherwise a steady "Players ready").
+		local noun = if ctx.connectedCount == 1 then "player" else "players"
+		local count = string.format("%d %s", ctx.connectedCount, noun)
 		local title
 		if state.secondsRemaining == nil then
-			title = "Waiting for players"
+			title = "Players ready"
 		else
 			title = "Round starting in " .. tostring(state.secondsRemaining)
 		end
