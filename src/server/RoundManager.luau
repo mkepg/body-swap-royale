@@ -30,6 +30,7 @@ local ControlManager = require(script.Parent.ControlManager)
 local SwapController = require(script.Parent.SwapController)
 local HazardSystem = require(script.Parent.HazardSystem)
 local LobbyArea = require(script.Parent.LobbyArea)
+local EconomyService = require(script.Parent.EconomyService)
 
 local RoundStateChanged = Remotes.get("RoundStateChanged")
 local EliminationEvent = Remotes.get("EliminationEvent")
@@ -50,6 +51,13 @@ local swapPos = {} -- [player] = Vector3
 -- maps these -> the next swap interval (20s calm round-start -> 8s frantic endgame).
 local cadenceStartCount = 0
 local swapsSoFar = 0
+
+-- Economy: per-player swaps-survived counter (a placement proxy) + the round's
+-- participant set, so endRound can award everyone who played. `awarded` guards
+-- against double-paying a single round-end. All reset in beginRound.
+local survivedSwaps = {}     -- [player] = int
+local roundParticipants = {} -- [player] = true
+local awarded = false
 
 -- The single monotonic clock for grace. Pure GraceModel takes `now` injected.
 local function now()
@@ -310,7 +318,16 @@ local function runCountdown()
 end
 
 local function beginRound()
-	RoundState.beginRound(model, eligibleSet()) -- Lobby -> Active; only valid-bodied present players become alive
+	local eligible = eligibleSet()
+	RoundState.beginRound(model, eligible) -- Lobby -> Active; only valid-bodied present players become alive
+	-- Economy: snapshot participants + zero their swaps-survived for this round.
+	survivedSwaps = {}
+	roundParticipants = {}
+	for player in pairs(eligible) do
+		roundParticipants[player] = true
+		survivedSwaps[player] = 0
+	end
+	awarded = false
 	cadenceStartCount = RoundState.aliveCount(model)
 	swapsSoFar = 0
 	-- Unanchor + reposition bodies BEFORE re-granting ownership: SetNetworkOwner
@@ -392,6 +409,12 @@ local function runActivePhase()
 			commitSwap(plan)
 			swapsSoFar += 1 -- advances the cadence progress term (counts planned swaps; a
 			-- late roster-collapse abort inside commitSwap is benign -- the round is ending)
+			-- Economy: every participant still alive just survived this swap.
+			for player in pairs(roundParticipants) do
+				if RoundState.isAlive(model, player) then
+					survivedSwaps[player] = (survivedSwaps[player] or 0) + 1
+				end
+			end
 		end
 	end
 end
@@ -401,6 +424,17 @@ local function endRound()
 	HazardSystem.stop() -- freeze tiles solid for the Ended/Lobby floor
 	local winner = RoundState.getWinner(model)
 	print("[BSR] round ended; winner:", winner and winner.Name or "(none)")
+	-- Economy: award every participant exactly once for this round (survival-depth).
+	if not awarded then
+		awarded = true
+		for player in pairs(roundParticipants) do
+			EconomyService.awardRound(player, {
+				survivedSwaps = survivedSwaps[player] or 0,
+				isWinner = player == winner,
+				participated = true,
+			})
+		end
+	end
 	-- Victory cam: while the Results banner is up, point EVERY present player's
 	-- camera at the winner standing in the arena below. Bodies are NOT relocated
 	-- yet, so the winner stays put as the cam subject. Reuses SpectateBody (the
