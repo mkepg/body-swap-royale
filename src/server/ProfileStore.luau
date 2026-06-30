@@ -30,7 +30,9 @@ function ProfileStore.load(userId)
 		if success then
 			return ProfileModel.sanitize(result, Config.PROFILE_VERSION), true
 		end
-		task.wait(Config.ECONOMY_RETRY_BACKOFF * attempt)
+		if attempt < Config.ECONOMY_LOAD_RETRIES then
+			task.wait(Config.ECONOMY_RETRY_BACKOFF * attempt)
+		end
 	end
 	return ProfileModel.default(Config.PROFILE_VERSION), false
 end
@@ -49,7 +51,9 @@ function ProfileStore.save(userId, profile)
 		if success then
 			return true
 		end
-		task.wait(Config.ECONOMY_RETRY_BACKOFF * attempt)
+		if attempt < Config.ECONOMY_SAVE_RETRIES then
+			task.wait(Config.ECONOMY_RETRY_BACKOFF * attempt)
+		end
 	end
 	warn(string.format("[BSR] economy: save failed for UserId %s", tostring(userId)))
 	return false
