@@ -300,4 +300,27 @@ Config.LOBBY_STAGE_CHEER_SECONDS = 0.5   -- cheer decay time
 -- the beyblade ships as code.
 Config.LOBBY_STAGE_ORB_MESH = ""
 
+-- ===== Economy & Persistence (Coins + XP + Level) =====
+-- Reward formula (RewardModel). XP matches the GDD §9 formula verbatim; coins
+-- are tuned to the GDD §8 ~20-100/round range via survival depth (swaps survived).
+Config.REWARD_XP_BASE = 25          -- participation
+Config.REWARD_XP_PER_SWAP = 5       -- per swap survived
+Config.REWARD_XP_WIN = 100          -- winner bonus
+Config.REWARD_COINS_BASE = 15       -- participation
+Config.REWARD_COINS_PER_SWAP = 4    -- per swap survived
+Config.REWARD_COINS_WIN = 40        -- winner bonus
+
+-- Progression (ProgressionModel). XP to advance FROM level L = floor(COEFF * L ^ EXP).
+Config.PROGRESSION_XP_COEFF = 100
+Config.PROGRESSION_XP_EXP = 1.4
+Config.PROGRESSION_MAX_LEVEL = 100
+
+-- Persistence (ProfileStore / EconomyService).
+Config.DATASTORE_NAME = "PlayerData_v1"
+Config.PROFILE_VERSION = 1
+Config.ECONOMY_LOAD_RETRIES = 4         -- load attempts before giving up (then persisted=false)
+Config.ECONOMY_SAVE_RETRIES = 3         -- save attempts before logging failure
+Config.ECONOMY_RETRY_BACKOFF = 1.0      -- seconds; multiplied by the attempt number
+Config.ECONOMY_AUTOSAVE_SECONDS = 120   -- periodic background-save cadence
+
 return Config
