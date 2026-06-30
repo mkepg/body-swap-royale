@@ -95,7 +95,7 @@ The server-side animator built during prototyping was removed. **The core swap m
 | PlayerStateManager | Holds canonical alive/dead status per player | 🟡 |
 | AnalyticsLogger | Pushes events to analytics endpoint | ⚪ |
 | AntiCheatValidator | Validates client-owned movement (position/speed) and rejects invalid states | 🟡 load-bearing, not implemented |
-| EconomyService | Awards XP and currency on server side only | ⚪ |
+| EconomyService | Awards XP and currency on server side only | 🟢 `EconomyService.luau` + `ProfileStore.luau`; pure `RewardModel`/`ProgressionModel`/`ProfileModel`/`RewardScreenModel` |
 | AIRecapService | Calls Anthropic API for post-round narrative | ⚪ |
 | ReplayBuilder | Constructs server-authoritative replay timeline | ⚪ |
 
@@ -644,12 +644,12 @@ Mobile users represent ~60% of Roblox's audience. Mobile performance is a tier-o
 - [ ] 🟡 Round state machine — *RoundManager not implemented*
 - [ ] 🟡 Win/lose conditions — *no death/elimination path*
 - [ ] ⚪ Basic UI (menu, lobby, gameplay, results)
-- [ ] ⚪ DataStore for player level and coins
+- [x] 🟢 DataStore for player level and coins — *`ProfileStore` (UpdateAsync, retry, no-clobber-on-failed-load) + `EconomyService` session cache; survival-depth Coins/XP/Level awarded at round end; reward panel + persistent HUD balance*
 - [ ] ⚪ One cosmetic category (hats)
 
 **Definition of done:** Two friends can join the game, play a round with random swaps, orient safely after each swap, see a winner declared, and earn currency.
 
-> **Gap to DoD:** death/elimination, grace, win declaration, currency, and a RoundManager to sequence the round are all still required. The swap, control, animation, and camera layers are in place.
+> **DoD status (2026-06-30):** death/elimination, grace, win declaration, the RoundManager, and now **currency** (Coins/XP/Level + DataStore persistence) are all in place — the MVP Definition-of-Done sentence ("…and earn currency") is met. Remaining MVP-scope polish: swap preview, Control Signature visuals, movement validation, lobby matchmaking, and basic menu/results UI.
 
 ### Alpha Phase (Weeks 7-12)
 
