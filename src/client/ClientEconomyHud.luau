@@ -36,22 +36,27 @@ local function build()
 	local gui = Instance.new("ScreenGui")
 	gui.Name = "EconomyHud"
 	gui.ResetOnSpawn = false
-	gui.IgnoreGuiInset = true
+	-- Respect the topbar inset so the top-left balance panel below sits BELOW
+	-- Roblox's menu/unibar button on every device. The engine computes the inset
+	-- per-device (topbar height + notch/safe-area), which a fixed or scale offset
+	-- can't do reliably. The centered reward panel is unaffected (it just centers
+	-- within the inset-reduced area).
+	gui.IgnoreGuiInset = false
 	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 	gui.DisplayOrder = HudTheme.DisplayOrder.bookend -- same layer as the results banner
 	gui.Parent = player:WaitForChild("PlayerGui")
 
-	-- ===== Persistent Coins/Level readout (left edge, below the top bar) =====
-	-- Anchored to the LEFT edge but dropped ~16% down so it clears Roblox's
-	-- top-left menu/unibar button (which sits in the topbar inset and would
-	-- otherwise obstruct a top-left panel). The top-right corner is avoided too
-	-- (default CoreGui player list), as is top-center (the round banner) and the
-	-- bottom corners (mobile joystick/jump). GUI ignores the inset, so the 0.16
-	-- scale offset (not a fixed pixel inset) clears the bar across resolutions.
+	-- ===== Persistent Coins/Level readout (top-left, below the topbar inset) =====
+	-- Pinned top-left with a small fixed margin. Because the ScreenGui RESPECTS the
+	-- GUI inset (IgnoreGuiInset = false above), (0,14)/(0,14) is measured from just
+	-- below Roblox's topbar -- clearing the top-left menu/unibar button on phone,
+	-- tablet, and desktop alike. We deliberately avoid the other corners: top-right
+	-- (default CoreGui player list), top-center (the round banner), and the bottom
+	-- corners (mobile joystick/jump).
 	local handle = HudTheme.makePanel(gui, UDim2.fromScale(0.16, 0.07), "top", nil)
 	HudTheme.setPanelFlat(handle, HudTheme.Color.panelDark)
 	handle.root.AnchorPoint = Vector2.new(0, 0)
-	handle.root.Position = UDim2.new(0, 14, 0.16, 0)
+	handle.root.Position = UDim2.new(0, 14, 0, 14)
 
 	local layout = Instance.new("UIListLayout")
 	layout.FillDirection = Enum.FillDirection.Vertical
