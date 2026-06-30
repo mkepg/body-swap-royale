@@ -1,0 +1,49 @@
+# Economy & Persistence — 2-Client Smoke Test (2026-06-30)
+
+Covers the server/client glue that lune can't: `EconomyService`, `ProfileStore`
+(DataStore), the `RoundManager` award seam, and `ClientEconomyHud`. Pure logic
+(`RewardModel` / `ProgressionModel` / `ProfileModel` / `RewardScreenModel`) is lune-green.
+
+**Setup:** Studio, 2 players (Test → Clients and Servers → 2 players, Start). DataStore
+API access must be enabled for the place: **Game Settings → Security → Enable Studio
+Access to API Services**. If it is OFF, every DataStore call throws, every player gets a
+default profile with `ok=false`, and nothing persists — so confirm it is ON first.
+
+## Checks
+
+1. **Persistent readout on join.** Each client shows a top-left "N Coins / Level L"
+   readout immediately after spawn (from `ProfileUpdated`). A brand-new test player
+   reads "0 Coins / Level 1". (On join, `ProfileUpdated` fires before any `RewardGranted`.)
+2. **Earn on round end.** Play a full round to a winner. Both clients see the centered
+   reward panel pop in: `+Coins`, `+XP`, a level line, and a filled level bar. The
+   top-left Coins total increases by exactly the panel's `+Coins`. The panel auto-hides
+   after ~4.5s (`PANEL_VISIBLE_SECONDS`).
+3. **Survival-depth gradient.** The winner's `+Coins`/`+XP` exceeds an early casualty's
+   (more swaps survived → more reward). Force quick swaps with `RoundManager.forceSwap()`
+   in the command bar to build up `survivedSwaps` if needed.
+4. **Level-up callout.** Accumulate XP across rounds (or temporarily lower
+   `Config.PROGRESSION_XP_COEFF`) until a level threshold is crossed; the reward panel
+   reads "Level Up!  N", shows the green ("win") accent, and the bar resets low.
+5. **Persistence across rejoin.** Note a client's Coins total, leave, rejoin → the total
+   is restored (saved on `PlayerRemoving`).
+6. **No-clobber on failed load.** Temporarily turn OFF API services (or point
+   `Config.DATASTORE_NAME` at a throwaway and force a throw); confirm the session still
+   plays/earns, the console logs `load failed … will NOT be saved`, and the real saved
+   value is untouched after the session ends. Restore the setting afterward.
+7. **Shutdown flush.** Earn coins, then stop the server (don't leave first); rejoin a
+   fresh server → the earnings persisted (`BindToClose` flushed).
+
+## Direct-trigger shortcuts (command bar, server side)
+
+- Force a reward without playing a whole round (verifies the panel + balance path):
+  `require(game.ServerScriptService.Server.EconomyService).awardRound(game.Players:GetPlayers()[1], { survivedSwaps = 1, isWinner = true, participated = true })`
+- Inspect a cached profile:
+  `print(require(game.ServerScriptService.Server.EconomyService).getProfile(game.Players:GetPlayers()[1]))`
+
+## Notes
+- Rojo sync can go stale — confirm the place has the latest code (`script_read`) before
+  trusting an MCP visual check.
+- Keep the test at 2 clients: simultaneous multi-player joins can exhaust the DataStore
+  request budget and make loads burn through their retries.
+- Confirm the top-left balance panel (≈14px from both edges) doesn't overlap the
+  top-center round HUD on narrow viewports.
