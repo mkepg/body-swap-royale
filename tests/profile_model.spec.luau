@@ -51,4 +51,12 @@ do
 	print("profile: sanitize-corrupt OK")
 end
 
+-- Infinity (+/-) is not a usable count and must coerce to 0.
+do
+	local p = ProfileModel.sanitize({ coins = math.huge, totalXp = -math.huge }, V)
+	expect(p.coins == 0, "+inf coins -> 0, got " .. tostring(p.coins))
+	expect(p.totalXp == 0, "-inf totalXp -> 0, got " .. tostring(p.totalXp))
+	print("profile: sanitize-infinity OK")
+end
+
 print("ALL ProfileModel TESTS PASSED")
