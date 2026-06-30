@@ -1,7 +1,12 @@
 local ProgressionModel = require("../src/shared/ProgressionModel")
 
-local function fail(msg) error("ASSERTION FAILED: " .. msg, 2) end
-local function expect(cond, msg) if not cond then fail(msg) end end
+local function fail(msg)
+	error("ASSERTION FAILED: " .. msg, 2)
+end
+
+local function expect(cond, msg)
+	if not cond then fail(msg) end
+end
 
 local OPTS = { coeff = 100, exp = 1.4, maxLevel = 100 }
 
@@ -14,7 +19,7 @@ end
 -- xpForLevel is strictly increasing.
 do
 	local prev = -1
-	for level = 1, 50 do
+	for level = 1, OPTS.maxLevel - 1 do
 		local need = ProgressionModel.xpForLevel(level, OPTS)
 		expect(need > prev, "xpForLevel not increasing at level " .. level)
 		prev = need
@@ -50,7 +55,17 @@ do
 	expect(v.level == 100, "clamped to maxLevel, got " .. tostring(v.level))
 	expect(v.progress == 1, "max level full progress")
 	expect(v.xpForNext == 0, "no next at max level")
+	expect(v.xpIntoLevel == 0, "no xp into level at max level")
 	print("progression: levelFor-clamp OK")
+end
+
+-- Negative xp is guarded (math.max(0, ...)): reads as a fresh level-1 player.
+do
+	local v = ProgressionModel.levelFor(-500, OPTS)
+	expect(v.level == 1, "negative xp is level 1, got " .. tostring(v.level))
+	expect(v.xpIntoLevel == 0, "negative xp clamps to 0 into level")
+	expect(v.progress == 0, "negative xp has no progress")
+	print("progression: levelFor-negative OK")
 end
 
 print("ALL ProgressionModel TESTS PASSED")
