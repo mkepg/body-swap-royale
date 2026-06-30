@@ -323,4 +323,13 @@ Config.ECONOMY_SAVE_RETRIES = 3         -- save attempts before logging failure
 Config.ECONOMY_RETRY_BACKOFF = 1.0      -- seconds; multiplied by the attempt number
 Config.ECONOMY_AUTOSAVE_SECONDS = 120   -- periodic background-save cadence
 
+-- ===== Animated XP fill (reward panel) =====
+-- Timing only; the fill GEOMETRY (segments across level boundaries) is pure
+-- (XpFillModel). Consumed by ClientEconomyHud's timeline player.
+Config.REWARD_XP_FILL_SECONDS = 1.2        -- total bar-fill time, any XP amount
+Config.REWARD_LEVELUP_PAUSE_SECONDS = 0.3  -- hold at each level-up (pop/flash)
+Config.REWARD_PANEL_HOLD_SECONDS = 2.5     -- readable beat after the animation completes
+Config.REWARD_LEVELUP_POP_SCALE = 1.08     -- panel scale-punch peak on level-up
+Config.REWARD_LEVELUP_FLASH_COLOR = Color3.fromRGB(255, 246, 200) -- bright surge tint
+
 return Config
