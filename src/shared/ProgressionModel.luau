@@ -3,6 +3,8 @@
 	caller injects tunables via `opts = { coeff, exp, maxLevel }` (server passes
 	Config values; tests pass literals). Level is DERIVED from cumulative totalXp,
 	never stored, so the curve can change without a data migration.
+	Precondition: opts.maxLevel >= 1. A maxLevel of 1 reads as permanently max
+	level by design (in a one-level game you are always at the only level).
 	Location (Roblox): ReplicatedStorage/Shared/ProgressionModel  (ModuleScript)
 --]]
 
@@ -28,6 +30,8 @@ function ProgressionModel.levelFor(totalXp, opts)
 		level += 1
 	end
 	if level >= opts.maxLevel then
+		-- At max level any excess XP beyond the top threshold is intentionally
+		-- discarded: xpIntoLevel/xpForNext = 0 with a full bar (progress = 1).
 		return { level = opts.maxLevel, xpIntoLevel = 0, xpForNext = 0, progress = 1 }
 	end
 	local need = ProgressionModel.xpForLevel(level, opts)
