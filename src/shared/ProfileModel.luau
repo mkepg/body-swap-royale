@@ -11,7 +11,7 @@ local ProfileModel = {}
 
 -- Non-negative integer, or nil if v isn't a usable number.
 local function toCount(v)
-	if type(v) ~= "number" or v ~= v then -- reject non-numbers and NaN
+	if type(v) ~= "number" or v ~= v or v == math.huge or v == -math.huge then -- reject non-numbers, NaN, +/-inf
 		return nil
 	end
 	return math.max(0, math.floor(v))
