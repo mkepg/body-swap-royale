@@ -41,11 +41,17 @@ local function build()
 	gui.DisplayOrder = HudTheme.DisplayOrder.bookend -- same layer as the results banner
 	gui.Parent = player:WaitForChild("PlayerGui")
 
-	-- ===== Persistent Coins/Level readout (top-left) =====
+	-- ===== Persistent Coins/Level readout (left edge, below the top bar) =====
+	-- Anchored to the LEFT edge but dropped ~16% down so it clears Roblox's
+	-- top-left menu/unibar button (which sits in the topbar inset and would
+	-- otherwise obstruct a top-left panel). The top-right corner is avoided too
+	-- (default CoreGui player list), as is top-center (the round banner) and the
+	-- bottom corners (mobile joystick/jump). GUI ignores the inset, so the 0.16
+	-- scale offset (not a fixed pixel inset) clears the bar across resolutions.
 	local handle = HudTheme.makePanel(gui, UDim2.fromScale(0.16, 0.07), "top", nil)
 	HudTheme.setPanelFlat(handle, HudTheme.Color.panelDark)
 	handle.root.AnchorPoint = Vector2.new(0, 0)
-	handle.root.Position = UDim2.new(0, 14, 0, 14)
+	handle.root.Position = UDim2.new(0, 14, 0.16, 0)
 
 	local layout = Instance.new("UIListLayout")
 	layout.FillDirection = Enum.FillDirection.Vertical
