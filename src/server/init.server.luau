@@ -16,8 +16,10 @@ local Players = game:GetService("Players")
 Players.CharacterAutoLoads = false
 
 local RoundManager = require(script.RoundManager)
+local EconomyService = require(script.EconomyService)
 
 local function onPlayerAdded(player)
+	EconomyService.onPlayerAdded(player) -- load/cache the profile + push it to the client
 	RoundManager.addPlayer(player)
 end
 
@@ -28,7 +30,9 @@ end
 
 Players.PlayerRemoving:Connect(function(player)
 	RoundManager.removePlayer(player)
+	EconomyService.onPlayerRemoving(player) -- save + drop AFTER the round handles the leave
 end)
 
+EconomyService.start() -- autosave loop + BindToClose flush
 RoundManager.start()
-print("[BSR] Server ready (ownership-transfer model + round loop).")
+print("[BSR] Server ready (ownership-transfer model + round loop + economy).")
