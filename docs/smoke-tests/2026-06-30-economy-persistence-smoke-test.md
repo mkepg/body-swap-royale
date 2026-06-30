@@ -32,6 +32,10 @@ default profile with `ok=false`, and nothing persists — so confirm it is ON fi
    value is untouched after the session ends. Restore the setting afterward.
 7. **Shutdown flush.** Earn coins, then stop the server (don't leave first); rejoin a
    fresh server → the earnings persisted (`BindToClose` flushed).
+8. **Disconnect mid-round (expected forfeit).** If a player disconnects during the
+   Active phase, they get NO `RewardGranted` for that round — their profile was already
+   saved + dropped on leave, so `awardRound` no-ops for them. Their pre-round total is
+   intact on rejoin. This is expected, not a bug; observe it once so it isn't surprising.
 
 ## Direct-trigger shortcuts (command bar, server side)
 
