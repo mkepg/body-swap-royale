@@ -14,8 +14,11 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local FOLDER_NAME = "Remotes"
-local REMOTE_EVENTS =
-	{ "SetControlledBody", "RoundStateChanged", "EliminationEvent", "SpectateBody", "SwapPreview", "SoulMap" }
+local REMOTE_EVENTS = {
+	"SetControlledBody", "RoundStateChanged", "EliminationEvent", "SpectateBody", "SwapPreview", "SoulMap",
+	"RewardGranted",  -- server->client: per-round reward delta { coins, xp, leveledUp }
+	"ProfileUpdated", -- server->client: authoritative HUD state { coins, level, xpIntoLevel, xpForNext, progress }
+}
 
 local function getFolder()
 	if RunService:IsServer() then
