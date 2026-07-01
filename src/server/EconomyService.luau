@@ -98,15 +98,21 @@ function EconomyService.awardRound(player, ctx)
 	if not profile then
 		return -- player left mid-round (profile already saved + dropped)
 	end
-	local before = ProgressionModel.levelFor(profile.totalXp, progressionOpts()).level
+	-- Pre-award snapshot drives the client's XP-fill animation (XpFillModel start state).
+	local beforeLv = ProgressionModel.levelFor(profile.totalXp, progressionOpts())
 	local reward = RewardModel.rewardFor(ctx, rewardOpts())
 	profile.coins += reward.coins
 	profile.totalXp += reward.xp
-	local after = ProgressionModel.levelFor(profile.totalXp, progressionOpts()).level
+	local afterLevel = ProgressionModel.levelFor(profile.totalXp, progressionOpts()).level
 	RewardGranted:FireClient(player, {
 		coins = reward.coins,
 		xp = reward.xp,
-		leveledUp = after > before,
+		leveledUp = afterLevel > beforeLv.level,
+		before = {
+			level = beforeLv.level,
+			xpIntoLevel = beforeLv.xpIntoLevel,
+			xpForNext = beforeLv.xpForNext,
+		},
 	})
 	pushProfile(player)
 end
