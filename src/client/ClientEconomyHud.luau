@@ -9,9 +9,14 @@
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared:WaitForChild("Config"))
 local RewardScreenModel = require(Shared:WaitForChild("RewardScreenModel"))
+local XpFillModel = require(Shared:WaitForChild("XpFillModel"))
+local ProgressionModel = require(Shared:WaitForChild("ProgressionModel"))
 local Remotes = require(Shared:WaitForChild("Remotes"))
 
 local RewardGranted = Remotes.get("RewardGranted")
@@ -29,8 +34,8 @@ local lastView = { coins = 0, level = 1, progress = 0 }
 local balanceCoins, balanceLevel       -- persistent readout labels
 local rewardRoot, rewardCoins, rewardXp, rewardLevel, rewardBarFill -- reward panel
 local rewardHandle                     -- makePanel handle; setPanelAccent needs the table, not a Frame
-local PANEL_VISIBLE_SECONDS = 4.5
-local hideToken = nil
+local hideToken = nil  -- generation token: a newer reward cancels the prior hide
+local animToken = nil  -- same token gates the running fill coroutine (cancel-on-retrigger)
 
 local function build()
 	local gui = Instance.new("ScreenGui")
@@ -140,6 +145,93 @@ local function build()
 	rewardBarFill.Parent = track
 end
 
+-- Progression tunables for XpFillModel's injected xpForLevel + the start fraction.
+local function progressionOpts()
+	return {
+		coeff = Config.PROGRESSION_XP_COEFF,
+		exp = Config.PROGRESSION_XP_EXP,
+		maxLevel = Config.PROGRESSION_MAX_LEVEL,
+	}
+end
+
+local function setBar(p)
+	rewardBarFill.Size = UDim2.fromScale(math.clamp(p, 0, 1), 1)
+end
+
+-- The level-up "moment": tick the label, scale-punch the panel, surge the bar color.
+local function playLevelUpMoment(newLevel)
+	rewardLevel.Text = "Level " .. tostring(newLevel)
+	local scale = rewardRoot:FindFirstChildOfClass("UIScale") or Instance.new("UIScale")
+	scale.Parent = rewardRoot
+	TweenService:Create(
+		scale,
+		TweenInfo.new(0.12, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+		{ Scale = Config.REWARD_LEVELUP_POP_SCALE }
+	):Play()
+	task.delay(0.12, function()
+		TweenService:Create(scale, TweenInfo.new(0.12), { Scale = 1 }):Play()
+	end)
+	rewardBarFill.BackgroundColor3 = Config.REWARD_LEVELUP_FLASH_COLOR
+	TweenService:Create(
+		rewardBarFill,
+		TweenInfo.new(Config.REWARD_LEVELUP_PAUSE_SECONDS),
+		{ BackgroundColor3 = HudTheme.Accent.win.top }
+	):Play()
+end
+
+-- Play the XpFillModel timeline: fill each segment proportionally to its xpSpan over
+-- a fixed total time, count the +XP up, and run the level-up moment between segments.
+-- `token` gates cancellation (a newer reward replaces animToken). Driven by Heartbeat
+-- so the bar fill + number count-up + segment transitions stay in lockstep.
+local function playTimeline(token, plan, delta)
+	if #plan.segments == 0 or plan.totalSpan <= 0 then
+		-- Nothing to animate: rest on the final state immediately.
+		setBar(plan.finalProgress)
+		rewardLevel.Text = "Level " .. tostring(plan.finalLevel)
+		rewardXp.Text = "+" .. tostring(math.max(0, math.floor(delta))) .. " XP"
+		return
+	end
+
+	local FILL = Config.REWARD_XP_FILL_SECONDS
+	local PAUSE = Config.REWARD_LEVELUP_PAUSE_SECONDS
+	local fillElapsed = 0 -- cumulative fill time (excludes pauses); drives the +XP count-up
+
+	for i, seg in ipairs(plan.segments) do
+		rewardLevel.Text = "Level " .. tostring(seg.level)
+		local dur = FILL * (seg.xpSpan / plan.totalSpan)
+		local t = 0
+		while t < dur do
+			if token ~= animToken then return end
+			local dt = RunService.Heartbeat:Wait()
+			t = math.min(dur, t + dt)
+			local f = t / dur
+			setBar(seg.fromProgress + (seg.toProgress - seg.fromProgress) * f)
+			local xpShown = math.floor(delta * math.min(1, (fillElapsed + t) / FILL))
+			rewardXp.Text = "+" .. tostring(xpShown) .. " XP"
+		end
+		fillElapsed += dur
+		if seg.levelUpAfter then
+			if token ~= animToken then return end
+			playLevelUpMoment(seg.level + 1)
+			-- Reposition for the next segment (fresh level at 0) or the final rest
+			-- (full at max level, else the start of the next level).
+			local nextSeg = plan.segments[i + 1]
+			setBar(nextSeg and nextSeg.fromProgress or plan.finalProgress)
+			local p = 0
+			while p < PAUSE do
+				if token ~= animToken then return end
+				p += RunService.Heartbeat:Wait()
+			end
+		end
+	end
+
+	if token ~= animToken then return end
+	-- Settle exactly on the authoritative final state.
+	setBar(plan.finalProgress)
+	rewardLevel.Text = "Level " .. tostring(plan.finalLevel)
+	rewardXp.Text = "+" .. tostring(math.floor(delta)) .. " XP"
+end
+
 local function applyView(view)
 	lastView = view
 	balanceCoins.Text = string.format("%d Coins", view.coins)
@@ -151,18 +243,57 @@ local function showReward(grant)
 	if not d.visible then
 		return
 	end
-	rewardLevel.Text = d.levelText
+
+	-- Coins render instantly (XP is the animated focus).
 	rewardCoins.Text = d.coinsText
-	rewardXp.Text = d.xpText
-	rewardBarFill.Size = UDim2.fromScale(math.clamp(d.levelBarProgress or 0, 0, 1), 1)
-	HudTheme.setPanelAccent(rewardHandle, d.leveledUp and "win" or "neutral")
+
+	-- Build the fill timeline from the pre-award snapshot in the payload (self-contained;
+	-- independent of ProfileUpdated arrival order). xpForLevel is injected so XpFillModel
+	-- stays Roblox-free.
+	local start = grant.before
+	local opts = progressionOpts()
+	local plan = XpFillModel.build(start, grant.xp, {
+		maxLevel = opts.maxLevel,
+		xpForLevel = function(level)
+			return ProgressionModel.xpForLevel(level, opts)
+		end,
+	})
+
+	-- Initial visual state: start level, start fraction, +0 XP.
+	local startProgress
+	if start.xpForNext and start.xpForNext > 0 then
+		startProgress = start.xpIntoLevel / start.xpForNext
+	elseif start.level >= opts.maxLevel then
+		startProgress = 1
+	else
+		startProgress = 0
+	end
+	rewardLevel.Text = "Level " .. tostring(start.level)
+	rewardXp.Text = "+0 XP"
+	rewardBarFill.BackgroundColor3 = HudTheme.Accent.win.top
+	setBar(startProgress)
+	HudTheme.setPanelAccent(rewardHandle, grant.leveledUp and "win" or "neutral")
+
 	rewardRoot.Visible = true
 	HudTheme.popIn(rewardRoot)
 
-	-- Auto-hide after a few seconds; a newer reward cancels the previous timer.
+	-- New reward cancels any running fill + the prior hide (shared token).
 	local token = {}
+	animToken = token
 	hideToken = token
-	task.delay(PANEL_VISIBLE_SECONDS, function()
+	task.spawn(playTimeline, token, plan, grant.xp)
+
+	-- Keep the panel up for the whole sequence (fill + level-up pauses) plus a readable hold.
+	local levelUps = 0
+	for _, s in ipairs(plan.segments) do
+		if s.levelUpAfter then
+			levelUps += 1
+		end
+	end
+	local visibleFor = Config.REWARD_XP_FILL_SECONDS
+		+ Config.REWARD_LEVELUP_PAUSE_SECONDS * levelUps
+		+ Config.REWARD_PANEL_HOLD_SECONDS
+	task.delay(visibleFor, function()
 		if hideToken == token then
 			rewardRoot.Visible = false
 		end
