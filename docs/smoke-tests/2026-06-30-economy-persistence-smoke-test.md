@@ -44,6 +44,23 @@ default profile with `ok=false`, and nothing persists — so confirm it is ON fi
 - Inspect a cached profile:
   `print(require(game.ServerScriptService.Server.EconomyService).getProfile(game.Players:GetPlayers()[1]))`
 
+## XP-fill animation checks (2026-07-01)
+
+8. **Smooth fill.** On the reward panel, the XP bar fills smoothly from its prior
+   fraction to the new one (not an instant snap), finishing in ~1.2s, and the `+XP`
+   number counts up from `+0` to the full amount in step with the bar.
+9. **Level-up moment.** Award enough XP to cross a level (lower `Config.PROGRESSION_XP_COEFF`
+   temporarily, or use the direct-trigger below with a big XP value): the bar fills to
+   full, the panel pops/flashes, the `Level N` label ticks up, the bar resets to empty and
+   continues toward the next level. Multiple level-ups chain.
+10. **Panel stays long enough.** The panel remains visible through the entire animation
+    plus a readable hold (it does not vanish mid-fill).
+11. **Re-trigger.** Triggering a second reward while the first is animating cancels the
+    first and restarts cleanly (no stuck/garbled bar).
+
+Direct trigger for a big multi-level award (server command bar):
+`require(game.ServerScriptService.Server.EconomyService).awardRound(game.Players:GetPlayers()[1], { survivedSwaps = 40, isWinner = true, participated = true })`
+
 ## Notes
 - Rojo sync can go stale — confirm the place has the latest code (`script_read`) before
   trusting an MCP visual check.
