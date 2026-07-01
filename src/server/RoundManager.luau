@@ -274,12 +274,11 @@ local function startMonitor()
 						-- hazard death: while a freshly-swapped body still can't die
 						-- from a hazard, the hex under it won't arm either. Computed
 						-- AFTER the move check, so moving (which clears grace) also
-						-- un-blocks arming.
+						-- un-blocks arming. HazardSystem raycasts from `position` to
+						-- find the tile actually under the body (hex logic stays there).
 						local graceBlocked = not GraceModel.canDieFromHazard(grace, player, t)
 						samples[#samples + 1] = {
-							dx = root.Position.X,
-							dz = root.Position.Z,
-							y = root.Position.Y,
+							position = root.Position,
 							graceBlocked = graceBlocked,
 						}
 						-- Void death source, gated by the post-swap grace window.

@@ -61,6 +61,11 @@ Config.HEX_FLOOR_GAP = 50        -- vertical studs between floors (floors at 0/-
 Config.VOID_Y = -(Config.HEX_FLOOR_COUNT - 1) * Config.HEX_FLOOR_GAP - 4
 Config.HEX_STAND_BAND = 6        -- root-height window above a floor that counts as "on" it
                                  -- (must be < HEX_FLOOR_GAP so floor bands don't overlap)
+Config.HEX_GROUND_PROBE_RADIUS = 1.5 -- contact-probe sphere radius (studs): the downward
+                                     -- spherecast that finds which tile a body stands on. >0 so a
+                                     -- body over the HEX_GAP grout seam still hits its tile; keep it
+                                     -- well under the tile radius (HEX_SIZE - HEX_GAP) so it never
+                                     -- catches a neighbor.
 Config.HEX_GONE_DELAY_SECONDS = 1.2 -- step -> gone delay (warning color shows the whole time)
 Config.TILE_SURFACE_Y = 0        -- top-floor surface Y (reused by HazardSystem + spawn)
 Config.TILE_THICKNESS = 1        -- hex part thickness

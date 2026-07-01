@@ -34,12 +34,17 @@ local HazardSystem = {}
 
 local SQRT3 = math.sqrt(3)
 
-local tiles = {}      -- array of { parts = {Part, WedgePart×4}, steppedAt, phase, floor, q, r }
-local tileByKey = {}  -- ["floor:q:r"] = tile record
+local tiles = {}       -- array of { parts = {Part, WedgePart×4}, steppedAt, phase, floor, q, r }
+local partToTile = {}  -- [BasePart] = tile record; populated in build() for fast contact lookup
 
-local function keyOf(floor, q, r)
-	return floor .. ":" .. q .. ":" .. r
-end
+-- groundParams is initialised in build() once the HexField folder exists.
+-- Include-filter on the HexField only, RespectCanCollide=true so `gone`
+-- tiles (CanCollide=false) are never returned -- a body can't stand on a vanished tile.
+local groundParams = nil
+
+-- Contact-probe sweep direction: straight down through the feet, HEX_STAND_BAND deep
+-- (the height above a floor that counts as standing on it). Constant, so hoisted.
+local PROBE_DOWN = Vector3.new(0, -Config.HEX_STAND_BAND, 0)
 
 local function durations()
 	return { gone = Config.HEX_GONE_DELAY_SECONDS }
@@ -152,6 +157,13 @@ function HazardSystem.build()
 		folder.Parent = workspace
 	end
 
+	-- Contact probe: include ONLY the HexField, and respect CanCollide so `gone` tiles
+	-- (CanCollide=false) are transparently skipped -- a body can't stand on a vanished tile.
+	groundParams = RaycastParams.new()
+	groundParams.FilterType = Enum.RaycastFilterType.Include
+	groundParams.FilterDescendantsInstances = { folder }
+	groundParams.RespectCanCollide = true
+
 	-- The pit is a TRUE CIRCLE: clip the hex lattice to HEX_CIRCLE_RADIUS. Over-generate
 	-- rings (genRings reaches well past the circle) so the circle is fully tiled.
 	local genRings = math.ceil(Config.HEX_CIRCLE_RADIUS / Config.HEX_SIZE) + 1
@@ -163,7 +175,11 @@ function HazardSystem.build()
 			local parts = buildHexParts(folder, dx, dz, surfaceY, floor, c.q, c.r)
 			local tile = { parts = parts, steppedAt = nil, phase = "solid", floor = floor, q = c.q, r = c.r }
 			tiles[#tiles + 1] = tile
-			tileByKey[keyOf(floor, c.q, c.r)] = tile
+			-- Register every part so the contact probe can map a hit back to its tile record.
+			-- Each tile is 5 parts (1 Block + 4 WedgeParts); all must be registered.
+			for _, part in ipairs(parts) do
+				partToTile[part] = tile
+			end
 		end
 	end
 end
@@ -183,17 +199,29 @@ function HazardSystem.start(_startTime)
 end
 
 -- Driven each tick by RoundManager's void monitor. samples = array of
--- { dx, dz, y, graceBlocked } (one per alive body, offsets from the field center
--- at origin). Arms the hex each body stands on (grace-gated), then applies the
+-- { position: Vector3, graceBlocked: boolean } (one per alive body; position is the
+-- body root's world position). For each sample a small sphere is cast straight down
+-- through the body's feet to find the collidable hex tile it is actually standing on
+-- (contact-probe arming). This is robust to rim tiles whose lattice neighbor is outside
+-- the circle (the old point-sample rounded to a nonexistent tile) and to bodies
+-- perched on a tile's edge (where the root's XZ no longer rounds to the right hex).
+-- Only collidable parts are returned (groundParams.RespectCanCollide=true), so `gone`
+-- tiles are never re-armed. Arms each found tile (grace-gated), then applies the
 -- current phase to every tile on change. `now` is os.clock().
 function HazardSystem.step(now, samples)
-	if Config.HAZARDS_ENABLED then
+	if Config.HAZARDS_ENABLED and groundParams then
 		for _, s in ipairs(samples) do
-			local floor = HexGrid.floorAt(
-				s.y, Config.TILE_SURFACE_Y, Config.HEX_FLOOR_GAP, Config.HEX_STAND_BAND, Config.HEX_FLOOR_COUNT)
-			if floor then
-				local q, r = HexGrid.fromWorld(s.dx, s.dz, Config.HEX_SIZE)
-				local tile = tileByKey[keyOf(floor, q, r)]
+			-- Find the tile ACTUALLY under this body: sweep a small sphere straight down
+			-- from the root through the feet (PROBE_DOWN is HEX_STAND_BAND deep -- the
+			-- height above a floor that counts as standing on it). The nearest collidable
+			-- hex part is the bearing tile -- robust to rim tiles and edge/perched poses,
+			-- unlike a point-sample. Spherecast (not raycast) so a body over the grout seam
+			-- still arms a bearing tile (either adjacent tile when squarely over the seam --
+			-- both are valid arm targets).
+			local hit = workspace:Spherecast(
+				s.position, Config.HEX_GROUND_PROBE_RADIUS, PROBE_DOWN, groundParams)
+			if hit then
+				local tile = partToTile[hit.Instance]
 				if tile then
 					tile.steppedAt = HexErosionModel.arm(tile.steppedAt, true, s.graceBlocked, now)
 				end
