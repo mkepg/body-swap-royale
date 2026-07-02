@@ -10,13 +10,13 @@
 --]]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local UserInputService = game:GetService("UserInputService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
 local Remotes = require(Shared:WaitForChild("Remotes"))
 local SoulMap = Remotes.get("SoulMap")
 local SetControlledBody = Remotes.get("SetControlledBody")
+local InputController = require(script.Parent:WaitForChild("InputController"))
 
 local SoulController = {}
 local myBody = nil
@@ -117,16 +117,6 @@ local function playGraceShimmer(body)
 
 	local start = os.clock()
 	local moved = false
-	local conn = UserInputService.InputBegan:Connect(function(input, gpe)
-		if gpe then
-			return
-		end
-		local kc = input.KeyCode
-		if kc == Enum.KeyCode.W or kc == Enum.KeyCode.A or kc == Enum.KeyCode.S
-			or kc == Enum.KeyCode.D or kc == Enum.KeyCode.Space then
-			moved = true
-		end
-	end)
 
 	task.spawn(function()
 		-- `hl.Parent` guard: if the body is destroyed mid-grace (its owner
@@ -135,13 +125,17 @@ local function playGraceShimmer(body)
 		while shimmerToken == token and hl.Parent do
 			local elapsed = os.clock() - start
 			hl.FillTransparency = 0.5 + 0.3 * math.sin(elapsed * 8) -- pulse
+			-- Device-agnostic "moved": true once the player pushes the stick/keys,
+			-- across keyboard, touch, and gamepad (was raw WASD/Space only).
+			if not moved and InputController.isMoving() then
+				moved = true
+			end
 			local floorDone = elapsed >= Config.GRACE_FLOOR_SECONDS
 			if elapsed >= Config.GRACE_SECONDS or (floorDone and moved) then
 				break
 			end
 			task.wait()
 		end
-		conn:Disconnect()
 		hl:Destroy()
 		if shimmerToken == token then
 			shimmerToken = nil
