@@ -7,10 +7,13 @@
 	(Humanoid:Move -> predicted, smooth) and points the camera at it. On a swap
 	it plays a short FOV "punch."
 
-	Movement/jump input is device-agnostic: InputController supplies a move vector
-	(WASD + touch thumbstick + gamepad stick) and a cross-device jump binding;
-	MoveDirection turns the camera-relative vector into a world direction. Camera
-	rotation is left to Roblox's default CameraModule (works on all devices).
+	Movement input is device-agnostic: InputController supplies a move vector (WASD +
+	default touch thumbstick + gamepad stick) and MoveDirection turns that
+	camera-relative vector into a world direction we feed to Humanoid:Move. Jump and
+	the mobile touch HUD are Roblox's DEFAULT controls: InputController.ensureControls
+	keeps the ControlModule bound to the current body each frame, so it renders the
+	touch thumbstick/jump button and drives jump on every device. Camera rotation is
+	left to Roblox's default CameraModule (works on all devices).
 
 	Animation is handled separately by ClientAnimator (local, per-body, from
 	replicated velocity) -- intentionally NOT here.
@@ -49,20 +52,10 @@ local function worldDir()
 end
 
 function ClientControl.start()
-	InputController.enable()
-	InputController.bindJump(function()
-		if hum then
-			hum.Jump = true
-		end
-	end)
-
-	RunService.RenderStepped:Connect(function()
-		if hum and body and body.Parent then
-			hum:Move(worldDir(), false) -- client owns this body, so this is predicted
-		end
-	end)
-
-	-- ===== control assignment + swap transition =====
+	-- Connect the assignment handler FIRST, before enable() -- enable() yields on
+	-- WaitForChild("PlayerModule"), and the initial SetControlledBody can fire during
+	-- that yield. Connecting first guarantees we never miss the spawn assignment (and
+	-- thus never miss attaching the body to the ControlModule for the touch HUD).
 	SetControlledBody.OnClientEvent:Connect(function(newBody, isSwap)
 		body = newBody
 		hum = newBody:FindFirstChildOfClass("Humanoid")
@@ -78,6 +71,32 @@ function ClientControl.start()
 		end
 		print("[BSR] controlling:", newBody.Name, isSwap and "(swap)" or "(spawn)")
 	end)
+
+	RunService.RenderStepped:Connect(function()
+		if body and body.Parent then
+			-- Re-derive the humanoid each frame. The body (and its Humanoid) can
+			-- replicate in AFTER the SetControlledBody handler runs, which would leave a
+			-- once-captured `hum` nil forever (no movement, no control binding). This is
+			-- robust to that late replication.
+			hum = body:FindFirstChildOfClass("Humanoid")
+			if hum then
+				if camera.CameraSubject ~= hum then
+					camera.CameraSubject = hum
+				end
+				-- Keep Roblox's ControlModule bound to this body so its default touch HUD
+				-- (thumbstick + jump) renders and it drives jump. Self-healing/idempotent.
+				InputController.ensureControls(body, hum)
+				hum:Move(worldDir(), false) -- client owns this body, so this is predicted
+			end
+		else
+			InputController.releaseControls()
+		end
+	end)
+
+	-- enable() yields on WaitForChild("PlayerModule"); do it last so the handlers
+	-- above are already live. attachBody() self-heals by calling enable() if a body
+	-- is assigned before this returns.
+	InputController.enable()
 end
 
 return ClientControl

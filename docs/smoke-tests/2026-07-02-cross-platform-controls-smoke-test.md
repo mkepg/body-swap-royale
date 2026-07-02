@@ -1,71 +1,75 @@
 # Smoke Test — Cross-Platform Controls (2026-07-02)
 
-**Status:** RUNTIME-UNVERIFIED until run in Studio + on a real phone.
-**Covers:** the client glue lune can't test — `InputController` (PlayerModule move
-vector + ContextActionService jump) and `ClientControl` driving the assigned body
-across Touch, Keyboard/Mouse, and Gamepad. Pure `MoveDirection` math is lune-covered.
+**Status:** RUNTIME-UNVERIFIED on-device until run on a real phone / Studio device emulation.
+**Covers:** the client glue lune can't test — `InputController` (Roblox ControlModule as the
+DEFAULT cross-platform input) + `DeviceOrientation` (landscape) + `ClientControl` driving the
+assigned body. Pure `MoveDirection` math is lune-covered.
 
 **Spec:** `docs/specs/2026-07-02-cross-platform-controls-design.md`
 
-**Note on `screen_capture`:** the MCP `screen_capture` tool renders only the edit
-viewport, not the running Play client. All checks below require the human to drive
-the actual Play session (and a real phone for touch).
+## Approach (as shipped) & root cause
 
-## Load-bearing pre-check (spec §6.1) — ControlModule without a Character
+The game has no `LocalPlayer.Character` (`Players.CharacterAutoLoads = false`). Roblox's
+`ControlModule` only builds/shows its **default touch HUD** (thumbstick + jump button) when it
+has a humanoid to control — `ControlModule:UpdateTouchGuiVisibility()` gates `doShow` on
+`self.humanoid`, normally set from `CharacterAdded`, which never fires here. **That is why the
+mobile thumbstick was missing while a jump button still showed.**
 
-**Live result (2026-07-02, desktop, via MCP execute_luau in a Play session):** PASS.
-With `LocalPlayer.Character == nil`, `require(PlayerScripts.PlayerModule):GetControls()`
-returned a controls object, `controls:Enable()` ran without error, and
-`controls:GetMoveVector()` returned a `Vector3` (0,0,0 with no key held). The
-ControlModule is usable without a Character, so the primary approach stands (the
-custom-thumbstick contingency is NOT needed). Still to confirm by a human: a NONZERO
-move vector while input is held, and the touch thumbstick rendering under emulation /
-on a real phone.
+Fix (uses Roblox's DEFAULT controls, per request):
+- `InputController.ensureControls(body, humanoid)` calls `controls:OnCharacterAdded(body)` each
+  frame from `ClientControl` RenderStepped, binding the assigned body's humanoid so the default
+  touch HUD renders and the ControlModule drives jump on all devices. Self-healing (re-binds only
+  on change; robust to the body/humanoid replicating in late — `hum` is re-derived each frame).
+- `enable()` sets `controls.moveFunction = function() end` so the ControlModule stops calling
+  `LocalPlayer:Move()` each frame (with no Character it is a no-op that otherwise spams
+  "Player:Move called, but player currently has no character"). We own movement via `Humanoid:Move`.
+- `releaseControls()` clears the humanoid when there is no body (eliminated / round over).
+- `DeviceOrientation` sets `PlayerGui.ScreenOrientation = LandscapeSensor` on join.
 
-- [ ] In a running Play session, open the command bar and run:
-      `print(require(game.Players.LocalPlayer.PlayerScripts.PlayerModule):GetControls())`
-      Expected: a controls object (not an error).
-- [ ] While pushing WASD (or the thumbstick), print the move vector once per second
-      and confirm it is nonzero while pushing, zero when released. If the vector is
-      always zero, the ControlModule is not usable without a Character → invoke the
-      spec's contingency (custom-thumbstick impl behind the same InputController seam).
+**Notes for whoever verifies:**
+- The MCP `screen_capture` shows only the edit viewport, not the Play client — drive the real session.
+- **MCP `execute_luau` runs in a SEPARATE `require` cache** from the game scripts. Reading
+  `require(PlayerModule):GetControls().humanoid` in an MCP probe returns a *different* ControlModule
+  instance (always nil) — it does NOT reflect the game's. To observe game state, use instance
+  **Attributes** the game code sets, not `require(module).state`.
 
-## 1. Keyboard/Mouse (regression)
+## Desktop-verified via MCP (2026-07-02)
 
-- [ ] WASD moves the controlled body relative to the camera (W = away from camera,
-      etc.); movement matches pre-change behavior.
-- [ ] Space makes the body jump.
-- [ ] Mouse rotates the camera; the body follows.
+- [x] Client boots clean: no errors, **no `Player:Move` spam** (moveFunction no-op working).
+- [x] In-game ControlModule humanoid **is bound** to the controlled body (proven via a temporary
+      Attribute written from inside `ensureControls`: `dbg_cmHumBefore=true`, `dbg_boundAfter=true`).
+- [x] `PlayerGui.ScreenOrientation == LandscapeSensor`.
+- Not observable on desktop: the touch HUD itself only renders when `PreferredInput == Touch`.
 
-## 2. Touch (Studio device emulation + a real phone)
+## 1. Touch — the primary check (real phone / Studio device emulation)
 
-- [ ] A movement thumbstick appears (bottom-left by default) and moves the body in
-      all directions relative to the camera.
-- [ ] A jump button appears (auto-created by ContextActionService) and jumps the body.
-- [ ] Dragging elsewhere on screen rotates the camera (spec §6.2). If it does NOT,
-      record it here — camera input becomes a separate follow-up.
+- [ ] A **movement thumbstick** appears (Roblox default, bottom-left / dynamic) and moves the body
+      in all directions relative to the camera. (This is the reported bug — must now work.)
+- [ ] A **jump button** appears (Roblox default, bottom-right) and jumps the body.
+- [ ] Dragging elsewhere rotates the camera; the body follows.
+- [ ] The screen is **landscape** on join and stays landscape (auto left/right by the sensor).
+
+## 2. Keyboard/Mouse (regression)
+
+- [ ] WASD moves the body relative to the camera; Space jumps; mouse rotates the camera.
 
 ## 3. Gamepad
 
-- [ ] Left stick moves the body relative to the camera.
-- [ ] Button A jumps the body.
-- [ ] Right stick rotates the camera (spec §6.2). If it does NOT, record it here.
+- [ ] Left stick moves the body relative to the camera; Button A jumps; right stick rotates camera.
 
-## 4. Grace shimmer × devices (Task 4)
+## 4. Swaps & grace shimmer × devices
 
-- [ ] Force a swap: `require(game.ServerScriptService.Server.RoundManager).forceSwap()`
-      (or wait for a cadence swap).
-- [ ] The inherited body shows the blue grace shimmer. On EACH device (keyboard,
-      touch, gamepad), once you push movement the shimmer fades early (after the
-      hard-floor window); if you never move it pulses for the full grace window.
+- [ ] Force a swap: `require(game.ServerScriptService.Server.RoundManager).forceSwap()` (or wait for
+      a cadence swap). Control + the touch HUD follow to the new body; the FOV "punch" plays.
+- [ ] On each device, after a swap the blue grace shimmer fades early once you push movement (and
+      pulses the full window if you never move).
 
-## 5. Swap still feels right (regression)
+## 5. Elimination / round end
 
-- [ ] After a swap, the FOV "punch" still plays and the camera snaps to the new body.
-- [ ] Control of the new body is immediate on all devices.
+- [ ] When your body is removed (eliminated / round over), no errors spam from a stale humanoid
+      (releaseControls clears it); the touch HUD hides until the next round assigns a body.
 
 ## Result
 
-Record pass/fail per check and any tuning notes (thumbstick/jump-button placement,
-move-vector dead zone). If the §6.1 pre-check fails, note it prominently — the
-contingency (custom thumbstick) is the follow-up.
+Record pass/fail per check and any tuning notes (thumbstick style, jump-button placement, orientation
+feel). The touch thumbstick appearing and moving the body is the load-bearing pass.
