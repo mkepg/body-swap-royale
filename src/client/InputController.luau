@@ -28,6 +28,8 @@
 --]]
 
 local Players = game:GetService("Players")
+local ContextActionService = game:GetService("ContextActionService")
+local RunService = game:GetService("RunService")
 
 local LocalPlayer = Players.LocalPlayer
 
@@ -35,6 +37,7 @@ local InputController = {}
 
 local controls = nil          -- the PlayerModule ControlModule
 local MOVE_EPSILON_SQ = 0.01  -- treat |move| below this as "not moving"
+local jumpHeld = false         -- touch jump button held (see setupJump)
 
 -- Acquire and enable Roblox's control module. Idempotent.
 function InputController.enable()
@@ -87,6 +90,32 @@ function InputController.releaseControls()
 	if controls and controls.humanoid ~= nil then
 		controls:OnCharacterRemoving()
 	end
+end
+
+-- Jump. Desktop (Space) and gamepad (ButtonA) already jump via the ControlModule's
+-- own controllers, which set `humanoid.Jump` in its Input-priority render step. TOUCH
+-- is the gap: Roblox's default TouchJump button is hard-gated on LocalPlayer.Character
+-- (via CharacterUtil), which this game never has, so it never renders. So we add a
+-- TOUCH-ONLY jump button (default jump art) via ContextActionService.
+--
+-- The catch: because we feed the ControlModule our body's humanoid (for the
+-- thumbstick), its render step writes `humanoid.Jump = false` every frame on touch
+-- (no touch controller reports jumping). A one-shot `Jump = true` would be stomped.
+-- So we re-assert `Jump = true` while the button is held at Last render priority
+-- (2000), which runs AFTER the ControlModule's Input step (100) -- our write wins.
+function InputController.setupJump()
+	ContextActionService:BindAction("BSR_Jump", function(_actionName, inputState)
+		jumpHeld = (inputState == Enum.UserInputState.Begin)
+		return Enum.ContextActionResult.Pass
+	end, true) -- createTouchButton = true, NO keycodes: touch-only (KB/gamepad use ControlModule)
+	ContextActionService:SetImage("BSR_Jump", "rbxasset://textures/ui/Input/JumpButtonRegular.png")
+	ContextActionService:SetTitle("BSR_Jump", "")
+
+	RunService:BindToRenderStep("BSR_JumpReassert", Enum.RenderPriority.Last.Value, function()
+		if jumpHeld and controls and controls.humanoid then
+			controls.humanoid.Jump = true
+		end
+	end)
 end
 
 return InputController
