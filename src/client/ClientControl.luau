@@ -94,9 +94,11 @@ function ClientControl.start()
 	end)
 
 	-- enable() yields on WaitForChild("PlayerModule"); do it last so the handlers
-	-- above are already live. attachBody() self-heals by calling enable() if a body
-	-- is assigned before this returns.
+	-- above are already live. ensureControls() self-heals by calling enable() if a
+	-- body is assigned before this returns.
 	InputController.enable()
+	-- Touch-only jump button (default controls cover desktop/gamepad jump already).
+	InputController.setupJump()
 end
 
 return ClientControl

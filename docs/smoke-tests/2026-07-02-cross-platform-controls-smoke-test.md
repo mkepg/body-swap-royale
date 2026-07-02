@@ -15,15 +15,23 @@ has a humanoid to control — `ControlModule:UpdateTouchGuiVisibility()` gates `
 `self.humanoid`, normally set from `CharacterAdded`, which never fires here. **That is why the
 mobile thumbstick was missing while a jump button still showed.**
 
-Fix (uses Roblox's DEFAULT controls, per request):
+Fix (uses Roblox's DEFAULT controls where possible):
 - `InputController.ensureControls(body, humanoid)` calls `controls:OnCharacterAdded(body)` each
   frame from `ClientControl` RenderStepped, binding the assigned body's humanoid so the default
-  touch HUD renders and the ControlModule drives jump on all devices. Self-healing (re-binds only
-  on change; robust to the body/humanoid replicating in late — `hum` is re-derived each frame).
+  **movement thumbstick** renders. Self-healing (re-binds only on change; robust to the
+  body/humanoid replicating in late — `hum` is re-derived each frame).
 - `enable()` sets `controls.moveFunction = function() end` so the ControlModule stops calling
   `LocalPlayer:Move()` each frame (with no Character it is a no-op that otherwise spams
   "Player:Move called, but player currently has no character"). We own movement via `Humanoid:Move`.
 - `releaseControls()` clears the humanoid when there is no body (eliminated / round over).
+- **Jump:** desktop (Space) and gamepad (ButtonA) jump via the ControlModule's own controllers.
+  TOUCH cannot: Roblox's default `TouchJump` button is hard-gated on `LocalPlayer.Character` (it
+  finds the humanoid via `CharacterUtil`, not `ControlModule.humanoid`), which this game never
+  has. So `InputController.setupJump()` adds a **touch-only** ContextActionService button with the
+  default jump art (`rbxasset://textures/ui/Input/JumpButtonRegular.png`). Because the ControlModule
+  writes `humanoid.Jump = false` each frame on touch (we fed it our humanoid for the thumbstick), the
+  button re-asserts `Jump = true` while held at `Last` render priority (2000 > the ControlModule's
+  Input step at 100) so it wins.
 - `DeviceOrientation` sets `PlayerGui.ScreenOrientation = LandscapeSensor` on join.
 
 **Notes for whoever verifies:**
@@ -45,7 +53,9 @@ Fix (uses Roblox's DEFAULT controls, per request):
 
 - [ ] A **movement thumbstick** appears (Roblox default, bottom-left / dynamic) and moves the body
       in all directions relative to the camera. (This is the reported bug — must now work.)
-- [ ] A **jump button** appears (Roblox default, bottom-right) and jumps the body.
+- [ ] A **jump button** appears (default jump art, bottom-right) and jumps the body. It re-asserts
+      while held, so tap-jump and hold work. (Custom touch-only button — the native TouchJump can't
+      render without a Character.)
 - [ ] Dragging elsewhere rotates the camera; the body follows.
 - [ ] The screen is **landscape** on join and stays landscape (auto left/right by the sensor).
 
