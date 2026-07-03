@@ -19,12 +19,14 @@
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local RoundState = require(ReplicatedStorage.Shared.RoundState)
 local GraceModel = require(ReplicatedStorage.Shared.GraceModel)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local CadenceModel = require(ReplicatedStorage.Shared.CadenceModel)
+local ControlModel = require(ReplicatedStorage.Shared.ControlModel)
 local BodyManager = require(script.Parent.BodyManager)
 local ControlManager = require(script.Parent.ControlManager)
 local SwapController = require(script.Parent.SwapController)
@@ -137,6 +139,46 @@ local function aliveRoster()
 	return roster
 end
 
+-- Current-state floor probe (doom-exclusion, spec 2026-07-03 §4). A body is SAFE iff
+-- a downward ray from its root to the kill-plane (VOID_Y), excluding all player bodies,
+-- hits solid floor. RespectCanCollide=true means a gone (CanCollide=false) hex tile is
+-- correctly NOT floor. Arena-agnostic: any arena's floors are solid parts; VOID_Y is a
+-- per-arena Config value. Bodies with no floor before the void are void-bound (doomed)
+-- and must be excluded from the derangement so they are never handed to a victim.
+local function hasFloorBeneath(body)
+	local root = body and body:FindFirstChild("HumanoidRootPart")
+	if not root then
+		return false
+	end
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	local bodiesFolder = Workspace:FindFirstChild("Bodies")
+	params.FilterDescendantsInstances = bodiesFolder and { bodiesFolder } or {}
+	params.RespectCanCollide = true
+	local origin = root.Position
+	local downTo = Config.VOID_Y - origin.Y -- negative: from root down to the kill-plane
+	local hit = Workspace:Raycast(origin, Vector3.new(0, downTo, 0), params)
+	return hit ~= nil
+end
+
+-- Is the body `player` currently controls safe to swap right now?
+local function isBodySafe(player)
+	return hasFloorBeneath(ControlManager.getControlledBody(player))
+end
+
+-- True iff every player in the plan currently has a safe (non-void-bound) body. Used
+-- so the commit re-plans over the safe subset even when the plan is otherwise CURRENT:
+-- the pre-swap rim-jump happens DURING the preview, so a still-alive planned player can
+-- become doomed just before commit.
+local function planAllSafe(plan)
+	for _, pair in ipairs(plan.to) do
+		if not isBodySafe(pair.player) then
+			return false
+		end
+	end
+	return true
+end
+
 -- Tell each player in the plan which body they will inherit (drives the
 -- client-side preview highlight). Fired at preview start and on any re-plan.
 local function firePreview(plan)
@@ -177,13 +219,15 @@ local function planIsCurrent(plan)
 	return true
 end
 
--- Commit a planned swap. The commit is authoritative over the CURRENT roster: if
--- the plan went stale during the preview window (someone died/left, or an absorb
--- moved a survivor), recompute over the live roster before applying. Aborts if
--- fewer than 2 remain (the round is ending).
+-- Commit a planned swap. The commit is authoritative over the CURRENT roster: if the
+-- plan went stale during the preview (someone died/left, an absorb moved a survivor),
+-- OR any planned player became void-bound (doom-exclusion), recompute over the live,
+-- currently-safe roster before applying. Doomed bodies are excluded from the
+-- derangement (they keep their current controller and die for their own grief). Aborts
+-- if fewer than 2 safe players remain (the round is ending).
 local function commitSwap(plan)
-	if not planIsCurrent(plan) then
-		local roster = aliveRoster()
+	if not planIsCurrent(plan) or not planAllSafe(plan) then
+		local roster = ControlModel.filterSafe(aliveRoster(), isBodySafe)
 		if #roster < 2 then
 			return
 		end
