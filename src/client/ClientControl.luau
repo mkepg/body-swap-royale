@@ -33,6 +33,23 @@ local ClientControl = {}
 
 local camera = workspace.CurrentCamera
 local body, hum
+local myUserId = game:GetService("Players").LocalPlayer.UserId
+
+-- Backstop for a missed/dropped SetControlledBody: find the body whose authoritative
+-- ControllerUserId attribute (set by ControlManager) is ours. Returns nil (gracefully,
+-- retried next frame) if workspace.Bodies hasn't replicated in yet or nothing matches.
+local function findMyBody()
+	local bodies = workspace:FindFirstChild("Bodies")
+	if not bodies then
+		return nil
+	end
+	for _, candidate in ipairs(bodies:GetChildren()) do
+		if candidate:GetAttribute("ControllerUserId") == myUserId then
+			return candidate
+		end
+	end
+	return nil
+end
 
 -- Camera-relative move vector (from any device) -> normalized world direction.
 local function worldDir()
@@ -73,6 +90,25 @@ function ClientControl.start()
 	end)
 
 	RunService.RenderStepped:Connect(function()
+		-- Self-heal a missed/dropped SetControlledBody: if we have no valid body that's
+		-- still authoritatively ours, look one up from the ControllerUserId attribute.
+		-- This trusts applyOwnership's server-side ordering (it sets ControllerUserId
+		-- BEFORE firing SetControlledBody), so after a swap exactly one body carries our
+		-- id and we can't re-attach to a stale one. This RECONCILE BLOCK is dormant
+		-- whenever `body` is already correct (including during Lobby/Ended, where our own
+		-- body's ControllerUserId still equals us), so it adds no new interference with
+		-- SpectateBody's victory/spectator camera. (The per-frame CameraSubject write
+		-- below is pre-existing and separate -- unchanged by this backstop.)
+		if not (body and body.Parent and body:GetAttribute("ControllerUserId") == myUserId) then
+			local found = findMyBody()
+			if found and found ~= body then
+				body = found
+				hum = body:FindFirstChildOfClass("Humanoid")
+				camera.CameraType = Enum.CameraType.Custom
+				print("[BSR] controlling (reconciled):", body.Name)
+			end
+		end
+
 		if body and body.Parent then
 			-- Re-derive the humanoid each frame. The body (and its Humanoid) can
 			-- replicate in AFTER the SetControlledBody handler runs, which would leave a
