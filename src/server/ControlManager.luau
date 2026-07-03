@@ -41,12 +41,26 @@ function ControlManager.broadcastSoulMap()
 end
 
 -- Hand `player` network ownership of `body` and tell their client to retarget.
+-- On a swap handoff (isSwap), zero the body's velocity server-authoritatively:
+-- the body is client-owned, so a naive velocity write would be overwritten by the
+-- owning client's physics. Taking ownership (nil) first, zeroing, then handing to
+-- the new controller makes the inheritor start at rest -- no inherited launch/shove
+-- momentum (which would otherwise cancel grace). Same own->mutate->re-own ordering
+-- as BodyManager's reposition-then-re-own primitive.
 local function applyOwnership(player, body, isSwap)
 	local root = body and body:FindFirstChild("HumanoidRootPart")
 	if root then
-		pcall(function()
+		local ok, err = pcall(function()
+			if isSwap then
+				root:SetNetworkOwner(nil) -- server takes the body
+				root.AssemblyLinearVelocity = Vector3.zero
+				root.AssemblyAngularVelocity = Vector3.zero
+			end
 			root:SetNetworkOwner(player)
 		end)
+		if not ok then
+			warn("[ControlManager] SetNetworkOwner failed for " .. tostring(player) .. ": " .. tostring(err))
+		end
 	end
 	SetControlledBody:FireClient(player, body, isSwap == true)
 end
