@@ -128,6 +128,9 @@ end
 function ControlManager.resetControl()
 	local result = ControlModel.resetControl(model)
 	for _, pair in ipairs(result) do
+		if pair.body then
+			pair.body:SetAttribute("GraceProtected", false)
+		end
 		applyOwnership(pair.player, pair.body, false)
 	end
 	ControlManager.broadcastSoulMap()

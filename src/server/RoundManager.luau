@@ -157,6 +157,9 @@ local function hasFloorBeneath(body)
 	params.RespectCanCollide = true
 	local origin = root.Position
 	local downTo = Config.VOID_Y - origin.Y -- negative: from root down to the kill-plane
+	if downTo >= 0 then
+		return false -- root is already at/below the kill-plane: no floor "before the void"
+	end
 	local hit = Workspace:Raycast(origin, Vector3.new(0, downTo, 0), params)
 	return hit ~= nil
 end
