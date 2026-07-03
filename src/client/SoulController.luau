@@ -16,7 +16,6 @@ local Config = require(Shared:WaitForChild("Config"))
 local Remotes = require(Shared:WaitForChild("Remotes"))
 local SoulMap = Remotes.get("SoulMap")
 local SetControlledBody = Remotes.get("SetControlledBody")
-local InputController = require(script.Parent:WaitForChild("InputController"))
 
 local SoulController = {}
 local myBody = nil
@@ -94,15 +93,30 @@ local function reconcile(list)
 	end
 end
 
--- A brief shield shimmer on the body you just swapped into, mirroring the
--- post-swap grace window: it pulses for up to GRACE_SECONDS and fades early once
--- you've moved (after the GRACE_FLOOR_SECONDS hard floor). Cosmetic only -- the
--- server owns the real grace gate; this approximates its feel from local input.
+-- A brief shield shimmer on the body you control, driven by the SERVER's authoritative
+-- grace gate (the GraceProtected body attribute), not a local guess. It shows while the
+-- attribute is true and ends the instant the server clears it, so the shield never
+-- outlives real protection (no dying inside a visible shield). Cosmetic only.
 local shimmerToken = nil
+local graceConn = nil
+local watchedBody = nil
 
-local function playGraceShimmer(body)
+local function stopShimmer(body)
+	shimmerToken = nil
+	if body then
+		local hl = body:FindFirstChild("GraceShimmer")
+		if hl then
+			hl:Destroy()
+		end
+	end
+end
+
+local function startShimmer(body)
 	if not (body and body.Parent) then
 		return
+	end
+	if body:FindFirstChild("GraceShimmer") then
+		return -- already shimmering
 	end
 	local token = {}
 	shimmerToken = token
@@ -116,45 +130,54 @@ local function playGraceShimmer(body)
 	hl.Parent = body
 
 	local start = os.clock()
-	local moved = false
-
 	task.spawn(function()
-		-- `hl.Parent` guard: if the body is destroyed mid-grace (its owner
-		-- disconnects -> BodyManager.removeBody), hl is destroyed with it; stop
-		-- before writing to the locked instance so we still disconnect cleanly.
+		-- `hl.Parent` guard: if the body is destroyed mid-shimmer (owner disconnects),
+		-- hl is destroyed with it; stop before writing to the locked instance.
 		while shimmerToken == token and hl.Parent do
-			local elapsed = os.clock() - start
-			hl.FillTransparency = 0.5 + 0.3 * math.sin(elapsed * 8) -- pulse
-			-- Device-agnostic "moved": true once the player pushes the stick/keys,
-			-- across keyboard, touch, and gamepad (was raw WASD/Space only).
-			if not moved and InputController.isMoving() then
-				moved = true
-			end
-			local floorDone = elapsed >= Config.GRACE_FLOOR_SECONDS
-			if elapsed >= Config.GRACE_SECONDS or (floorDone and moved) then
-				break
-			end
+			hl.FillTransparency = 0.5 + 0.3 * math.sin((os.clock() - start) * 8) -- pulse
 			task.wait()
 		end
-		hl:Destroy()
-		if shimmerToken == token then
-			shimmerToken = nil
-		end
 	end)
+end
+
+-- Bind the shimmer to `body`'s authoritative GraceProtected attribute: show while true,
+-- hide when false/absent, and re-evaluate whenever it changes. Rebound on every swap.
+local function watchGrace(body)
+	if graceConn then
+		graceConn:Disconnect()
+		graceConn = nil
+	end
+	-- Clear the shimmer on the PREVIOUS body (client-local highlight nothing else
+	-- removes) before rebinding, so a swap doesn't leave a stale shield on the body
+	-- you no longer control.
+	if watchedBody then
+		stopShimmer(watchedBody)
+	end
+	watchedBody = body
+	if not (body and body.Parent) then
+		return
+	end
+	local function refresh()
+		if body:GetAttribute("GraceProtected") then
+			startShimmer(body)
+		else
+			stopShimmer(body)
+		end
+	end
+	graceConn = body:GetAttributeChangedSignal("GraceProtected"):Connect(refresh)
+	refresh() -- catch the case where the attribute is already true
 end
 
 function SoulController.start()
 	SoulMap.OnClientEvent:Connect(reconcile)
 
-	SetControlledBody.OnClientEvent:Connect(function(body, isSwap)
+	SetControlledBody.OnClientEvent:Connect(function(body, _isSwap)
 		myBody = body
 		-- Re-emphasize immediately (don't wait for the next SoulMap broadcast).
 		for b, halo in pairs(halos) do
 			applyEmphasis(b, halo)
 		end
-		if isSwap and body then
-			playGraceShimmer(body)
-		end
+		watchGrace(body)
 	end)
 end
 
