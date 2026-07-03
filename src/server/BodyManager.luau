@@ -26,6 +26,14 @@ local LOBBY_ROWS = math.ceil(Config.LOBBY_CAPACITY / Config.LOBBY_PER_ROW)
 -- the body's 1-based slot. 37 slots at HEX_RADIUS=3 cover the 16-body cap.
 local ARENA_SLOTS = HexGrid.spawnSlots(Config.HEX_RADIUS)
 
+-- Bounded retries for body construction: a transient avatar/asset-service outage
+-- can make BOTH the real-avatar build and the blank-description fallback throw on
+-- a given attempt, so we retry the whole primary-then-fallback attempt a few times
+-- with a short backoff before giving up (rather than leaving the player permanently
+-- bodiless on a single bad tick).
+local BUILD_BODY_MAX_ATTEMPTS = 3
+local BUILD_BODY_RETRY_BACKOFF_SECONDS = 0.5
+
 -- Slot allocator: hand out a 1-based grid index in [1, LOBBY_CAPACITY] per body and
 -- RECLAIM it when the body is removed, so join/leave churn never pushes a body past
 -- the grid (the arena field / balcony pad). Both the arena and balcony slots use the
@@ -64,7 +72,19 @@ local function ensureFolder()
 	return BodyManager.folder
 end
 
-local function buildAvatarBody(player)
+-- Build-time validity: HRP + Humanoid (the parts control ownership and the round
+-- eligibility check require). No Parent check since the body isn't parented into
+-- the Bodies folder until createBody finishes.
+local function isValidBody(body)
+	return body ~= nil
+		and body:FindFirstChild("HumanoidRootPart") ~= nil
+		and body:FindFirstChildOfClass("Humanoid") ~= nil
+end
+
+-- Primary build: the player's real avatar, normalized per Config. Pcall'd because
+-- both GetHumanoidDescriptionFromUserId and CreateHumanoidModelFromDescription hit
+-- Roblox's avatar/asset services, which can throw (rate limit, outage, bad UserId).
+local function tryBuildFromAvatar(player)
 	local body
 	local ok = pcall(function()
 		local desc = Players:GetHumanoidDescriptionFromUserId(player.UserId)
@@ -73,12 +93,57 @@ local function buildAvatarBody(player)
 		end
 		body = Players:CreateHumanoidModelFromDescription(desc, Enum.HumanoidRigType.R15)
 	end)
-	if not ok or not body then
-		-- Fallback for test players with no valid web avatar.
-		body = Players:CreateHumanoidModelFromDescription(
-			Instance.new("HumanoidDescription"), Enum.HumanoidRigType.R15)
+	if not ok then
+		return nil
 	end
 	return body
+end
+
+-- Fallback build: a blank HumanoidDescription (the default rig, no web lookup) for
+-- test players with no valid web avatar. Uses only core Roblox assets, so it should
+-- virtually always succeed -- but it is still pcall'd because buildAvatarBody must
+-- NEVER throw, even under a correlated avatar/asset-service outage.
+local function tryBuildBlank()
+	local body
+	local ok = pcall(function()
+		body = Players:CreateHumanoidModelFromDescription(
+			Instance.new("HumanoidDescription"), Enum.HumanoidRigType.R15)
+	end)
+	if not ok then
+		return nil
+	end
+	return body
+end
+
+-- Build a player's persistent body: try the real avatar, then the blank fallback,
+-- for a bounded number of attempts with a short backoff between them. NEVER throws
+-- -- an attempt whose primary AND fallback both fail is just treated as "no body
+-- yet" and retried, so a correlated failure of both branches degrades to nil
+-- instead of crashing the caller (createBody) and aborting the whole join. Returns
+-- nil only if every attempt failed; the caller then leaves the player bodiless.
+local function buildAvatarBody(player)
+	for attempt = 1, BUILD_BODY_MAX_ATTEMPTS do
+		local body = tryBuildFromAvatar(player)
+		if not isValidBody(body) then
+			if body then
+				body:Destroy() -- partial/invalid build from the primary path; discard it
+			end
+			body = tryBuildBlank()
+		end
+		if isValidBody(body) then
+			return body
+		end
+		if body then
+			body:Destroy() -- partial/invalid fallback build; discard it
+		end
+		if attempt < BUILD_BODY_MAX_ATTEMPTS then
+			task.wait(BUILD_BODY_RETRY_BACKOFF_SECONDS)
+		end
+	end
+	warn(string.format(
+		"[BSR] buildAvatarBody: all %d attempts failed for %s -- no body built",
+		BUILD_BODY_MAX_ATTEMPTS, player.Name))
+	return nil
 end
 
 -- Arena spawn CFrame for a 1-based body index: a hex center (pure HexGrid) offset
@@ -105,6 +170,20 @@ end
 
 function BodyManager.createBody(player)
 	local body = buildAvatarBody(player)
+	if not body then
+		-- Every build attempt failed (buildAvatarBody already warned). Do not index a
+		-- nil body or reserve a lobby/arena slot for it -- return nil so the caller
+		-- leaves the player bodiless.
+		return nil
+	end
+	if player.Parent ~= Players then
+		-- The build now yields (retries + backoff), so the player can disconnect while
+		-- it runs. Their removeBody already fired (found nothing, since bodyByOwner is
+		-- only set at the end of this function), so registering now would parent a ghost
+		-- body and leak a lobby slot for an absent player. Discard the build instead.
+		body:Destroy()
+		return nil
+	end
 	body.Name = "Body_" .. player.UserId
 
 	local hum = body:FindFirstChildOfClass("Humanoid")
