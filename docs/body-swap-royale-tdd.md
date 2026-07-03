@@ -197,6 +197,16 @@ function CanDieFromHazard(character):
 
 This logic is implemented in the pure `GraceModel` (time-injected, lune-tested). `RoundManager` stamps a window on each swap (`Config.GRACE_SECONDS = 1.5`, `Config.GRACE_FLOOR_SECONDS = 0.5`) and routes the void death through `RoundManager.eliminateFromHazard`, which consults `GraceModel.canDieFromHazard` before eliminating. `HasMovedSinceSwap` is derived server-side from observed **horizontal** position change on the client-owned body (vertical fall does not count, per GDD §4), sampled in the void monitor against the body's swap-time position; the threshold is `Config.GRACE_MOVE_EPSILON`. The client-side grace visual (shield shimmer + Soul pulse) is deferred to the Soul/VFX work.
 
+> **Update (2026-07-03 — Core Loop Correctness Bundle,
+> [spec](../superpowers/specs/2026-07-03-core-loop-correctness-design.md)):** the deferred
+> client-side grace visual above is now implemented and corrected. (a) Inherited momentum no
+> longer trips `HasMovedSinceSwap`/cancels grace, because `ControlManager` zeroes
+> `AssemblyLinearVelocity`/`AssemblyAngularVelocity` server-authoritatively during the
+> ownership handoff (own → zero → re-own), so every swap hands off a body at rest. (c) The
+> client shimmer no longer guesses the window from local input; the server mirrors its
+> `graceBlocked` gate on-change to an authoritative `GraceProtected` body attribute, and
+> `SoulController` starts/stops the shimmer from `GetAttributeChangedSignal("GraceProtected")`.
+
 ### Camera Transition (implementation)
 
 The swap camera change is a **hard cut + ~0.3s FOV punch**, not a positional interpolation (a fast fly-across the arena is more disorienting and can clip geometry). On receiving `SetControlledBody(body, isSwap=true)` the client sets `CameraSubject` to the new humanoid and, if `isSwap`, snaps `FieldOfView` to 88 and tweens to 70 over 0.3s (`Quad`/`Out`). *Implemented in `ClientControl.luau`.*
@@ -211,6 +221,16 @@ function ResolveAssignment(player, targetBody):
             SoftTeleportToNearestSafe(targetBody)
     ReassignControl(player, targetBody)
 ```
+
+> **Update (2026-07-03 — Core Loop Correctness Bundle,
+> [spec](../superpowers/specs/2026-07-03-core-loop-correctness-design.md)):** the rescue-based
+> resolution above (extend grace / soft-teleport) is still proposed and not committed, but a
+> narrower exclusion-based Layer 2 is now **implemented**: void-bound bodies are excluded from
+> the derangement via a current-state floor-beneath probe (raycast from body root to `VOID_Y`,
+> excluding player bodies, at swap commit). `RoundManager.commitSwap` computes the safe subset
+> via the pure, lune-tested `ControlModel.filterSafe(orderedPlayers, isSafe)`, and the derangement
+> plan is computed only over that subset; a doomed body is simply never assigned to a victim —
+> its own controller keeps it and dies.
 
 ---
 

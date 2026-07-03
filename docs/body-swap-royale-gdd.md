@@ -894,6 +894,16 @@ These systems address real weaknesses but carry enough risk — of removing chao
 
 **Status:** Proposed. Not committed. Evaluate *after* the grace window's effect on fairness is measured. If grace + preview already make inherited death feel fair, this rule may be unnecessary — and adding it risks sanding off chaos that the game wants to keep.
 
+> **Update (2026-07-03):** Bug #2's two correctness layers are now **IMPLEMENTED**, ahead of and
+> independent from the full rescue-based rule below — see the
+> [Core Loop Correctness Bundle](superpowers/specs/2026-07-03-core-loop-correctness-design.md).
+> Layer 1: swap handoff zeroes body velocity server-authoritatively, so inherited momentum no
+> longer cancels grace. Layer 2: a current-state floor-beneath probe excludes void-bound bodies
+> from the derangement at commit — a doomed body is never handed to a victim; the griefer keeps
+> their own falling body and dies. This is *exclusion*, not the rescue (extend grace / soft-
+> teleport) the rule below still proposes; that rescue behavior remains proposed and not
+> committed.
+
 **What it would do:** Prevent the derangement from handing a fresh player a body that is *already unrecoverable* at the instant of the swap. A narrow safety net, not a fairness blanket.
 
 A body is flagged **doomed** only if, at swap time, it is:
