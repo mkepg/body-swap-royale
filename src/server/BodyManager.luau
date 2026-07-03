@@ -124,6 +124,9 @@ end
 -- the player bodiless until the RoundManager re-embodiment sweep retries.
 local function buildAvatarBody(player)
 	for attempt = 1, BUILD_BODY_MAX_ATTEMPTS do
+		if player.Parent ~= Players then
+			return nil -- player left mid-build; stop spending avatar web calls / backoff on them
+		end
 		local body = tryBuildFromAvatar(player)
 		if not isValidBody(body) then
 			if body then
