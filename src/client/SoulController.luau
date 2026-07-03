@@ -19,6 +19,7 @@ local SetControlledBody = Remotes.get("SetControlledBody")
 local SoulController = {}
 local myBody = nil
 local halos = {} -- [body] = BillboardGui
+local myUserId = game:GetService("Players").LocalPlayer.UserId
 
 local SIZE_MINE = UDim2.fromOffset(42, 42)
 local SIZE_OTHER = UDim2.fromOffset(24, 24)
@@ -58,37 +59,6 @@ local function applyEmphasis(body, halo)
 	local stroke = halo:FindFirstChild("Dot") and halo.Dot:FindFirstChild("Emphasis")
 	if stroke then
 		stroke.Thickness = isMine and 3 or 0
-	end
-end
-
-local function reconcile(list)
-	local seen = {}
-	for _, entry in ipairs(list) do
-		local body, color = entry.body, entry.color
-		if body and body.Parent then
-			local head = body:FindFirstChild("Head") or body:FindFirstChild("HumanoidRootPart")
-			if head then
-				seen[body] = true
-				local halo = halos[body]
-				if not halo or halo.Parent ~= head then
-					if halo then halo:Destroy() end
-					halo = makeHalo(head)
-					halos[body] = halo
-				end
-				local dot = halo:FindFirstChild("Dot")
-				if dot then
-					dot.BackgroundColor3 = color
-				end
-				applyEmphasis(body, halo)
-			end
-		end
-	end
-	-- Drop halos for bodies no longer in the map.
-	for body, halo in pairs(halos) do
-		if not seen[body] then
-			halo:Destroy()
-			halos[body] = nil
-		end
 	end
 end
 
@@ -165,6 +135,56 @@ local function watchGrace(body)
 	end
 	graceConn = body:GetAttributeChangedSignal("GraceProtected"):Connect(refresh)
 	refresh() -- catch the case where the attribute is already true
+end
+
+-- Backstop for a missed/dropped SetControlledBody: if `myBody` is stale (nil,
+-- destroyed, or no longer authoritatively ours), re-derive it from the SoulMap
+-- broadcast's ControllerUserId attributes -- the same broadcast that drives the
+-- halos below, so this fires on every control change with no extra plumbing.
+local function reconcileMyBody(list)
+	if myBody and myBody.Parent and myBody:GetAttribute("ControllerUserId") == myUserId then
+		return
+	end
+	for _, entry in ipairs(list) do
+		local body = entry.body
+		if body and body.Parent and body:GetAttribute("ControllerUserId") == myUserId then
+			myBody = body
+			watchGrace(myBody)
+			return
+		end
+	end
+end
+
+local function reconcile(list)
+	reconcileMyBody(list)
+	local seen = {}
+	for _, entry in ipairs(list) do
+		local body, color = entry.body, entry.color
+		if body and body.Parent then
+			local head = body:FindFirstChild("Head") or body:FindFirstChild("HumanoidRootPart")
+			if head then
+				seen[body] = true
+				local halo = halos[body]
+				if not halo or halo.Parent ~= head then
+					if halo then halo:Destroy() end
+					halo = makeHalo(head)
+					halos[body] = halo
+				end
+				local dot = halo:FindFirstChild("Dot")
+				if dot then
+					dot.BackgroundColor3 = color
+				end
+				applyEmphasis(body, halo)
+			end
+		end
+	end
+	-- Drop halos for bodies no longer in the map.
+	for body, halo in pairs(halos) do
+		if not seen[body] then
+			halo:Destroy()
+			halos[body] = nil
+		end
+	end
 end
 
 function SoulController.start()

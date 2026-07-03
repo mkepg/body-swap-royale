@@ -19,7 +19,10 @@ local RoundManager = require(script.RoundManager)
 local EconomyService = require(script.EconomyService)
 
 local function onPlayerAdded(player)
-	EconomyService.onPlayerAdded(player) -- load/cache the profile + push it to the client
+	-- Economy persistence yields on DataStore (retry+backoff, seconds on a throttled
+	-- first join). Run it on its own thread so embodiment is NEVER gated behind it --
+	-- a disembodied (camera-only) player is the bug we are fixing.
+	task.spawn(EconomyService.onPlayerAdded, player) -- load/cache the profile + push it to the client
 	RoundManager.addPlayer(player)
 end
 
