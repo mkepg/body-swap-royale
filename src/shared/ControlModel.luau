@@ -192,4 +192,20 @@ function ControlModel.resetControl(model)
 	return result
 end
 
+-- Reduce an ordered roster to the subset that is currently SAFE to swap, preserving
+-- order. `isSafe(player) -> bool` is injected (in production: "has solid floor beneath
+-- before VOID_Y"; in tests: a plain predicate), keeping this pure. Void-bound bodies
+-- are excluded from the derangement so they are never handed to another player; the
+-- caller's existing `< 2` guard then suppresses the swap if too few remain. Does not
+-- mutate the input.
+function ControlModel.filterSafe(orderedPlayers, isSafe)
+	local out = {}
+	for _, player in ipairs(orderedPlayers) do
+		if isSafe(player) then
+			out[#out + 1] = player
+		end
+	end
+	return out
+end
+
 return ControlModel
