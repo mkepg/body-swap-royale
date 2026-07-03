@@ -141,6 +141,36 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   (GDD §4). Disconnect elimination remains ungated.
 
 ### Fixed
+- **First-join bodiless spawn (camera-only, round won't start) (2026-07-03).**
+  Players have no `Character` (`CharacterAutoLoads = false`); each is a disembodied
+  controller given a server-built body. Intermittently — most often on a first join —
+  a player was left with only a camera, no body, and the round would not start even at
+  the minimum player count. Root-caused to four independent, first-join-amplified fault
+  paths and fixed with defense-in-depth:
+  - **Total body build.** `BodyManager.buildAvatarBody`'s fallback rig build was NOT
+    pcall-guarded; when the primary avatar build failed (a correlated avatar/asset-service
+    outage), the fallback could also throw, `buildAvatarBody` returned nil, and
+    `createBody` crashed indexing `body.Name` — aborting the whole join. It now guards
+    both build branches, retries a bounded number of times with backoff, never throws,
+    and `createBody`/`RoundManager.addPlayer` tolerate a nil body (log + skip registration,
+    no crash). Also drops a body/slot if the player disconnects during the longer build.
+  - **Self-healing control assignment.** The `SetControlledBody` RemoteEvent is
+    fire-and-forget and was the client's ONLY path to learn its body; the server fires it
+    from `PlayerAdded`, often before the client's handler is connected (cold first join),
+    so a dropped event stranded the client camera-only with no recovery. The server now
+    stamps an authoritative `ControllerUserId` attribute on the body at the single
+    ownership choke point (`ControlManager.applyOwnership`), and clients (`ClientControl`,
+    `SoulController`) self-heal by re-acquiring the body whose `ControllerUserId` matches
+    their own UserId — so a lost assignment (spawn or swap) reconciles within a frame.
+  - **Decoupled embodiment from economy.** Body creation was serialized behind
+    `EconomyService.onPlayerAdded`'s yielding, retry+backoff DataStore load (seconds on a
+    throttled first-join key). The economy load now runs on its own thread
+    (`task.spawn`), so embodiment is never gated behind persistence.
+  - **Re-embodiment net.** `RoundManager.addPlayer` is now idempotent + re-entrancy-safe
+    (an `addInProgress` guard around the yielding build), and a pcall-isolated periodic
+    sweep (`Config.BODY_RECONCILE_SECONDS`) re-embodies any connected-but-bodiless player
+    as a last resort — arena-/phase-agnostic, so a first-join failure self-heals instead
+    of stranding the player.
 - Disconnect handling no longer destroys a leaving player's avatar body
   unconditionally. After a swap that body may be controlled by another player;
   the old code yanked them and orphaned the leaver's controlled body.

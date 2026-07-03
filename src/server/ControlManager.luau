@@ -62,6 +62,15 @@ local function applyOwnership(player, body, isSwap)
 			warn("[ControlManager] SetNetworkOwner failed for " .. tostring(player) .. ": " .. tostring(err))
 		end
 	end
+	-- Authoritative "who controls this body RIGHT NOW" -- attributes replicate
+	-- reliably and in-order per instance, unlike the fire-and-forget SetControlledBody
+	-- remote below. The client self-heals its camera/control from this if that remote
+	-- is ever missed (e.g. fired before the client's LocalScripts finish loading on a
+	-- cold first join). Distinct from BodyManager's OwnerUserId (stable avatar identity
+	-- for this body); ControllerUserId changes on every swap/regrant/reset.
+	if body then
+		body:SetAttribute("ControllerUserId", player.UserId)
+	end
 	SetControlledBody:FireClient(player, body, isSwap == true)
 end
 
