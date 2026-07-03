@@ -527,6 +527,14 @@ end
 
 function RoundManager.addPlayer(player)
 	local body = BodyManager.createBody(player)
+	if not body then
+		-- Every build attempt failed (see BodyManager.buildAvatarBody). Do not poison
+		-- the control map with a nil body or register a bodyless player as present.
+		-- The player stays connected as a bodiless spectator (camera only); there is
+		-- no automatic retry yet.
+		warn(string.format("[BSR] %s joined with no body (spectator, no retry yet)", player.Name))
+		return
+	end
 	ControlManager.addPlayer(player, body) -- start in your own body
 	RoundState.addPlayer(model, player)
 	print(string.format("[BSR] %s -> own body (%s)", player.Name, body.Name))
