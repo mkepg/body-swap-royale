@@ -120,7 +120,8 @@ end
 -- -- an attempt whose primary AND fallback both fail is just treated as "no body
 -- yet" and retried, so a correlated failure of both branches degrades to nil
 -- instead of crashing the caller (createBody) and aborting the whole join. Returns
--- nil only if every attempt failed; the caller then leaves the player bodiless.
+-- nil only if every attempt failed; the caller (RoundManager.addPlayer) then leaves
+-- the player bodiless until the RoundManager re-embodiment sweep retries.
 local function buildAvatarBody(player)
 	for attempt = 1, BUILD_BODY_MAX_ATTEMPTS do
 		local body = tryBuildFromAvatar(player)
@@ -173,7 +174,8 @@ function BodyManager.createBody(player)
 	if not body then
 		-- Every build attempt failed (buildAvatarBody already warned). Do not index a
 		-- nil body or reserve a lobby/arena slot for it -- return nil so the caller
-		-- leaves the player bodiless.
+		-- (RoundManager.addPlayer) leaves the player bodiless; RoundManager's periodic
+		-- re-embodiment sweep will retry until it succeeds.
 		return nil
 	end
 	if player.Parent ~= Players then

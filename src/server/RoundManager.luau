@@ -525,14 +525,37 @@ end
 
 -- ===== lifecycle entry points (called by init.server) =====
 
+-- Guards addPlayer against overlapping calls for the same player. BodyManager.createBody
+-- YIELDS (avatar web calls + retry backoff), so the reconciler sweep (below) can fire
+-- again for a player whose PlayerAdded-driven addPlayer is still mid-build; without this,
+-- that interleaving would build two bodies and double-register the player.
+local addInProgress = {} -- [player] = true while a body build is running
+
+-- Idempotent + re-entrancy-safe: a no-op if the player is already embodied
+-- (BodyManager.getOwnBody ~= nil) or a build is already in flight for them. Safe to
+-- call repeatedly -- PlayerAdded calls it once; the reconciler sweep in start() calls
+-- it again for any connected-but-bodiless player until it succeeds.
 function RoundManager.addPlayer(player)
-	local body = BodyManager.createBody(player)
+	if BodyManager.getOwnBody(player) ~= nil or addInProgress[player] then
+		return
+	end
+	addInProgress[player] = true
+	-- pcall so a throw from createBody (which is designed never to throw, but this
+	-- last-resort net must be fail-safe regardless) still clears addInProgress. A
+	-- leaked `true` would permanently block this player's re-embodiment, since the
+	-- top guard also gates every reconciler retry.
+	local ok, body = pcall(BodyManager.createBody, player)
+	addInProgress[player] = nil -- always cleared, even on throw
+	if not ok then
+		warn(string.format("[BSR] createBody(%s) errored; reconciler will retry: %s", player.Name, tostring(body)))
+		return
+	end
 	if not body then
 		-- Every build attempt failed (see BodyManager.buildAvatarBody). Do not poison
 		-- the control map with a nil body or register a bodyless player as present.
-		-- The player stays connected as a bodiless spectator (camera only); there is
-		-- no automatic retry yet.
-		warn(string.format("[BSR] %s joined with no body (spectator, no retry yet)", player.Name))
+		-- The player stays connected as a bodiless spectator (camera only); the
+		-- reconciler sweep in RoundManager.start() will retry.
+		warn(string.format("[BSR] %s joined with no body; reconciler will retry", player.Name))
 		return
 	end
 	ControlManager.addPlayer(player, body) -- start in your own body
@@ -559,6 +582,7 @@ function RoundManager.removePlayer(player)
 	end
 	GraceModel.clear(grace, player)
 	swapPos[player] = nil
+	addInProgress[player] = nil -- clear a stale guard if the player disconnected mid-build
 	-- If the disconnect ended the round, the Active loop observes phase Ended and
 	-- runs endRound; no special handling needed here.
 end
@@ -572,6 +596,27 @@ end
 function RoundManager.start()
 	HazardSystem.build() -- construct the 3-floor hex arena once (replaces the baseplate)
 	LobbyArea.build() -- construct the elevated lobby balcony once
+	-- Re-embodiment net: a connected player with no own body (every build attempt
+	-- failed on join) is re-embodied here. Arena-/phase-agnostic and idempotent (addPlayer's
+	-- own guard prevents a double build). A mid-round heal gives the player a balcony body
+	-- that joins the next round, exactly like a late joiner. Each player is pcall-isolated:
+	-- this loop is the last-resort recovery and never restarts, so an uncaught throw would
+	-- unwind out of both the for and the while true and silently disable recovery for the
+	-- server's lifetime. The p.Parent == Players guard also skips a player who left during a
+	-- previous player's build yield (no wasted avatar web build + misleading warn).
+	task.spawn(function()
+		while true do
+			task.wait(Config.BODY_RECONCILE_SECONDS)
+			for _, p in ipairs(Players:GetPlayers()) do
+				if p.Parent == Players and not BodyManager.getOwnBody(p) then
+					local ok, err = pcall(RoundManager.addPlayer, p)
+					if not ok then
+						warn(string.format("[BSR] reconciler addPlayer(%s) errored: %s", p.Name, tostring(err)))
+					end
+				end
+			end
+		end
+	end)
 	task.spawn(function()
 		while true do
 			-- Re-broadcast the Lobby state on every poll, not just once. FireAllClients
