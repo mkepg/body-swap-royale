@@ -197,6 +197,9 @@ local function stampGrace(players)
 		local body = ControlManager.getControlledBody(player)
 		local root = body and body:FindFirstChild("HumanoidRootPart")
 		swapPos[player] = root and root.Position or nil
+		if body then
+			body:SetAttribute("GraceProtected", true) -- client shimmer follows this
+		end
 	end
 end
 
@@ -267,6 +270,7 @@ function RoundManager.eliminate(player)
 	-- from the lobby instead of leaving a parked corpse in the arena.
 	local body = ControlManager.getControlledBody(player)
 	if body then
+		body:SetAttribute("GraceProtected", false)
 		BodyManager.sendToLobby(player, body)
 	end
 	EliminationEvent:FireAllClients(player.Name)
@@ -321,6 +325,12 @@ local function startMonitor()
 						-- un-blocks arming. HazardSystem raycasts from `position` to
 						-- find the tile actually under the body (hex logic stays there).
 						local graceBlocked = not GraceModel.canDieFromHazard(grace, player, t)
+						-- Mirror the authoritative grace gate onto the body so the client
+						-- shimmer follows it instead of guessing from local input. On-change
+						-- only (avoid per-tick replication spam). graceBlocked == protected.
+						if body:GetAttribute("GraceProtected") ~= graceBlocked then
+							body:SetAttribute("GraceProtected", graceBlocked)
+						end
 						samples[#samples + 1] = {
 							position = root.Position,
 							graceBlocked = graceBlocked,
