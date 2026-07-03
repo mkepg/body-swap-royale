@@ -328,6 +328,12 @@ Config.ECONOMY_SAVE_RETRIES = 3         -- save attempts before logging failure
 Config.ECONOMY_RETRY_BACKOFF = 1.0      -- seconds; multiplied by the attempt number
 Config.ECONOMY_AUTOSAVE_SECONDS = 120   -- periodic background-save cadence
 
+-- Re-embodiment sweep (RoundManager): how often the server rechecks every connected
+-- player for a missing own body (every BodyManager.createBody attempt failed on join)
+-- and retries. Short enough that a bodiless-on-join player recovers quickly without
+-- meaningfully polling the player list.
+Config.BODY_RECONCILE_SECONDS = 2
+
 -- ===== Animated XP fill (reward panel) =====
 -- Timing only; the fill GEOMETRY (segments across level boundaries) is pure
 -- (XpFillModel). Consumed by ClientEconomyHud's timeline player.
