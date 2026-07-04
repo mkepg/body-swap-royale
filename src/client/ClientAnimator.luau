@@ -28,6 +28,12 @@ local ClientAnimator = {}
 local WALK_THRESHOLD = 0.5 -- studs/s of horizontal speed before "walk" kicks in
 local RISING_THRESHOLD = 1 -- upward studs/s that reads as "jump" rather than "fall"
 
+-- A body's Humanoid can lag one or more frames behind its ChildAdded on a cold join, so
+-- loadTracks returns nil and the body would never animate for the session. Retry until the
+-- rig replicates (same late-replication class ClientControl already guards against).
+local REGISTER_MAX_ATTEMPTS = 10
+local REGISTER_RETRY_SECONDS = 0.2
+
 -- [body] = { tracks = { idle, walk, jump, fall }, current = stateName }
 local rigs = {}
 
@@ -64,10 +70,21 @@ end
 
 local function register(body)
 	if rigs[body] then return end
-	local tracks = loadTracks(body)
-	if tracks then
-		rigs[body] = { tracks = tracks, current = nil }
-	end
+	-- Retry off the caller's thread: loadTracks needs the Humanoid, which may not have
+	-- replicated yet. Give up after REGISTER_MAX_ATTEMPTS (body is likely gone).
+	task.spawn(function()
+		for _ = 1, REGISTER_MAX_ATTEMPTS do
+			if not body.Parent or rigs[body] then return end -- removed, or registered elsewhere
+			local tracks = loadTracks(body)
+			if tracks then
+				if body.Parent and not rigs[body] then
+					rigs[body] = { tracks = tracks, current = nil }
+				end
+				return
+			end
+			task.wait(REGISTER_RETRY_SECONDS)
+		end
+	end)
 end
 
 local function update()
