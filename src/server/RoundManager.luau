@@ -275,6 +275,11 @@ function RoundManager.eliminate(player)
 	if body then
 		body:SetAttribute("GraceProtected", false)
 		BodyManager.sendToLobby(player, body)
+		-- Re-assert ownership after the server pivot (reposition-then-re-own), so the
+		-- teleport replicates onto the client-owned body -- uniform with beginRound's
+		-- resetBody->resetControl and the disconnect rescue's sendToArena->regrantControl
+		-- (review Action #4; matters for the fast-falling elimination case under latency).
+		ControlManager.regrantControl(player)
 	end
 	EliminationEvent:FireAllClients(player.Name)
 	GraceModel.clear(grace, player)
