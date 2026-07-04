@@ -59,10 +59,13 @@ eliminated alike — establishing one invariant: **every owned body is validated
 eliminated bodies (a teleport back toward the arena snaps to the last valid anchor) with no special
 case, no ownership revocation, and no hardcoded balcony volume.
 
-**Lenient + debounce.** Generous per-tick budgets plus a required run of consecutive violating ticks
-before any correction. A one-tick lag spike is forgiven; only sustained, physically-impossible motion
-is corrected. An exploiter therefore gets ~0.2–0.3 s of illegal motion before the snap — still unable
-to win — while honest lag is untouched.
+**Lenient + debounce.** Modest per-tick budgets plus a required run of consecutive violating ticks
+before any correction. The debounce — not the slack — is what forgives latency: a lag spike arrives as
+a single oversized tick (the server loop runs at a fixed 10 Hz regardless of the client's connection),
+then the next tick resets the run. Keeping the slack modest matters because the horizontal slack
+doubles as the *permitted speed-hack ceiling* (a body moving at `slack ×` walk speed every tick is never
+flagged); leaning on debounce for lag lets the ceiling stay tight. An exploiter gets ~0.5 s of illegal
+motion before the snap — still unable to win — while honest lag is untouched.
 
 ## 4. Architecture — pure / glue split
 
@@ -111,8 +114,13 @@ A tick is a **violation** if ANY predicate holds:
    fall well past this), so falling never trips it.
 3. **Anti-hover (fly):** `hasFloor == false` AND `vertDelta > -minFallEpsilon`.
    A body over the void / a hole with no floor beneath it MUST be losing altitude; one that holds or
-   gains altitude is flying. `minFallEpsilon` tolerates sampling jitter at a jump apex; debounce
-   forgives the ~1 tick a legit jump-arc over a hole spends not descending.
+   *slowly gains* altitude indefinitely is flying. A legitimate jump across an eroded gap, however,
+   ascends over the void before it falls — so its ascent + apex ticks also satisfy this predicate. The
+   discriminator between a legal gap-jump and an illegal hover is **duration**: a jump arc's
+   non-descending phase is bounded by physics (ascent time `= sqrt(2·JumpHeight/gravity)` ≈ 0.27 s ≈ 3
+   ticks at defaults), while a fly is unbounded. This is exactly what the debounce captures — so
+   `violationTicks` MUST exceed the maximum legal non-descending run (see §5). `minFallEpsilon` only
+   tolerates sampling jitter around zero vertical velocity.
 
 **Debounce:** increment `violations[bodyId]` on any violating tick, reset to 0 on a clean tick. Return
 `correct = true` only when the counter reaches `violationTicks`, and reset the counter on that return
@@ -170,15 +178,20 @@ review flagged for 2-client confirmation).
 
 ```
 Config.MOVE_VALIDATION_ENABLED = true     -- dev/test switch (like HAZARDS_ENABLED), NOT a gameplay tunable
-Config.MOVE_HORIZONTAL_SLACK   = 3.0      -- x (WALK_SPEED * dt); generous, absorbs normal lag jitter
-Config.MOVE_VERTICAL_SLACK     = 1.5      -- x (jumpSpeed * dt) rise budget
+Config.MOVE_HORIZONTAL_SLACK   = 2.0      -- x (WALK_SPEED * dt) per-tick budget = the permitted speed-hack
+                                          --   ceiling; debounce (not slack) forgives lag, so keep this tight
+Config.MOVE_VERTICAL_SLACK     = 1.5      -- x (jumpSpeed * dt) rise budget (a whole legal jump rises < this in one tick)
 Config.MOVE_MIN_FALL_EPSILON   = 0.5      -- studs/tick; descent below which a floorless body counts as hovering
-Config.MOVE_VIOLATION_TICKS    = 3        -- consecutive violating ticks (~0.3s at 10Hz) before a correction
+Config.MOVE_VIOLATION_TICKS    = 5        -- consecutive violating ticks (~0.5s at 10Hz) before a correction.
+                                          --   MUST exceed the max legal non-descending run (a gap-jump's
+                                          --   ascent, ~3 ticks at default gravity + JUMP_HEIGHT); 5 leaves margin.
 ```
 
 `jumpSpeed` is derived at runtime in the glue: `math.sqrt(2 * Workspace.Gravity * Config.JUMP_HEIGHT)`
-(≈53 studs/s at defaults → ≈5.3 studs/tick, ×1.5 slack ≈ 8 studs/tick allowed rise). Horizontal budget
-at defaults ≈ 16×0.1×3 = 4.8 studs/tick. These are deliberately loose; tune down only with playtest data.
+(≈53 studs/s at defaults → ≈5.3 studs/tick actual jump rise, under the ×1.5 budget ≈ 8 studs/tick).
+Horizontal budget at defaults ≈ 16×0.1×2 = 3.2 studs/tick (a sustained >2× speed hack is corrected; a
+single lag spike above it is forgiven by debounce). Tune only with playtest data; if `Workspace.Gravity`
+or `JUMP_HEIGHT` change, re-check `MOVE_VIOLATION_TICKS` against the ascent-time formula in §4.2.
 
 ## 6. Performance
 
@@ -196,7 +209,7 @@ reusing HazardSystem's per-body contact result.
   `violationTicks` in a row. The chosen lenient+debounce posture exists precisely to guarantee this.
 - **False-positive worst case:** a ~one-tile snap that reads like an ordinary lag correction. The smoke
   test must explicitly confirm honest (including artificially-laggy) play is never corrected.
-- **Cheaters:** ~0.2–0.3 s of illegal motion then snapped back; no kick, no message → no false-accusation
+- **Cheaters:** ~0.5 s of illegal motion then snapped back; no kick, no message → no false-accusation
   blowback and no way to win.
 - **Eliminated players:** balcony roaming unchanged (the barrier already contains walking); only a
   teleport/fly attempt snaps back.
