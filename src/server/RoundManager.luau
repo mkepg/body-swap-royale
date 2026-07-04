@@ -26,6 +26,7 @@ local RoundState = require(ReplicatedStorage.Shared.RoundState)
 local GraceModel = require(ReplicatedStorage.Shared.GraceModel)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local CadenceModel = require(ReplicatedStorage.Shared.CadenceModel)
+local MovementValidator = require(ReplicatedStorage.Shared.MovementValidator)
 local ControlModel = require(ReplicatedStorage.Shared.ControlModel)
 local BodyManager = require(script.Parent.BodyManager)
 local ControlManager = require(script.Parent.ControlManager)
@@ -47,6 +48,17 @@ local model = RoundState.new(Config.MIN_PLAYERS_TO_START, Config.MIN_PLAYERS_TO_
 -- position at its last swap, so the void monitor can derive horizontal travel.
 local grace = GraceModel.new()
 local swapPos = {} -- [player] = Vector3
+
+-- Movement validation (server-authoritative anti-cheat). The pure MovementValidator
+-- judges each owned body's per-tick motion; the glue below holds the only Roblox-typed
+-- state. `lastPos` is the previous tick's root position (to derive deltas); `validAnchor`
+-- is the most recent CLEAN + GROUNDED pose (the rubber-band target). Jump launch speed is
+-- derived from gravity + JUMP_HEIGHT (kept out of the pure model, which only multiplies).
+local validator = MovementValidator.new()
+local lastPos = {}       -- [body] = Vector3
+local validAnchor = {}   -- [body] = CFrame
+local lastMonitorT = nil -- previous monitor-tick timestamp (measured dt)
+local jumpSpeed = math.sqrt(2 * Workspace.Gravity * Config.JUMP_HEIGHT)
 
 -- Round-scoped dynamic-cadence state (reset in beginRound). cadenceStartCount is the
 -- alive count at round start; swapsSoFar counts swaps committed this round. CadenceModel
@@ -162,6 +174,74 @@ local function hasFloorBeneath(body)
 	end
 	local hit = Workspace:Raycast(origin, Vector3.new(0, downTo, 0), params)
 	return hit ~= nil
+end
+
+-- Movement-validation bookkeeping ------------------------------------------------
+
+-- A server-initiated PivotTo (round start / end / elimination / rescue) moves a body far
+-- in one tick; clearing its tracking makes the next monitor tick re-seed cleanly instead
+-- of reading the teleport as a violation.
+local function noteServerReposition(body)
+	if not body then return end
+	lastPos[body] = nil
+	validAnchor[body] = nil
+	MovementValidator.reseed(validator, body)
+end
+
+-- Drop all validation state for a destroyed body (disconnect), so the tables never leak.
+local function forgetBodyValidation(body)
+	if not body then return end
+	lastPos[body] = nil
+	validAnchor[body] = nil
+	MovementValidator.forget(validator, body)
+end
+
+-- Validate one owned body for one monitor tick. Reduces the body to scalar deltas, asks the
+-- pure MovementValidator, and on a confirmed violation snaps it back to its last valid grounded
+-- pose (reposition-then-re-own). `player` is the current controller (for the re-own). `dt` is the
+-- measured seconds since the last tick.
+local function validateBody(player, body, dt)
+	local root = body and body:FindFirstChild("HumanoidRootPart")
+	if not root then return end
+	local pos = root.Position
+	local prev = lastPos[body]
+	if not prev then
+		-- First sight (or just after a server reposition): seed and skip; no delta yet.
+		lastPos[body] = pos
+		validAnchor[body] = body:GetPivot()
+		MovementValidator.reseed(validator, body)
+		return
+	end
+	local delta = pos - prev
+	local hasFloor = hasFloorBeneath(body) -- the ONE ray per body per tick (reused below)
+	local decision = MovementValidator.step(validator, body, {
+		horizDelta = Vector3.new(delta.X, 0, delta.Z).Magnitude,
+		vertDelta = delta.Y,
+		dt = dt,
+		hasFloor = hasFloor,
+	}, {
+		walkSpeed = Config.WALK_SPEED,
+		horizontalSlack = Config.MOVE_HORIZONTAL_SLACK,
+		jumpSpeed = jumpSpeed,
+		verticalSlack = Config.MOVE_VERTICAL_SLACK,
+		minFallEpsilon = Config.MOVE_MIN_FALL_EPSILON,
+		violationTicks = Config.MOVE_VIOLATION_TICKS,
+	})
+	if decision.correct then
+		local anchor = validAnchor[body]
+		if anchor then
+			-- Reposition-then-re-own: pivot (zeroes velocity) then re-assert ownership so the
+			-- snap replicates onto the client-owned body. Same primitive as the disconnect rescue.
+			BodyManager.pivotTo(body, anchor)
+			ControlManager.regrantControl(player)
+			lastPos[body] = anchor.Position -- next delta is measured from where we put it
+		end
+	else
+		lastPos[body] = pos
+		if hasFloor then
+			validAnchor[body] = body:GetPivot() -- only anchor on a clean, grounded pose
+		end
+	end
 end
 
 -- Is the body `player` currently controls safe to swap right now?
@@ -280,6 +360,7 @@ function RoundManager.eliminate(player)
 		-- resetBody->resetControl and the disconnect rescue's sendToArena->regrantControl
 		-- (review Action #4; matters for the fast-falling elimination case under latency).
 		ControlManager.regrantControl(player)
+		noteServerReposition(body) -- the send-to-lobby pivot is server-initiated, not a cheat
 	end
 	EliminationEvent:FireAllClients(player.Name)
 	GraceModel.clear(grace, player)
@@ -303,9 +384,24 @@ end
 local function startMonitor()
 	local token = {}
 	monitorToken = token
+	lastMonitorT = nil
 	task.spawn(function()
 		while monitorToken == token do
 			local t = now()
+			local dt = lastMonitorT and (t - lastMonitorT) or 0.1
+			if dt <= 0 then dt = 0.1 end
+			lastMonitorT = t
+			-- Movement validation runs for EVERY owned body (alive or eliminated) -- one
+			-- invariant: all owned bodies are validated. This also contains an eliminated
+			-- player's balcony body (a teleport back toward the arena is snapped away).
+			if Config.MOVE_VALIDATION_ENABLED then
+				for _, player in ipairs(Players:GetPlayers()) do
+					local body = ControlManager.getControlledBody(player)
+					if body then
+						validateBody(player, body, dt)
+					end
+				end
+			end
 			-- One server loop now drives BOTH void death and hex erosion: gather a
 			-- body sample per alive player (position + whether grace still shields it)
 			-- and hand them to HazardSystem.step after the per-player death check.
@@ -396,6 +492,7 @@ local function beginRound()
 	-- unanchor in resetBody is defensive.)
 	for _, p in ipairs(Players:GetPlayers()) do
 		BodyManager.resetBody(p) -- reposition own body to spawn + unanchor
+		noteServerReposition(BodyManager.getOwnBody(p)) -- don't read the spawn teleport as a violation
 	end
 	ControlManager.resetControl() -- everyone back on their own body (+ retarget)
 	broadcastState() -- phase Active
@@ -522,6 +619,7 @@ local function endRound()
 	-- now standing on the balcony.
 	for _, p in ipairs(Players:GetPlayers()) do
 		BodyManager.returnToLobby(p)
+		noteServerReposition(BodyManager.getOwnBody(p))
 	end
 	ControlManager.resetControl()
 	RoundState.reset(model) -- Ended -> Lobby
@@ -574,8 +672,10 @@ function RoundManager.removePlayer(player)
 	-- was controlling to a still-ALIVE survivor -- which would otherwise strand that
 	-- survivor on the balcony and stop the round from ever ending (disconnect-strand spec).
 	local leaverWasAlive = RoundState.isAlive(model, player)
+	local leaverBody = BodyManager.getOwnBody(player) -- captured before ControlManager destroys it
 	RoundState.removePlayer(model, player) -- lifecycle (may auto-end the round)
 	local decision = ControlManager.removePlayer(player) -- absorb + destroy the leaver's own body
+	forgetBodyValidation(leaverBody) -- the leaver's body is destroyed; drop its tracking
 	-- Alive-aware rescue: reposition the survivor's newly-absorbed body back into the
 	-- arena and re-assert their ownership (reposition-then-re-own, like beginRound, so
 	-- the teleport replicates onto the client-owned body). Their camera follows the
@@ -584,6 +684,7 @@ function RoundManager.removePlayer(player)
 		and RoundState.isAlive(model, decision.reassign.player) then
 		BodyManager.sendToArena(decision.reassign.body)
 		ControlManager.regrantControl(decision.reassign.player)
+		noteServerReposition(decision.reassign.body) -- rescued survivor's body was server-pivoted
 	end
 	GraceModel.clear(grace, player)
 	swapPos[player] = nil
