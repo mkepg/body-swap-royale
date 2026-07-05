@@ -150,4 +150,10 @@ function ControlManager.getControlledBody(player)
 	return ControlModel.controlledBody(model, player)
 end
 
+-- Inverse lookup: the player currently controlling `body` (nil if none). Used by
+-- the broken-body heal to find who is riding a torn-down body.
+function ControlManager.getController(body)
+	return model.controllerOf[body]
+end
+
 return ControlManager

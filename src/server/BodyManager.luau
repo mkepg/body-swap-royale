@@ -219,6 +219,20 @@ function BodyManager.getOwnBody(player)
 	return BodyManager.bodyByOwner[player]
 end
 
+-- Runtime intactness of a REGISTERED body: parented into the world with its
+-- HumanoidRootPart and Humanoid still present. Registration only happens after a
+-- fully-built body is parented, and no legitimate path unparents or dismembers
+-- one afterwards -- so failing this is never transient. It means the body was
+-- torn down outside our control (e.g. the engine destroyed its parts at
+-- Workspace.FallenPartsDestroyHeight during a grace-shielded fall) and it will
+-- never work again: its controller is stranded camera-only until it is rebuilt.
+function BodyManager.isIntact(body)
+	return body ~= nil
+		and body.Parent ~= nil
+		and body:FindFirstChild("HumanoidRootPart") ~= nil
+		and body:FindFirstChildOfClass("Humanoid") ~= nil
+end
+
 -- Returns an array of all current bodies (handy for the client animation driver
 -- or any per-body server pass).
 function BodyManager.getAllBodies()
