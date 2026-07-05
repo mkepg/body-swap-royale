@@ -704,6 +704,45 @@ function RoundManager.forceSwap()
 	doSwap()
 end
 
+-- Tear down + rebuild a player whose REGISTERED own body is no longer intact
+-- (unparented / engine-destroyed parts -- e.g. a grace-shielded fall that beat the
+-- 10 Hz void monitor to Workspace.FallenPartsDestroyHeight). Such a body never
+-- heals on its own, and it used to BLIND the bodiless sweep: getOwnBody was still
+-- set, so the sweep never retried, stranding whoever controlled the wreck
+-- camera-only for the rest of the server's life (and hanging the round -- a
+-- rootless body skips the void-death check, so its rider could never be
+-- eliminated). Sequenced to preserve the control bijection + round invariants:
+--   1. eliminate the RIDER (whoever controls the wreck): their ride is gone --
+--      same semantics as dying to the void (idempotent no-op if not alive);
+--   2. eliminate the OWNER too if they are alive on some OTHER body: their avatar
+--      body is being torn down, and eliminate() first parks the body they control;
+--   3. ControlManager.removePlayer applies the lune-tested absorb rule and
+--      destroys the wreck; a rider reassigned by the absorb (always just
+--      eliminated) is parked on their balcony slot, reposition-then-re-own;
+--   4. the sweep's existing bodiless branch then rebuilds the owner exactly like
+--      a late joiner (fresh body on the balcony, next round entry).
+local function healBrokenBody(owner)
+	local broken = BodyManager.getOwnBody(owner)
+	local rider = ControlManager.getController(broken)
+	warn(string.format("[BSR] %s's body is broken (unparented/destroyed parts); rebuilding (rider: %s)",
+		owner.Name, rider and rider.Name or "none"))
+	if rider then
+		RoundManager.eliminate(rider)
+	end
+	if rider ~= owner then
+		RoundManager.eliminate(owner)
+	end
+	local decision = ControlManager.removePlayer(owner)
+	if decision and decision.reassign then
+		BodyManager.sendToLobby(decision.reassign.player, decision.reassign.body)
+		ControlManager.regrantControl(decision.reassign.player)
+		noteServerReposition(decision.reassign.body)
+	end
+	forgetBodyValidation(broken)
+	-- Owner stays present in RoundState (they are still connected); the sweep's
+	-- addPlayer call right after re-embodies them.
+end
+
 function RoundManager.start()
 	HazardSystem.build() -- construct the 3-floor hex arena once (replaces the baseplate)
 	LobbyArea.build() -- construct the elevated lobby balcony once
@@ -719,10 +758,24 @@ function RoundManager.start()
 		while true do
 			task.wait(Config.BODY_RECONCILE_SECONDS)
 			for _, p in ipairs(Players:GetPlayers()) do
-				if p.Parent == Players and not BodyManager.getOwnBody(p) then
-					local ok, err = pcall(RoundManager.addPlayer, p)
-					if not ok then
-						warn(string.format("[BSR] reconciler addPlayer(%s) errored: %s", p.Name, tostring(err)))
+				if p.Parent == Players then
+					-- Health check must match the CONSUMERS' definition of usable
+					-- (hasValidBody / the client's camera), not mere registration: a
+					-- registered-but-broken body would otherwise blind this sweep
+					-- forever. Tear the wreck down first; the bodiless branch below
+					-- then rebuilds in the same pass.
+					local own = BodyManager.getOwnBody(p)
+					if own and not BodyManager.isIntact(own) then
+						local ok, err = pcall(healBrokenBody, p)
+						if not ok then
+							warn(string.format("[BSR] reconciler healBrokenBody(%s) errored: %s", p.Name, tostring(err)))
+						end
+					end
+					if not BodyManager.getOwnBody(p) then
+						local ok, err = pcall(RoundManager.addPlayer, p)
+						if not ok then
+							warn(string.format("[BSR] reconciler addPlayer(%s) errored: %s", p.Name, tostring(err)))
+						end
 					end
 				end
 			end
