@@ -6,11 +6,14 @@
 	  2. HintModel.resolve against the registry;
 	  3. on a hit: fire ShowHint to that client + append the id to seenHints (mutates the
 	     cached profile; the existing autosave / leave-save path persists it).
+	Dev switch Config.HINT_IGNORE_SEEN bypasses the seen-gate (fires every trigger,
+	persists nothing) so the hints can be replayed each round while testing.
 	Location (Roblox): ServerScriptService/Server/HintService  (ModuleScript)
 --]]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local HintModel = require(ReplicatedStorage.Shared.HintModel)
 local HintRegistry = require(ReplicatedStorage.Shared.HintRegistry)
@@ -25,7 +28,10 @@ function HintService.fireTrigger(player, trigger)
 	if not profile then
 		return -- not loaded yet / already left: nothing to gate against
 	end
-	local hint = HintModel.resolve(HintRegistry, profile.seenHints, trigger)
+	-- Dev replay: resolve against an EMPTY seen-set so every trigger fires, and skip
+	-- the persist below so the real profile's seenHints stays untouched.
+	local seen = Config.HINT_IGNORE_SEEN and {} or profile.seenHints
+	local hint = HintModel.resolve(HintRegistry, seen, trigger)
 	if not hint then
 		return
 	end
@@ -35,7 +41,9 @@ function HintService.fireTrigger(player, trigger)
 		duration = hint.duration,
 		anchor = hint.anchor,
 	})
-	profile.seenHints = HintModel.withSeen(profile.seenHints, hint.id)
+	if not Config.HINT_IGNORE_SEEN then
+		profile.seenHints = HintModel.withSeen(profile.seenHints, hint.id)
+	end
 end
 
 return HintService

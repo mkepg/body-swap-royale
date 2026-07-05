@@ -373,5 +373,11 @@ Config.HINT_FADE_IN = 0.2           -- seconds
 Config.HINT_FADE_OUT = 0.3          -- seconds
 Config.HINT_LABEL_HEIGHT = 3.4      -- studs above the anchor head
 Config.HINT_LABEL_SIZE = Vector2.new(224, 56) -- px billboard size
+-- Dev/test switch (like HAZARDS_ENABLED / MOVE_VALIDATION_ENABLED): when true, the
+-- first-session hints IGNORE the persisted seenHints gate and fire on EVERY trigger
+-- (preview + swap), and DON'T persist -- so you can replay the onboarding hints every
+-- round while testing without wiping DataStore or using fresh accounts. NOT a gameplay
+-- tunable; leave false in production.
+Config.HINT_IGNORE_SEEN = false
 
 return Config
