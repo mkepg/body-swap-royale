@@ -29,7 +29,6 @@ local HudTheme = require(script.Parent:WaitForChild("HudTheme"))
 local ClientRoundHud = {}
 
 local player = Players.LocalPlayer
-local camera = workspace.CurrentCamera
 
 -- A stacked text line inside a panel. scaleY is its share of the panel height.
 local function panelLabel(parent, name, scaleY, order, fontKey)
@@ -223,8 +222,12 @@ function ClientRoundHud.start()
 	end)
 
 	SpectateBody.OnClientEvent:Connect(function(body)
+		-- Read the camera LIVE (never cache the instance at require time): the
+		-- engine can replace workspace.CurrentCamera around client boot, and a
+		-- cached dead camera swallows the retarget (see ClientControl).
 		local hum = body and body:FindFirstChildOfClass("Humanoid")
-		if hum then
+		local camera = workspace.CurrentCamera
+		if hum and camera then
 			camera.CameraType = Enum.CameraType.Custom
 			camera.CameraSubject = hum
 		end
