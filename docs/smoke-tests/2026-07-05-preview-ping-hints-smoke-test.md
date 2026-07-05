@@ -66,7 +66,7 @@ preview ping + `SwapPreview` hint).
 | # | Case | Expected |
 |---|------|----------|
 | 1 | Off-camera target during the T-3s preview | The amber **edge arrow** appears at the screen edge and points toward the target; turning the camera to frame the target swaps the arrow for the on-target **chevron** above its head. The `Highlight` is on the target throughout. |
-| 2 | First-ever preview (fresh `seenHints`) | The **"You're about to become the highlighted body — get ready!"** label appears anchored to the ping target, once. |
+| 2 | First-ever preview (fresh `seenHints`) | The **"You're about to become the highlighted body — get ready!"** label appears anchored to the player's **current (pre-swap) body** (the ping arrow/highlight points to the body they'll become), once. |
 | 3 | First-ever swap commit | The **"Your controls just moved — the glowing halo is always you."** label appears anchored to the Soul-halo body, once. |
 | 4 | Second preview / swap, same session | **No** hint labels re-appear (seen-state gating). |
 | 5 | Returning player (rejoin; `seenHints` persisted) | **Neither** hint appears on their first preview/swap. |

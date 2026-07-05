@@ -19,8 +19,9 @@ Two features, one spec:
    target body is off-camera (the common case). Add a screen-space directional indicator so the player
    can always *find* the body they are about to inherit.
 2. **Centralized, anchored first-session hints** — a small data-driven hint system whose first two rows
-   decode the swap mechanic in-match, presented as labels anchored to the very visuals this spec adds
-   (the ping target and the Soul halo).
+   decode the swap mechanic in-match, presented as labels anchored to the body the player is looking at:
+   their current body during the preview (with the ping pointing to the target), then the Soul halo after
+   the swap.
 
 ## 2. Scope
 
@@ -31,7 +32,9 @@ Two features, one spec:
   `HintService` (firing + seen-state) + client `HintController` (anchored rendering) + `profile.seenHints`
   persistence.
 - Exactly two hint rows now:
-  - `SwapPreview` trigger → *"you become this"* anchored to the ping target.
+  - `SwapPreview` trigger → *"you're about to become the highlighted body"* anchored to the player's
+    **current (pre-swap) body** — the ping's edge arrow/highlight points to the body they'll become, so
+    the caption sits where the player's attention already is.
   - `ControlSwap` trigger → *"this is you"* anchored to the Soul halo on the inherited body.
 
 **Explicitly out of scope (decided during brainstorm; recorded so they are not lost)**
@@ -124,7 +127,9 @@ Preview start (server)
     -> SwapPreview:FireClient(player, body)         (existing; drives ping highlight + arrow)
     -> HintService.fireTrigger(player,"SwapPreview")
          -> HintModel.resolve(registry, seenHints, "SwapPreview")
-         -> hit? ShowHint:FireClient(player,{id,text,duration,anchor="target"}); seenHints += id
+         -> hit? ShowHint:FireClient(player,{id,text,duration,anchor="controlledBody"}); seenHints += id
+         -- NB: preview fires BEFORE the commit's SetControlledBody, so "controlledBody"
+         --     here = the player's CURRENT (pre-swap) body.
 
 Swap commit (server)
   RoundManager commit (isSwap=true per player)
@@ -147,7 +152,7 @@ Client
   once     = true,                   -- gate on seen-state
   priority = 10,                     -- higher wins if multiple match one trigger
   duration = 3.0,                    -- seconds the label holds
-  anchor   = "target",               -- "target" | "controlledBody"
+  anchor   = "controlledBody",       -- "target" | "controlledBody" (here: the pre-swap current body)
   text     = "You're about to become the highlighted body — get ready!",
 }
 ```
@@ -228,7 +233,8 @@ an array of unique strings (non-strings dropped, deduped). Persisted inside the 
 - Ping shows a chevron on-screen and an edge arrow (correctly pointing, incl. behind-camera) off-screen;
   the shipped `Highlight` is retained; clears on commit / leaving Active.
 - Hint system centralized as specified; the two rows fire once-ever per player, persist via
-  `seenHints`, render anchored to the ping target then the Soul halo, and never overlap or block input.
+  `seenHints`, render anchored to the player's current body (preview) then the Soul halo (commit), and
+  never overlap or block input.
 - Zero client→server remotes added (verified).
 - Studio MCP glue verification done; manual smoke-test doc added; `CHANGELOG.md` updated.
 - Docs: note the deferred items (danger read, round-start grace, tutorial round, richer hints) so the
