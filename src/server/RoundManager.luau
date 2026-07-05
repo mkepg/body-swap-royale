@@ -34,6 +34,7 @@ local SwapController = require(script.Parent.SwapController)
 local HazardSystem = require(script.Parent.HazardSystem)
 local LobbyArea = require(script.Parent.LobbyArea)
 local EconomyService = require(script.Parent.EconomyService)
+local HintService = require(script.Parent.HintService)
 
 local RoundStateChanged = Remotes.get("RoundStateChanged")
 local EliminationEvent = Remotes.get("EliminationEvent")
@@ -267,6 +268,7 @@ end
 local function firePreview(plan)
 	for _, pair in ipairs(plan.to) do
 		SwapPreview:FireClient(pair.player, pair.body)
+		HintService.fireTrigger(pair.player, "SwapPreview")
 	end
 end
 
@@ -325,6 +327,9 @@ local function commitSwap(plan)
 		players[#players + 1] = pair.player
 	end
 	stampGrace(players)
+	for _, p in ipairs(players) do
+		HintService.fireTrigger(p, "ControlSwap")
+	end
 end
 
 -- Immediate plan+commit (no preview) -- used by forceSwap for the smoke test.
