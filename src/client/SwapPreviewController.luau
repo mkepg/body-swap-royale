@@ -21,6 +21,8 @@ local Config = require(Shared:WaitForChild("Config"))
 local Remotes = require(Shared:WaitForChild("Remotes"))
 local PingDirectionModel = require(Shared:WaitForChild("PingDirectionModel"))
 
+local HudTheme = require(script.Parent:WaitForChild("HudTheme"))
+
 local SwapPreview = Remotes.get("SwapPreview")
 local SetControlledBody = Remotes.get("SetControlledBody")
 local RoundStateChanged = Remotes.get("RoundStateChanged")
@@ -58,7 +60,7 @@ local function ensureGui()
 	arrow.Visible = false
 	local stroke = Instance.new("UIStroke")
 	stroke.Thickness = 2
-	stroke.Color = Color3.fromRGB(20, 24, 31)
+	stroke.Color = HudTheme.Color.textStroke
 	stroke.Parent = arrow
 	arrow.Parent = screenGui
 end
@@ -84,7 +86,7 @@ local function makeChevron(body)
 	lbl.TextColor3 = Config.PING_COLOR
 	local stroke = Instance.new("UIStroke")
 	stroke.Thickness = 2
-	stroke.Color = Color3.fromRGB(20, 24, 31)
+	stroke.Color = HudTheme.Color.textStroke
 	stroke.Parent = lbl
 	lbl.Parent = bb
 	return bb
@@ -115,9 +117,13 @@ local function update()
 		return
 	end
 	local root = target:FindFirstChild("HumanoidRootPart") or target:FindFirstChild("Head")
-	local camera = Workspace.CurrentCamera
-	if not (root and camera) then
+	if not root then
+		clear() -- target has no root parts (rig teardown) -> unusable; stop pinging
 		return
+	end
+	local camera = Workspace.CurrentCamera
+	if not camera then
+		return -- transient (camera swap); keep the preview alive
 	end
 	local vp = camera.ViewportSize
 	local sp = camera:WorldToViewportPoint(root.Position)

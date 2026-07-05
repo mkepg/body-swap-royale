@@ -15,6 +15,8 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
 local Remotes = require(Shared:WaitForChild("Remotes"))
 
+local HudTheme = require(script.Parent:WaitForChild("HudTheme"))
+
 local ShowHint = Remotes.get("ShowHint")
 local SwapPreview = Remotes.get("SwapPreview")
 local SetControlledBody = Remotes.get("SetControlledBody")
@@ -25,6 +27,10 @@ local controlledBody = nil    -- last SetControlledBody body
 local queue = {}
 local showing = false
 
+-- Anchored hints assume the server fires the anchor's remote (SwapPreview for
+-- "target", SetControlledBody for "controlledBody") BEFORE ShowHint -- true today
+-- (RoundManager fires the remote, then HintService). A future trigger fired before
+-- its anchor remote would find no body and no-op via present()'s drop path.
 local function anchorBody(anchor)
 	if anchor == "controlledBody" then
 		return controlledBody
@@ -32,14 +38,17 @@ local function anchorBody(anchor)
 	return previewTarget
 end
 
+-- Returns true iff a label was actually created; false on any drop path (anchor
+-- body/head missing) so the queue can release the slot immediately instead of
+-- holding it for the label's full lifetime.
 local function present(hint)
 	local body = anchorBody(hint.anchor)
 	if not (body and body.Parent) then
-		return -- anchor gone; drop this hint silently
+		return false -- anchor gone; drop this hint silently
 	end
 	local head = body:FindFirstChild("Head") or body:FindFirstChild("HumanoidRootPart")
 	if not head then
-		return
+		return false
 	end
 
 	local bb = Instance.new("BillboardGui")
@@ -52,7 +61,7 @@ local function present(hint)
 
 	local panel = Instance.new("Frame")
 	panel.Size = UDim2.fromScale(1, 1)
-	panel.BackgroundColor3 = Color3.fromRGB(17, 22, 31)
+	panel.BackgroundColor3 = HudTheme.Color.panelDark
 	panel.BackgroundTransparency = 1
 	panel.BorderSizePixel = 0
 	local corner = Instance.new("UICorner")
@@ -76,7 +85,7 @@ local function present(hint)
 	lbl.TextTransparency = 1
 	local ls = Instance.new("UIStroke")
 	ls.Thickness = 1
-	ls.Color = Color3.fromRGB(20, 24, 31)
+	ls.Color = HudTheme.Color.textStroke
 	ls.Transparency = 1
 	ls.Parent = lbl
 	lbl.Parent = panel
@@ -100,6 +109,7 @@ local function present(hint)
 		end)
 		fade:Play()
 	end)
+	return true
 end
 
 local function pump()
@@ -111,7 +121,13 @@ local function pump()
 		return
 	end
 	showing = true
-	present(hint)
+	if not present(hint) then
+		-- The anchor was gone: nothing was shown, so don't hold the slot for the
+		-- full lifetime -- release it and drive the next queued hint right away.
+		showing = false
+		task.spawn(pump)
+		return
+	end
 	-- Hold the slot for the label's full lifetime so two never overlap.
 	local life = Config.HINT_FADE_IN + (hint.duration or 3) + Config.HINT_FADE_OUT
 	task.delay(life, function()
