@@ -97,6 +97,23 @@ Config.MIN_PLAYERS_TO_CONTINUE = 2
 Config.WALK_SPEED = 16
 Config.JUMP_HEIGHT = 7.2
 
+-- ===== Movement validation (server-authoritative anti-cheat) =====
+-- The void monitor rubber-bands any owned body whose motion is physically impossible
+-- (fly / teleport / speed), snapping it to its last valid grounded pose. Pure decision
+-- lives in MovementValidator; the glue is in RoundManager.startMonitor. Lenient + debounced
+-- so honest laggy players are never corrected (see the 2026-07-04 spec).
+Config.MOVE_VALIDATION_ENABLED = true  -- dev/test switch (like HAZARDS_ENABLED), NOT a gameplay tunable
+Config.MOVE_HORIZONTAL_SLACK = 2.0     -- x (WALK_SPEED * dt) per-tick budget = the permitted speed-hack
+                                       -- ceiling; debounce (not slack) forgives lag, so keep this tight.
+Config.MOVE_VERTICAL_SLACK = 1.5       -- x (jumpSpeed * dt) rise budget; a whole legal jump rises < this
+                                       -- in a single 0.1s tick, so only a fly-up launch exceeds it.
+Config.MOVE_MIN_FALL_EPSILON = 0.5     -- studs/tick; a floorless body descending slower than this counts
+                                       -- as hovering (a real fall accelerates well past it).
+Config.MOVE_VIOLATION_TICKS = 5        -- consecutive violating ticks (~0.5s at 10Hz) before a correction.
+                                       -- MUST exceed the longest legal non-descending run -- a gap-jump's
+                                       -- ascent, ceil(sqrt(2*JUMP_HEIGHT/gravity)/0.1) ~= 3 ticks at default
+                                       -- gravity; 5 leaves margin. Re-check if gravity/JUMP_HEIGHT change.
+
 -- Avatar dimensions: appearance is personal, physics is uniform.
 Config.NORMALIZED_SCALES = {
 	HeightScale = 1,

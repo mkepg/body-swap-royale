@@ -255,6 +255,14 @@ local function pivotBodyTo(body, cf)
 	return true
 end
 
+-- Public reposition primitive: unanchor, zero velocity, PivotTo an arbitrary CFrame.
+-- Used by the movement-validation glue to snap a violating body back to its last valid
+-- pose (the caller then re-owns via ControlManager.regrantControl). Returns pivotBodyTo's
+-- success bool (false if the body has no HumanoidRootPart).
+function BodyManager.pivotTo(body, cf)
+	return pivotBodyTo(body, cf)
+end
+
 -- Round start: reposition a player's OWN body to its spawn slot and re-enable
 -- physics. The body was never killed (elimination is logical), so no revive is
 -- needed -- just unanchor, zero velocity, and pivot back to the spawn CFrame.
