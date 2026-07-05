@@ -13,8 +13,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `PingDirectionModel` (`SwapPreviewController` rewrite; keeps the amber Highlight). New centralized,
   data-driven hint system decodes the swap for first-timers: `HintRegistry` (rows) + pure `HintModel`
   (`tests/hint_model.spec.luau`) + server-authoritative `HintService` (fires from `RoundManager`;
-  no client→server remote) + client `HintController` rendering labels ANCHORED to the ping target
-  ("you become this") then the Soul halo ("this is you"), once-ever per player via persisted
+  no client→server remote) + client `HintController` rendering labels ANCHORED to the player's current
+  body during the preview (the ping points to the target) then the Soul halo after the swap
+  ("this is you"), once-ever per player via persisted
   `profile.seenHints` (migration-safe, no `PROFILE_VERSION` bump). Tunables in `Config.PING_*` /
   `Config.HINT_*`. Verified: 22/22 lune suites + Studio-MCP glue checks (clean boot/no require cycle,
   `ShowHint` delivery, anchored-label render, `PingDirectionModel` real-VM parity); manual 2-client
