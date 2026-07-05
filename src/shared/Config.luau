@@ -360,4 +360,18 @@ Config.REWARD_PANEL_HOLD_SECONDS = 2.5     -- readable beat after the animation 
 Config.REWARD_LEVELUP_POP_SCALE = 1.08     -- panel scale-punch peak on level-up
 Config.REWARD_LEVELUP_FLASH_COLOR = Color3.fromRGB(255, 246, 200) -- bright surge tint
 
+-- ===== Swap-preview directional ping =====
+Config.PING_COLOR = Color3.fromRGB(255, 200, 60)          -- amber; matches the preview Highlight fill
+Config.PING_OUTLINE_COLOR = Color3.fromRGB(255, 220, 120)
+Config.PING_EDGE_MARGIN = 48        -- px inset from the screen edge for the off-screen arrow
+Config.PING_ARROW_SIZE = 44         -- px, off-screen edge arrow
+Config.PING_CHEVRON_SIZE = 28       -- px, on-target chevron
+Config.PING_CHEVRON_HEIGHT = 3.2    -- studs above the target head
+
+-- ===== First-session hints =====
+Config.HINT_FADE_IN = 0.2           -- seconds
+Config.HINT_FADE_OUT = 0.3          -- seconds
+Config.HINT_LABEL_HEIGHT = 3.4      -- studs above the anchor head
+Config.HINT_LABEL_SIZE = Vector2.new(224, 56) -- px billboard size
+
 return Config

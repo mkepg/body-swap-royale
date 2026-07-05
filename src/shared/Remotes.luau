@@ -18,6 +18,7 @@ local REMOTE_EVENTS = {
 	"SetControlledBody", "RoundStateChanged", "EliminationEvent", "SpectateBody", "SwapPreview", "SoulMap",
 	"RewardGranted",  -- server->client: per-round reward delta { coins, xp, leveledUp }
 	"ProfileUpdated", -- server->client: authoritative HUD state { coins, level, xpIntoLevel, xpForNext, progress }
+	"ShowHint",       -- server->client: first-session hint { id, text, duration, anchor }
 }
 
 local function getFolder()
