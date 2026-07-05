@@ -31,9 +31,18 @@ local SetControlledBody = Remotes.get("SetControlledBody")
 
 local ClientControl = {}
 
-local camera = workspace.CurrentCamera
 local body, hum
 local myUserId = game:GetService("Players").LocalPlayer.UserId
+
+-- ALWAYS read the camera live, never cache the instance. The engine can replace
+-- workspace.CurrentCamera around client boot (the cold-join startup camera); a
+-- camera cached at require time then silently receives every retarget while the
+-- player watches the NEW camera -- a permanent camera-only spawn with a perfectly
+-- healthy server, immune to all the server-side re-embodiment layers. Can be nil
+-- for a moment mid-replacement, so callers must guard.
+local function currentCamera()
+	return workspace.CurrentCamera
+end
 
 -- Backstop for a missed/dropped SetControlledBody: find the body whose authoritative
 -- ControllerUserId attribute (set by ControlManager) is ours. Returns nil (gracefully,
@@ -53,6 +62,10 @@ end
 
 -- Camera-relative move vector (from any device) -> normalized world direction.
 local function worldDir()
+	local camera = currentCamera()
+	if not camera then
+		return Vector3.zero
+	end
 	local moveX, moveZ = InputController.getMoveVector()
 	local cf = camera.CFrame
 	local look = Vector3.new(cf.LookVector.X, 0, cf.LookVector.Z)
@@ -74,17 +87,28 @@ function ClientControl.start()
 	-- that yield. Connecting first guarantees we never miss the spawn assignment (and
 	-- thus never miss attaching the body to the ControlModule for the touch HUD).
 	SetControlledBody.OnClientEvent:Connect(function(newBody, isSwap)
+		-- A cold-join fire can outrun the body's replication, in which case the
+		-- engine delivers nil here. Don't bind (or index) it -- the per-frame
+		-- reconcile below attaches via the ControllerUserId attribute as soon as
+		-- the body streams in.
+		if not newBody then
+			warn("[BSR] SetControlledBody carried no body (not replicated yet); reconcile will attach")
+			return
+		end
 		body = newBody
 		hum = newBody:FindFirstChildOfClass("Humanoid")
-		camera.CameraType = Enum.CameraType.Custom
-		camera.CameraSubject = hum
-		if isSwap then
-			camera.FieldOfView = 88
-			TweenService:Create(
-				camera,
-				TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-				{ FieldOfView = 70 }
-			):Play()
+		local camera = currentCamera()
+		if camera then
+			camera.CameraType = Enum.CameraType.Custom
+			camera.CameraSubject = hum
+			if isSwap then
+				camera.FieldOfView = 88
+				TweenService:Create(
+					camera,
+					TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+					{ FieldOfView = 70 }
+				):Play()
+			end
 		end
 		print("[BSR] controlling:", newBody.Name, isSwap and "(swap)" or "(spawn)")
 	end)
@@ -98,13 +122,17 @@ function ClientControl.start()
 		-- whenever `body` is already correct (including during Lobby/Ended, where our own
 		-- body's ControllerUserId still equals us), so it adds no new interference with
 		-- SpectateBody's victory/spectator camera. (The per-frame CameraSubject write
-		-- below is pre-existing and separate -- unchanged by this backstop.)
+		-- below is pre-existing and separate from this backstop.)
+		local camera = currentCamera()
+
 		if not (body and body.Parent and body:GetAttribute("ControllerUserId") == myUserId) then
 			local found = findMyBody()
 			if found and found ~= body then
 				body = found
 				hum = body:FindFirstChildOfClass("Humanoid")
-				camera.CameraType = Enum.CameraType.Custom
+				if camera then
+					camera.CameraType = Enum.CameraType.Custom
+				end
 				print("[BSR] controlling (reconciled):", body.Name)
 			end
 		end
@@ -116,7 +144,11 @@ function ClientControl.start()
 			-- robust to that late replication.
 			hum = body:FindFirstChildOfClass("Humanoid")
 			if hum then
-				if camera.CameraSubject ~= hum then
+				-- Idempotent per-frame re-assert onto the LIVE camera; also heals a
+				-- mid-session camera replacement (a fresh Camera doesn't start Custom
+				-- or pointed at us).
+				if camera and camera.CameraSubject ~= hum then
+					camera.CameraType = Enum.CameraType.Custom
 					camera.CameraSubject = hum
 				end
 				-- Keep Roblox's ControlModule bound to this body so its default touch HUD
@@ -126,6 +158,34 @@ function ClientControl.start()
 			end
 		else
 			InputController.releaseControls()
+		end
+	end)
+
+	-- Bodiless-join watchdog: DIAGNOSTICS only (healing lives in the reconcile
+	-- above and the server sweep). A player never legitimately sits bodiless for
+	-- multiple reconcile periods -- eliminated players still control a body -- so
+	-- if we do, say WHICH layer is failing instead of leaving an intermittent
+	-- stranding to guesswork: no Bodies folder = replication/server-boot problem;
+	-- candidates but no ControllerUserId match = server-side control/attribute
+	-- problem (the client cannot self-heal either one).
+	task.spawn(function()
+		while true do
+			task.wait(5)
+			if not (body and body.Parent) then
+				local bodies = workspace:FindFirstChild("Bodies")
+				if not bodies then
+					warn("[BSR][watchdog] bodiless: workspace.Bodies has not replicated")
+				else
+					local kids = bodies:GetChildren()
+					local ids = {}
+					for i = 1, math.min(#kids, 8) do
+						ids[i] = tostring(kids[i]:GetAttribute("ControllerUserId"))
+					end
+					warn(string.format(
+						"[BSR][watchdog] bodiless: %d bodies, none with ControllerUserId == %d (saw: %s)",
+						#kids, myUserId, table.concat(ids, ", ")))
+				end
+			end
 		end
 	end)
 
