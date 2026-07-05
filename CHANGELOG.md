@@ -165,6 +165,41 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   (GDD §4). Disconnect elimination remains ungated.
 
 ### Fixed
+- **Bodiless spawn, residual holes (2026-07-05).** The 2026-07-03 defense-in-depth fix
+  still let the camera-only join recur intermittently because two spots in the join
+  pipeline had NO self-healing:
+  - **Dead cached camera (client).** `ClientControl` and `ClientRoundHud` cached
+    `workspace.CurrentCamera` once at require time — the earliest moment of a cold join,
+    exactly when the engine can still replace the startup camera instance. Every retarget
+    (spawn, reconcile, per-frame subject write, spectate) then landed on the destroyed
+    camera while the player watched the new one: a permanent camera-only spawn with a
+    perfectly healthy server, invisible to all four server-side healing layers.
+    (`SwapPreviewController` already read the camera live — the inconsistency was the
+    tell.) Both modules now read `workspace.CurrentCamera` live at every use, and the
+    per-frame re-assert also restores `CameraType.Custom`, so a mid-session camera
+    replacement heals within a frame.
+  - **Re-embodiment sweep blind to broken bodies (server).** The sweep only retried when
+    `getOwnBody(p) == nil`, a weaker health check than the round gate's `hasValidBody`.
+    A registered body whose parts were destroyed outside our control — concretely: a
+    grace-shielded straight fall from the lowest hex floor reaches the engine's
+    `FallenPartsDestroyHeight` (−500) in ~1.43 s, inside the 1.5 s grace window, before
+    the void monitor may eliminate it — left a rootless wreck that satisfied the sweep's
+    check forever: its controller stranded camera-only AND unkillable (no root ⇒ no void
+    check ⇒ the round could hang). The sweep now validates registered bodies with the new
+    `BodyManager.isIntact` and heals a wreck via `healBrokenBody`: eliminate the rider
+    (idempotent void-death semantics, un-hangs the round), eliminate the owner if alive
+    elsewhere, tear down through the lune-tested `ControlModel.removePlayer` absorb rule
+    (parking a reassigned rider on their balcony slot, reposition-then-re-own), then
+    rebuild the owner like a late joiner.
+  - Hardening: `Workspace.FallenPartsDestroyHeight` → −50000 (project file) so the
+    engine can never dismember a falling body before the 10 Hz monitor catches it (all
+    falling bodies are managed; nothing relies on engine part-GC).
+  - The client's `SetControlledBody` handler no longer errors when the fire outruns the
+    body's replication (nil argument): it logs and defers to the attribute reconcile.
+  - New client watchdog: if a player sits bodiless > 5 s (never legitimate), it warns
+    naming the failing layer (Bodies folder missing vs. no `ControllerUserId` match), so
+    any future recurrence self-identifies instead of needing a fresh investigation.
+  Smoke test: `docs/smoke-tests/2026-07-05-bodyless-spawn-residual-smoke-test.md`.
 - Elimination now re-asserts network ownership after `sendToLobby` (uniform reposition-then-re-own,
   review Action #4) so the balcony teleport replicates reliably onto a fast-falling client-owned body.
 - `ClientAnimator.register` retries until a body's Humanoid replicates (review Action #5), fixing bodies
