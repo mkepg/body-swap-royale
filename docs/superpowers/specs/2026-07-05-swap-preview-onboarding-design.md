@@ -75,7 +75,7 @@ injected, and lune-tested. Glue is thin and verified via Studio MCP + a manual s
 
 - `src/server/HintService.luau` — `fireTrigger(player, trigger)`:
   1. read `profile.seenHints` via `EconomyService.getProfile(player)` (nil profile → no-op);
-  2. `HintModel.resolve(HintRegistry.get(), seenSet, trigger)`;
+  2. `HintModel.resolve(HintRegistry, seenSet, trigger)` (the registry is a plain array module);
   3. on a hit: `ShowHint:FireClient(player, { id, text, duration, anchor })`, then append the id to
      `profile.seenHints` (mutates the cached profile; the existing autosave / leave-save path persists it).
   Server-authoritative; the client never reports "seen" back.

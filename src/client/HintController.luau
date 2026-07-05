@@ -147,6 +147,9 @@ function HintController.start()
 		if type(hint) ~= "table" or type(hint.text) ~= "string" then
 			return
 		end
+		if type(hint.duration) ~= "number" then
+			hint.duration = 3 -- defend the hold/fade timing against a malformed row
+		end
 		queue[#queue + 1] = hint
 		pump()
 	end)
