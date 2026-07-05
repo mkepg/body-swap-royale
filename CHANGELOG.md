@@ -7,6 +7,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **MVP movement validation (server-authoritative anti-cheat).** The 10 Hz void monitor now
+  rubber-bands any owned body whose motion is physically impossible — horizontal/vertical
+  displacement beyond walk/jump physics (speed, teleport, fly-up) or hovering over the void with no
+  floor beneath — snapping it to its last valid grounded pose via reposition-then-re-own. Pure decision
+  in `src/shared/MovementValidator.luau` (displacement clamp + anti-hover + a 5-tick debounce so honest
+  laggy players are never corrected; lune-tested `tests/movement_validator.spec.luau`); glue in
+  `RoundManager.startMonitor` reuses the doom-exclusion `hasFloorBeneath` probe. Validates EVERY owned
+  body (alive + eliminated), so an eliminated player can no longer teleport their balcony body back into
+  the arena. Closes the "an exploiter literally cannot lose" gap (review 2026-07-03 §3.2 / Action #6).
+  Tunables in `Config.MOVE_*`; smoke test `docs/smoke-tests/2026-07-04-movement-validation-smoke-test.md`.
 - **Hex-A-Gone arena** (replaces the time-driven square disappearing-tile floor):
   - **Rendering + depth revision (2026-06-24):** each tile is now ONE true
     hexagonal-prism `MeshPart` (built once via `AssetService` EditableMesh from the
@@ -141,6 +151,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   (GDD §4). Disconnect elimination remains ungated.
 
 ### Fixed
+- Elimination now re-asserts network ownership after `sendToLobby` (uniform reposition-then-re-own,
+  review Action #4) so the balcony teleport replicates reliably onto a fast-falling client-owned body.
+- `ClientAnimator.register` retries until a body's Humanoid replicates (review Action #5), fixing bodies
+  that could go permanently un-animated on a cold join when the rig lagged a frame behind `ChildAdded`.
 - **First-join bodiless spawn (camera-only, round won't start) (2026-07-03).**
   Players have no `Character` (`CharacterAutoLoads = false`); each is a disembodied
   controller given a server-built body. Intermittently — most often on a first join —
