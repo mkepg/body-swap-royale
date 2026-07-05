@@ -59,4 +59,15 @@ do
 	print("profile: sanitize-infinity OK")
 end
 
+-- seenHints: default empty; sanitize keeps unique strings, drops junk, dedupes.
+do
+	local d = ProfileModel.default(V)
+	expect(type(d.seenHints) == "table" and #d.seenHints == 0, "default seenHints = {}")
+	local p = ProfileModel.sanitize({ coins = 1, totalXp = 1, seenHints = { "a", "a", 7, "b" } }, V)
+	expect(#p.seenHints == 2, "dedupe + drop non-strings -> 2, got " .. #p.seenHints)
+	local n = ProfileModel.sanitize({ seenHints = "nope" }, V)
+	expect(type(n.seenHints) == "table" and #n.seenHints == 0, "non-array seenHints -> {}")
+	print("profile: seenHints OK")
+end
+
 print("ALL ProfileModel TESTS PASSED")

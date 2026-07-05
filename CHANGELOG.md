@@ -7,6 +7,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **Swap-preview directional ping + centralized first-session hints (review Action #7, partial).**
+  The preview now guides the eye to an off-camera target — an on-target chevron when it's framed, a
+  screen-edge arrow that points toward it (incl. behind-camera) otherwise — via the pure, lune-tested
+  `PingDirectionModel` (`SwapPreviewController` rewrite; keeps the amber Highlight). New centralized,
+  data-driven hint system decodes the swap for first-timers: `HintRegistry` (rows) + pure `HintModel`
+  (`tests/hint_model.spec.luau`) + server-authoritative `HintService` (fires from `RoundManager`;
+  no client→server remote) + client `HintController` rendering labels ANCHORED to the player's current
+  body during the preview (the ping points to the target) then the Soul halo after the swap
+  ("this is you"), once-ever per player via persisted
+  `profile.seenHints` (migration-safe, no `PROFILE_VERSION` bump). Tunables in `Config.PING_*` /
+  `Config.HINT_*`. Verified: 22/22 lune suites + Studio-MCP glue checks (clean boot/no require cycle,
+  `ShowHint` delivery, anchored-label render, `PingDirectionModel` real-VM parity); manual 2-client
+  cases pending in `docs/smoke-tests/2026-07-05-preview-ping-hints-smoke-test.md`. Deferred (recorded
+  in the spec): danger read, round-start grace, tutorial round, richer hint set.
 - **MVP movement validation (server-authoritative anti-cheat).** The 10 Hz void monitor now
   rubber-bands any owned body whose motion is physically impossible — horizontal/vertical
   displacement beyond walk/jump physics (speed, teleport, fly-up) or hovering over the void with no
