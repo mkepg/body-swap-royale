@@ -62,4 +62,23 @@ do
 	print("hint: withSeen OK")
 end
 
+-- Registry rows are well-formed and unique.
+do
+	local Registry = require("../src/shared/HintRegistry")
+	expect(#Registry >= 2, "registry has the two shipped rows")
+	local ids, triggers = {}, {}
+	for _, row in ipairs(Registry) do
+		expect(type(row.id) == "string" and row.id ~= "", "row has id")
+		expect(not ids[row.id], "row id unique: " .. tostring(row.id))
+		ids[row.id] = true
+		expect(row.anchor == "target" or row.anchor == "controlledBody",
+			"row anchor valid: " .. tostring(row.anchor))
+		expect(type(row.text) == "string" and #row.text > 0, "row has text")
+		expect(type(row.duration) == "number" and row.duration > 0, "row has duration")
+		triggers[row.trigger] = true
+	end
+	expect(triggers.SwapPreview and triggers.ControlSwap, "both triggers present")
+	print("hint: registry well-formed OK")
+end
+
 print("ALL HintModel TESTS PASSED")
