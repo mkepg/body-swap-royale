@@ -25,14 +25,20 @@ a player sits bodiless > 5 s.
 
 Setup: Studio, `rojo serve` connected, Start Server + 2 Players unless noted.
 
+**2026-07-06 — MCP solo-session verification (Play Solo, driven via Studio MCP):**
+tests 1, 2.3, 4.1 (passively) and 5.1 PASSED; details inline below. Still pending
+manually: 2.4 (mid-round heal), 4.2 (watchdog signal), 5.2, and the 2-client cold-join
+sweep — these need a real Start Server + 2 Players session.
+
 ## 1. Camera replacement self-heal (client)
 
 1. Start server + 1 player; wait for the balcony spawn ("controlling: Body_…" in the
    client log).
 2. In the CLIENT command bar: `workspace.CurrentCamera:Destroy()`.
-3. **[ ]** Within a frame the view snaps back to the player's body (per-frame
-   re-assert binds the NEW camera: `CameraType = Custom`, subject = our humanoid).
-   Movement (WASD) still works; no errors.
+3. **[x]** (2026-07-06, MCP solo) Within a frame the view snaps back to the player's
+   body (per-frame re-assert binds the NEW camera: `CameraType = Custom`, subject =
+   our humanoid). Verified: new camera instance, `CameraType.Custom`, subject == our
+   humanoid 0.5 s after the destroy; no errors.
 
 ## 2. Broken-body heal (server sweep)
 
@@ -40,10 +46,10 @@ Setup: Studio, `rojo serve` connected, Start Server + 2 Players unless noted.
 2. In the SERVER command bar, destroy one player's body parts to fake an
    engine-dismembered wreck:
    `for _, d in ipairs(workspace.Bodies:GetChildren()[1]:GetDescendants()) do if d:IsA("BasePart") then d:Destroy() end end`
-3. **[ ]** Within `Config.BODY_RECONCILE_SECONDS` (2 s) the server warns
-   `"…'s body is broken … rebuilding"` and rebuilds: a fresh body appears on the
-   balcony, the victim's camera re-attaches (`controlling (reconciled): …`), and the
-   round can still start with 2 valid bodies.
+3. **[x]** (2026-07-06, MCP solo) Within `Config.BODY_RECONCILE_SECONDS` (2 s) the
+   server warns `"…'s body is broken … rebuilding"` and rebuilds: a fresh intact body
+   on the balcony slot, correct `ControllerUserId`, wreck destroyed, client rebound
+   (`controlling: Body_… (spawn)`), camera on the NEW humanoid.
 4. **[ ]** Repeat mid-round (Active): the wreck's rider is eliminated (round does NOT
    hang), the owner is re-embodied on the balcony like a late joiner, and the round
    ends normally.
@@ -57,7 +63,9 @@ Hard to force deliberately (needs the remote to outrun replication). Passive che
 
 ## 4. Watchdog silence + signal
 
-1. **[ ]** Healthy 2-player session (join → round → elimination → round end → lobby):
+1. **[~]** (2026-07-06, MCP solo: silent through boot, camera destroy, and the ~2 s
+   bodiless heal window — correct, under the 5 s threshold.) Full 2-player check
+   still pending: healthy session (join → round → elimination → round end → lobby),
    no `[BSR][watchdog]` warns ever appear (eliminated players still control a body).
 2. **[ ]** With the server sweep loop commented out (dev-only) and a body deleted
    whole (`workspace.Bodies:GetChildren()[1]:Destroy()` on the server), the victim's
@@ -66,8 +74,9 @@ Hard to force deliberately (needs the remote to outrun replication). Passive che
 
 ## 5. FallenPartsDestroyHeight
 
-1. **[ ]** In a running session, `workspace.FallenPartsDestroyHeight` reads −50000
-   (rojo applied the project property to the live place).
+1. **[x]** (2026-07-06, MCP solo) In a running session,
+   `workspace.FallenPartsDestroyHeight` reads −50000 (rojo applied the project
+   property to the live place).
 2. **[ ]** Mid-round, a body knocked off the lowest floor is still teleported to the
    balcony by the void monitor once grace ends (elimination unchanged); its parts are
    never destroyed mid-fall.
