@@ -60,4 +60,39 @@ do
 	print("sweeper: clears OK")
 end
 
+-- isStruck: composes ramp -> beamAngle -> overlaps -> (not clears) over a tier's beams.
+do
+	local opts = { rampPerSecond = 0, maxSpeed = 10 }
+	local beams = {
+		{ baseAngle = 0, direction = 1, baseSpeed = 0, armCount = 1, class = "low",
+		  innerRadius = 3, outerRadius = 30, angularHalfWidth = 0.15 },
+	}
+	-- grounded body directly under the low beam at angle 0 -> struck.
+	expect(M.isStruck({ radius = 10, angle = 0, airborne = false }, beams, 0, opts),
+		"grounded under low beam -> struck")
+	-- same body but airborne -> clears the low beam.
+	expect(not M.isStruck({ radius = 10, angle = 0, airborne = true }, beams, 0, opts),
+		"airborne clears the low beam")
+	-- body away from the arc -> safe.
+	expect(not M.isStruck({ radius = 10, angle = 1.0, airborne = false }, beams, 0, opts),
+		"outside the arc -> safe")
+	-- two-arm beam: arm 1 is at π, so a grounded body at π is struck.
+	local two = {
+		{ baseAngle = 0, direction = 1, baseSpeed = 0, armCount = 2, class = "low",
+		  innerRadius = 3, outerRadius = 30, angularHalfWidth = 0.15 },
+	}
+	expect(M.isStruck({ radius = 10, angle = math.pi, airborne = false }, two, 0, opts),
+		"second arm at π strikes")
+	print("sweeper: isStruck OK")
+end
+
+-- outwardTarget: unit radial from center through the body, scaled to outRadius.
+do
+	local x, z = M.outwardTarget(5, 0, 0, 0, 30) -- body east of center
+	expect(near(x, 30) and near(z, 0), "pushes straight out east to outRadius")
+	local x2, z2 = M.outwardTarget(0, 0, 0, 0, 30) -- body exactly on center (degenerate)
+	expect(near(x2, 30) and near(z2, 0), "degenerate center -> default +x")
+	print("sweeper: outwardTarget OK")
+end
+
 print("ALL SweeperModel TESTS PASSED")
