@@ -32,4 +32,31 @@ function SweeperModel.beamAngle(beam, armIndex, speed, elapsed)
 	return norm(beam.baseAngle + beam.direction * speed * elapsed + arm)
 end
 
+-- Monotonic angular speed-up over the round, clamped. opts = { rampPerSecond, maxSpeed }.
+function SweeperModel.rampedSpeed(baseSpeed, elapsed, opts)
+	local s = baseSpeed + (opts.rampPerSecond or 0) * math.max(0, elapsed)
+	if opts.maxSpeed and s > opts.maxSpeed then
+		s = opts.maxSpeed
+	end
+	return s
+end
+
+-- Is a body at polar (radius, angle) under a beam arm currently at beamAngle?
+-- opts = { innerRadius, outerRadius, angularHalfWidth }. The hub (< innerRadius) is safe.
+function SweeperModel.overlaps(radius, angle, beamAngle, opts)
+	if radius < opts.innerRadius or radius > opts.outerRadius then
+		return false
+	end
+	return SweeperModel.angularDistance(angle, beamAngle) < opts.angularHalfWidth
+end
+
+-- Does a body's vertical state clear this beam class?
+-- "low" is cleared by jumping (airborne); "high" is cleared by staying grounded.
+function SweeperModel.clears(class, airborne)
+	if class == "low" then
+		return airborne == true
+	end
+	return airborne == false
+end
+
 return SweeperModel
