@@ -35,11 +35,17 @@ This is the **cross-slice source of truth**. Each slice gets its own `docs/super
 
 Captured so they aren't lost, but deliberately **not** numbered slices and not committed to this roadmap's order.
 
-- **Soul Sweeper arena (Arena #2).** A second playable arena behind the `ArenaHazard` interface
-  with procedural core shipped (stacked downward-widening discs, server-math strikes, cosmetic beams +
-  telegraph + tumble). Hybrid asset layer (materials + hero mesh) pending MCP asset sourcing. See
-  [spec](superpowers/specs/2026-07-07-soul-sweeper-arena-design.md) and [plan](superpowers/plans/2026-07-07-soul-sweeper-arena.md);
-  [smoke test](smoke-tests/2026-07-07-soul-sweeper-smoke-test.md) (Tasks 14–15 deferred).
+- **Soul Sweeper v2 arena — "Soul Turbine" + persistent two-arena world.** 🟡 Redesigned the sweeper
+  as a single annulus platform + central hub turbine with two solid stacked beams (server-animated,
+  physics-collidable); converted the world to persistent multi-arena with per-round rotation and full
+  idle-arena dormancy (zero per-frame cost for inactive arenas). Pure `ArenaRotationModel` (lune-tested),
+  collision-group grace pass-through, backstop anti-cheat, validator reseeds for beam shoves. Client
+  rewrote `SweeperController` as single shared loop fully gated on `LiveArena` attribute. Soul Turbine
+  art pass (137 parts, ≤180 budget): procedural annulus + hub + wake channels + rotor + light shaft +
+  marquee + under-structure + spotlights; three sourced asset slots (fallback-complete). Verified: 24/24
+  lune. See [spec](superpowers/specs/2026-07-08-soul-sweeper-v2-turbine-design.md) and
+  [plan](superpowers/plans/2026-07-08-soul-sweeper-v2-turbine.md); [smoke test](smoke-tests/2026-07-08-soul-sweeper-v2-smoke-test.md)
+  (Tasks 9–10: Studio MCP verification + asset sourcing pending).
 - **Dedicated social hub world.** A persistent space players land in *before/around* matches — main menu, shop, cosmetic customization, matchmaking queue, friends, emotes, hanging out (Fall Guys' main-menu/show-select equivalent). Distinct from the in-game balcony ([LobbyArea](../src/server/LobbyArea.luau)), which is between-rounds staging in the match world. A meaty addition: its own world, navigation, and likely a `TeleportService` flow; overlaps TDD §4 (lobby matchmaking) and the `MenuController`/shop systems. If pursued, scope as its **own** roadmap/effort rather than folding into Slice 2.
 
 ---
