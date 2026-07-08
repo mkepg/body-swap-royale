@@ -43,35 +43,21 @@ function ArenaDescriptor.hex()
 	}
 end
 
--- The Soul Sweeper arena's descriptor. footprint = the bottom (widest) disc's bounding
--- box, so Layer-2 dressing hugs the whole stack. One dressable level per tier (its
--- surface Y + color), top -> bottom, mirroring hex's per-floor levels.
+-- Soul Sweeper v2 descriptor: one annulus level at the platform surface.
 function ArenaDescriptor.sweeper()
-	local bottomRadius = Config.SWEEP_TOP_RADIUS + (Config.SWEEP_TIER_COUNT - 1) * Config.SWEEP_RADIUS_STEP
-	local extent = bottomRadius * 2
-	local levels = {}
-	for k = 0, Config.SWEEP_TIER_COUNT - 1 do
-		levels[#levels + 1] = {
-			y = Config.SWEEP_TOP_SURFACE_Y - k * Config.SWEEP_TIER_GAP,
-			color = Config.SWEEP_TIER_COLORS[math.min(k + 1, #Config.SWEEP_TIER_COLORS)],
-		}
-	end
+	local extent = Config.SWEEP_PLATFORM_RADIUS * 2
 	return {
-		center = Vector3.new(0, Config.SWEEP_TOP_SURFACE_Y, 0),
+		center = Vector3.new(Config.SWEEP_CENTER.X, Config.SWEEP_SURFACE_Y, Config.SWEEP_CENTER.Z),
 		footprint = Vector2.new(extent, extent),
-		depth = Config.SWEEP_TIER_GAP * (Config.SWEEP_TIER_COUNT - 1),
-		accent = Config.SWEEP_TIER_COLORS[1],
-		levels = levels,
+		depth = Config.SWEEP_SURFACE_Y - Config.SWEEP_VOID_Y,
+		accent = Config.SWEEP_ACCENT,
+		levels = { { y = Config.SWEEP_SURFACE_Y, color = Config.SWEEP_ACCENT } },
 	}
 end
 
--- Resolve the descriptor for the active arena (Config.ACTIVE_ARENA). Client dressing
--- consumes this instead of hardcoding a specific arena.
-function ArenaDescriptor.forActive()
-	if Config.ACTIVE_ARENA == "sweeper" then
-		return ArenaDescriptor.sweeper()
-	end
-	return ArenaDescriptor.hex()
+-- Every arena's descriptor (persistent world: the client dresses ALL of them).
+function ArenaDescriptor.all()
+	return { ArenaDescriptor.hex(), ArenaDescriptor.sweeper() }
 end
 
 -- Cheap shape guard so a future arena's hand-built descriptor fails loudly/early
