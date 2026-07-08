@@ -85,8 +85,40 @@
 
 ## Results
 
-### Expected Status
-- All cases pass: smoke test green, ready for Task 9 (Studio MCP verification + tuning) and Task 10 (asset sourcing).
+### 2026-07-08 — Studio MCP Play-Solo verification (Task 9, deterministic pass)
+
+Run against a fully Rojo-synced Play-Solo session (all v2 modules confirmed present by Source
+inspection before Play). Clean boot: no console errors; both arenas coexist (**HexField 2135
+parts** + **SweeperField 31 parts** = 28 floor segments + hub + 2 beams); no Baseplate.
+
+**Geometry (server raycast probes, RespectCanCollide):**
+- Annulus top **coplanar at Y=0 across 6 sampled angles** (seam walk proxy) — no height steps.
+- **Gap ring (r 5→10) is true void** (ray off-beam-angle → no hit down to the kill-plane);
+  annulus floor hits at r=24; past the rim (r=41) → nothing; hub top solid at Y=+8.
+- **Parked-beam yaw mapping confirmed:** low beam at polar angle 0, high at ±π, both at
+  radius 21.5, heights +1.2 / +5.5 — the world mapping `angle → (cos, sin)` matches the strike
+  math's `atan2` convention at both parked angles (dynamic agreement re-check remains a
+  2-client observation via telegraph alignment).
+- **Collision groups:** `SweepBeam`↔`GraceBody` NOT collidable; `GraceBody`↔`Default` collidable;
+  beams carry `CollisionGroup = "SweepBeam"`.
+- **Floor-probe fix (f142fec) empirically confirmed:** a Default-group ray through the gap ring
+  at the parked beam's angle **hits `SweepBeam_low`** (the bug the final review predicted), while
+  the same ray cast as `GraceBody` **passes through → no floor** (the fix).
+
+**Client (Play-Solo client VM):**
+- `SweeperDressing` = **exactly 137 parts**, inventory matches design (36 wake, 32 chase, 2×8
+  rotors, 12 lower ring, 4 struts, 3+3 spotlights, 28 rim accent, 2 telegraphs, 1 shaft).
+- **Standby state applied at build** (wake + chase at `SWEEP_STANDBY_TRANSPARENCY = 0.85`).
+- `ArenaDressing` dresses **both** arenas (112 trim bars at hex, 16 at the sweeper).
+- **Live-flip simulation** (attributes set server-side): telegraph swept ~25 studs/s, wake strips
+  left standby, chase animating; clearing `LiveArena` → telegraph frozen + wake back to 0.85
+  within a frame. **Dormancy engages and disengages correctly; dormant beams are frozen**
+  (CFrame stable across samples; no Heartbeat connection exists before a sweeper round).
+
+**Still MANUAL (2-client)** — cases 1, 4, 5, 7–11: shove feel under latency, high-beam clearance
+tuning, grace pass-through in a live round, resist backstop on a real client, full rotation
+(hex → sweeper → hex) with `LiveArena` flips + ring spawns, wake/telegraph readability after a
+swap cut, validator non-interference. Task 10 (asset sourcing) pending.
 
 ### Tuning Knobs (if issues found)
 - `Config.SWEEP_BEAM_HIGH_Y` — clearance for high beam (tuned via Case 5 if bodies snag).
