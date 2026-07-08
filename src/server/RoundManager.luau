@@ -173,6 +173,12 @@ local function hasFloorBeneath(body)
 	local bodiesFolder = Workspace:FindFirstChild("Bodies")
 	params.FilterDescendantsInstances = bodiesFolder and { bodiesFolder } or {}
 	params.RespectCanCollide = true
+	-- Moving hazard parts must never count as "floor": cast the ray AS a grace body
+	-- (the GraceBody group ignores SweepBeam), so a beam sweeping under a falling
+	-- body can't fake a floor and pollute doom-exclusion or the hover check. Real
+	-- floors are unaffected (GraceBody collides with everything else). Groups are
+	-- registered in SweeperHazard.build(), which runs at server start before any round.
+	params.CollisionGroup = "GraceBody"
 	local origin = root.Position
 	local downTo = arena.voidY() - origin.Y -- negative: from root down to the kill-plane
 	if downTo >= 0 then
