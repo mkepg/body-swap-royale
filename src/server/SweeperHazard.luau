@@ -15,7 +15,6 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local SweeperModel = require(ReplicatedStorage.Shared.SweeperModel)
 local ArenaDescriptor = require(ReplicatedStorage.Shared.ArenaDescriptor)
 
-local EMPTY = { sweeps = {} }
 local SweeperHazard = {}
 
 local tiers = {}      -- [k+1] = { surfaceY, radius, beams }  (0-based tier k)
