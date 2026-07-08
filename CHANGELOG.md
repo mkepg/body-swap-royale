@@ -4,6 +4,26 @@ All notable changes to this project are documented here.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2026-07-08]
+
+### Added
+- **Soul Sweeper v2 — "Soul Turbine" arena rework + persistent two-arena world.** Rebuilt the sweeper
+  as a single annulus platform around a central turbine hub; two solid stacked beams (low amber = JUMP,
+  high crimson = STAY GROUNDED) server-animated from `SweeperModel` angles every Heartbeat, colliding
+  naturally via anchored parts and PhysicsService collision groups. Persistent world: all arenas built
+  at startup and permanently visible; per-round rotation via pure `ArenaRotationModel` (lune-tested)
+  picks the live arena, `Config.ARENA_OVERRIDE` pins one for testing. Grace bodies (post-swap) use
+  collision groups to pass through beams; backstop anti-cheat forces a sweep after 3 ticks of resist.
+  MovementValidator reseeds bodies in beam arcs (no rubber-band during legitimate shoves). Client
+  rewrote `SweeperController` as single shared Heartbeat loop (telegraph, wake channels, rotor rings,
+  chase lights) fully gated on `workspace:GetAttribute("LiveArena")` — dormant arenas cost zero
+  per-frame writes (beams parked, cosmetics dimmed one-time). `ArenaHazard` interface gains `id` +
+  `spawnCFrame(index)` for per-round slot assignment via `BodyManager.setArenaSlot`. New `ArenaDescriptor.all()`
+  for multi-arena dressing. Soul Turbine art pass: procedural annulus + hub + 28-segment floor + wake
+  channels + rotor + light shaft + marquee chase + under-structure + spotlights (137 parts, ≤180 budget);
+  three Config-gated sourced asset slots (disc/beam materials, hub mesh) with procedural fallbacks.
+  Verified: 24/24 lune suites. Studio verification + asset sourcing (Tasks 9–10) pending.
+
 ## [2026-07-07]
 
 ### Added
