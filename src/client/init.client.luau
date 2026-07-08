@@ -8,9 +8,6 @@
 	  - ClientRoundHud: round text (countdown/elimination/winner) + spectator camera
 --]]
 
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
-
 local ClientControl = require(script.ClientControl)
 local ClientAnimator = require(script.ClientAnimator)
 local ClientRoundHud = require(script.ClientRoundHud)
@@ -23,6 +20,7 @@ local ArenaDressing = require(script.ArenaDressing)
 local LobbyStage = require(script.LobbyStage)
 local ClientEconomyHud = require(script.ClientEconomyHud)
 local DeviceOrientation = require(script.DeviceOrientation)
+local SweeperController = require(script.SweeperController)
 
 ClientControl.start()
 ClientAnimator.start()
@@ -37,11 +35,9 @@ LobbyStage.start()
 ClientEconomyHud.start()
 DeviceOrientation.start()
 
--- Soul Sweeper (arena #2) cosmetics: beams + telegraph + tumble. Only started when
--- that arena is active, so the hex path (ACTIVE_ARENA == "hex") is unaffected.
-if Config.ACTIVE_ARENA == "sweeper" then
-	local SweeperController = require(script.SweeperController)
-	SweeperController.start(ClientControl.getBody)
-end
+-- Soul Sweeper (arena #2) cosmetics: Soul Turbine dressing + telegraph + tumble.
+-- Started unconditionally (persistent two-arena world) -- it self-gates on the
+-- server-authoritative LiveArena attribute, so it's fully dormant while hex is live.
+SweeperController.start(ClientControl.getBody)
 
 print("[BSR] Client ready (ownership-transfer model).")
