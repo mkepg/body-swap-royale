@@ -84,6 +84,74 @@ Config.HEX_FLOOR_COLORS = {
 	Color3.fromRGB(120, 120, 140),  -- 7 slate (bottom)
 }
 
+-- ===== Arena selection =====
+-- Which arena the round loop + client dressing use. "hex" (Hex-A-Gone) or "sweeper"
+-- (Soul Sweeper). Selected once at startup by ArenaRegistry (server) and
+-- ArenaDescriptor.forActive (client). Round-to-round rotation is a later change.
+Config.ACTIVE_ARENA = "hex"
+
+-- ===== Soul Sweeper arena (Arena #2) =====
+-- Stacked circular discs over the void, WIDENING downward so a body swept off an upper
+-- disc's rim is caught by the wider tier below; only a fall off the bottom disc = void.
+-- Beams are cosmetic (client) + pure server strike math (SweeperModel). See the
+-- 2026-07-07 spec. All angles in radians.
+Config.SWEEP_TIER_COUNT = 3
+Config.SWEEP_TOP_SURFACE_Y = 0        -- top (smallest) disc surface Y
+Config.SWEEP_TIER_GAP = 50            -- vertical studs between tiers (mirrors HEX_FLOOR_GAP)
+Config.SWEEP_TOP_RADIUS = 26          -- top disc radius (studs)
+Config.SWEEP_RADIUS_STEP = 10         -- each lower disc is this much WIDER (catch geometry)
+Config.SWEEP_DISC_THICKNESS = 2
+Config.SWEEP_HUB_RADIUS = 3           -- inner dead zone: beams never strike inside the hub
+Config.SWEEP_STAND_BAND = 6           -- root-height window above a tier that counts as "on" it (< SWEEP_TIER_GAP)
+Config.SWEEP_AIRBORNE_BAND = 3        -- studs above the surface that count as airborne (clears low beams)
+Config.SWEEP_AIRBORNE_VY = 8          -- upward root velocity (studs/s) that also counts as airborne
+Config.SWEEP_OFF_MARGIN = 4           -- studs past the rim the sweep pushes a struck body
+Config.SWEEP_BEAM_HALF_WIDTH = math.rad(9) -- angular half-width of a beam's strike arc (radians)
+
+-- VOID_Y for the sweeper arena: 4 studs below the bottom disc (same rule hex uses).
+Config.SWEEP_VOID_Y = Config.SWEEP_TOP_SURFACE_Y - (Config.SWEEP_TIER_COUNT - 1) * Config.SWEEP_TIER_GAP - 4
+
+-- One distinct color per tier (top -> bottom) for post-swap depth orientation.
+Config.SWEEP_TIER_COLORS = {
+	Color3.fromRGB(245, 200, 70),   -- top (amber)
+	Color3.fromRGB(70, 200, 180),   -- mid (teal)
+	Color3.fromRGB(150, 120, 235),  -- bottom (indigo)
+}
+
+-- Per-tier beam configs (index = tier+1, top -> bottom). Each tier is an array of beams;
+-- each beam = { baseAngle, direction (+1/-1), baseSpeed (rad/s), armCount, class }.
+-- innerRadius/outerRadius/angularHalfWidth are attached from Config at build time
+-- (hub..rim, SWEEP_BEAM_HALF_WIDTH). Lower tiers sweep faster (the endgame floors).
+Config.SWEEP_TIER_BEAMS = {
+	{ -- tier 0 (top, slowest): one low arm + one opposing high arm
+		{ baseAngle = 0, direction = 1, baseSpeed = 0.6, armCount = 1, class = "low" },
+		{ baseAngle = math.pi, direction = -1, baseSpeed = 0.5, armCount = 1, class = "high" },
+	},
+	{ -- tier 1 (mid): a faster two-arm low sweep
+		{ baseAngle = 0, direction = 1, baseSpeed = 0.85, armCount = 2, class = "low" },
+	},
+	{ -- tier 2 (bottom, fastest): two-arm low + opposing high
+		{ baseAngle = 0, direction = 1, baseSpeed = 1.05, armCount = 2, class = "low" },
+		{ baseAngle = math.pi / 2, direction = -1, baseSpeed = 0.95, armCount = 1, class = "high" },
+	},
+}
+Config.SWEEP_SPEED_RAMP_PER_SEC = 0.02 -- angular speed-up per second of round
+Config.SWEEP_SPEED_MAX = 2.5           -- clamp
+
+-- Cosmetic beam rendering (client).
+Config.SWEEP_BEAM_LOW_COLOR = Color3.fromRGB(245, 170, 70)   -- amber: JUMP
+Config.SWEEP_BEAM_HIGH_COLOR = Color3.fromRGB(225, 70, 70)   -- red: STAY GROUNDED
+Config.SWEEP_BEAM_LOW_Y = 1.2          -- studs above the surface the low bar floats (ankle height)
+Config.SWEEP_BEAM_HIGH_Y = 5.5         -- studs above the surface the high bar floats (clears a stander)
+Config.SWEEP_BEAM_THICKNESS = 1.0      -- bar cross-section (studs)
+Config.SWEEP_TELEGRAPH_LEAD = 0.35     -- radians ahead of a beam the faded telegraph sits
+Config.SWEEP_TUMBLE_SECONDS = 0.6      -- cosmetic tumble spin duration on a sweep
+
+-- Hybrid assets (blank "" => procedural fallback; filled by the MCP task later).
+Config.SWEEP_DISC_MATERIAL = ""        -- MaterialVariant name / texture assetId for the discs
+Config.SWEEP_BEAM_MATERIAL = ""        -- ditto for the beams
+Config.SWEEP_HUB_MESH = ""             -- hero mesh assetId for the central emitter hub; fallback = cone
+
 -- Round population thresholds (consumed by RoundState via the server glue).
 -- MIN_PLAYERS_TO_START gates beginning a round; default 2 keeps the MVP playable
 -- with two friends, and it can be raised toward the GDD's 4/6 numbers later with
