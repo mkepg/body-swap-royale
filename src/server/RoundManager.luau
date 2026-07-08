@@ -278,12 +278,28 @@ local function firePreview(plan)
 end
 
 -- Grace bodies must not collide with the solid sweep beams (spec §4): mirror the
--- GraceProtected attribute into the body's collision group, on change only.
+-- GraceProtected attribute into the body's collision group. The monitor call site
+-- is change-gated (per-tick discipline); the swap / elimination / round-boundary
+-- sites re-assert unconditionally (idempotent one-shot writes).
 local function setGraceCollision(body, protected)
 	local group = protected and "GraceBody" or "Default"
 	for _, part in ipairs(body:GetDescendants()) do
 		if part:IsA("BasePart") then
 			part.CollisionGroup = group
+		end
+	end
+end
+
+-- Round-boundary sweep: put every controlled body back in the Default group.
+-- ControlManager.resetControl force-clears GraceProtected WITHOUT mirroring the
+-- collision group, and the cleared attribute then masks the monitor's on-change
+-- check -- so re-assert Default here or a round-boundary grace body stays in
+-- GraceBody forever (ghosts through beams, then gets backstop-swept as a "resister").
+local function clearAllGraceCollision()
+	for _, p in ipairs(Players:GetPlayers()) do
+		local b = ControlManager.getControlledBody(p)
+		if b then
+			setGraceCollision(b, false)
 		end
 	end
 end
@@ -546,6 +562,7 @@ local function beginRound()
 		noteServerReposition(BodyManager.getOwnBody(p)) -- don't read the spawn teleport as a violation
 	end
 	ControlManager.resetControl() -- everyone back on their own body (+ retarget)
+	clearAllGraceCollision() -- resetControl cleared GraceProtected; mirror the collision group too
 	broadcastState() -- phase Active
 	arena.start(now()) -- tile floor begins its cycles (solid at round start)
 	startMonitor()
@@ -674,6 +691,7 @@ local function endRound()
 		noteServerReposition(BodyManager.getOwnBody(p))
 	end
 	ControlManager.resetControl()
+	clearAllGraceCollision() -- resetControl cleared GraceProtected; mirror the collision group too
 	RoundState.reset(model) -- Ended -> Lobby
 	broadcastState() -- phase Lobby
 end
