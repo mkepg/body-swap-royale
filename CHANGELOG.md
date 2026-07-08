@@ -4,6 +4,22 @@ All notable changes to this project are documented here.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2026-07-07]
+
+### Added
+- **Soul Sweeper arena (Arena #2)** — Fall Guys "Jump Club" adapted to the swap loop, playable
+  behind a new `ArenaHazard` interface with Hex refactored to sit behind the same interface. Pure,
+  lune-tested `SweeperModel` decides beam geometry and strikes from plain numbers. Server
+  `SweeperHazard` builds stacked downward-widening collision discs, samples every body at 10 Hz,
+  and returns outward re-pivot "sweep" requests that `RoundManager` applies. Beams are cosmetic
+  (client-rendered, server-time-synced); death stays geometric via the existing grace-gated void
+  monitor. Sweeper-specific tunables in `Config.SWEEP_*` block; `Config.ACTIVE_ARENA` selector
+  (default `"hex"`). Server geometry: procedural discs + central emitter hubs. Cosmetic layer:
+  rotating low (amber: JUMP) and high (red: STAY GROUNDED) beams with faded leading telegraph bars.
+  Client tumble on sweep via `SweptAt` attribute stamp. Verified: 23/23 lune suites (pure model +
+  hex regression). Procedural build complete; hybrid asset layer (materials + one-hero-mesh)
+  pending MCP asset sourcing. Live glue verification + smoke test deferred to Task 15.
+
 ## [Unreleased]
 
 ### Added
