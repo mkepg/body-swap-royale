@@ -277,6 +277,13 @@ function BodyManager.pivotTo(body, cf)
 	return pivotBodyTo(body, cf)
 end
 
+-- Per-round arena slot assignment (persistent-world rotation): RoundManager sets each
+-- participant's slot from the LIVE arena's spawnCFrame at round start. The creation-time
+-- hex default above remains only as a harmless placeholder until the first round.
+function BodyManager.setArenaSlot(player, cf)
+	BodyManager.arenaSlotByOwner[player] = cf
+end
+
 -- Round start: reposition a player's OWN body to its spawn slot and re-enable
 -- physics. The body was never killed (elimination is logical), so no revive is
 -- needed -- just unanchor, zero velocity, and pivot back to the spawn CFrame.

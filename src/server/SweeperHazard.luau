@@ -16,6 +16,7 @@ local SweeperModel = require(ReplicatedStorage.Shared.SweeperModel)
 local ArenaDescriptor = require(ReplicatedStorage.Shared.ArenaDescriptor)
 
 local SweeperHazard = {}
+SweeperHazard.id = "sweeper"
 
 local tiers = {}      -- [k+1] = { surfaceY, radius, beams }  (0-based tier k)
 local startClock = 0  -- os.clock() at round start; elapsed = now - startClock
@@ -104,6 +105,13 @@ function SweeperHazard.stop() end
 
 function SweeperHazard.descriptor() return ArenaDescriptor.sweeper() end
 function SweeperHazard.voidY() return Config.SWEEP_VOID_Y end
+
+-- TEMPORARY stub (Task 5 replaces this with the real ring-spawn math per the v2
+-- spec) -- exists only so ArenaHazard.validate passes on the v1 geometry that is
+-- still in place here.
+function SweeperHazard.spawnCFrame(_index)
+	return CFrame.new(Config.SWEEP_CENTER + Vector3.new(0, 5, 0))
+end
 
 -- Which tier is this Y on? The tier whose surface is at/just above the body within
 -- SWEEP_STAND_BAND. Returns the tier record + its 0-based index, or nil (mid-fall).
