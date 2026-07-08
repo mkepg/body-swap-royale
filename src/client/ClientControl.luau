@@ -197,4 +197,12 @@ function ClientControl.start()
 	InputController.setupJump()
 end
 
+-- Accessor for other client modules that need "the body I currently control"
+-- (e.g. SweeperController's cosmetic tumble watcher). Returns the same `body`
+-- this module drives input/camera for -- nil until the first SetControlledBody
+-- fire or reconcile. No new remote: this just exposes the existing local state.
+function ClientControl.getBody()
+	return body
+end
+
 return ClientControl
