@@ -14,6 +14,8 @@ local TAU = math.pi * 2
 
 local function norm(a)
 	a = a % TAU
+	-- Belt-and-suspenders: Luau's `%` already yields [0, TAU) for a positive modulus,
+	-- so this branch is effectively unreachable; kept as a guard against sign surprises.
 	if a < 0 then a = a + TAU end
 	return a
 end
@@ -52,7 +54,9 @@ end
 
 -- Does a body's vertical state clear this beam class?
 -- "low" is cleared by jumping (airborne); "high" is cleared by staying grounded.
+-- Any other class value is a config error and fails loudly (never silently "high").
 function SweeperModel.clears(class, airborne)
+	assert(class == "low" or class == "high", "SweeperModel.clears: unknown beam class " .. tostring(class))
 	if class == "low" then
 		return airborne == true
 	end
