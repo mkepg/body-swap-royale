@@ -28,6 +28,7 @@ local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local CadenceModel = require(ReplicatedStorage.Shared.CadenceModel)
 local MovementValidator = require(ReplicatedStorage.Shared.MovementValidator)
 local ControlModel = require(ReplicatedStorage.Shared.ControlModel)
+local ArenaRotationModel = require(ReplicatedStorage.Shared.ArenaRotationModel)
 local BodyManager = require(script.Parent.BodyManager)
 local ControlManager = require(script.Parent.ControlManager)
 local SwapController = require(script.Parent.SwapController)
@@ -43,8 +44,10 @@ local SwapPreview = Remotes.get("SwapPreview")
 
 local RoundManager = {}
 local model = RoundState.new(Config.MIN_PLAYERS_TO_START, Config.MIN_PLAYERS_TO_CONTINUE)
--- The active arena hazard (hex or sweeper), resolved once. RoundManager is arena-agnostic.
-local arena = ArenaRegistry.forActive()
+-- The live arena is chosen PER ROUND (rotation); between rounds `arena` holds the
+-- last round's pick (safe: the monitor and swap paths only run during Active).
+local arena = ArenaRegistry.all()[1]
+local currentArenaId = nil
 
 -- Post-swap grace: per-player timers + a server-derived "has moved" flag (pure
 -- decision in GraceModel). swapPos holds each player's controlled-body root
@@ -274,6 +277,17 @@ local function firePreview(plan)
 	end
 end
 
+-- Grace bodies must not collide with the solid sweep beams (spec §4): mirror the
+-- GraceProtected attribute into the body's collision group, on change only.
+local function setGraceCollision(body, protected)
+	local group = protected and "GraceBody" or "Default"
+	for _, part in ipairs(body:GetDescendants()) do
+		if part:IsA("BasePart") then
+			part.CollisionGroup = group
+		end
+	end
+end
+
 -- After control has been committed, open the post-swap grace window for `players`
 -- and record each one's new controlled-body position so the void monitor can
 -- derive "has moved" (horizontal travel since the swap).
@@ -286,6 +300,7 @@ local function stampGrace(players)
 		swapPos[player] = root and root.Position or nil
 		if body then
 			body:SetAttribute("GraceProtected", true) -- client shimmer follows this
+			setGraceCollision(body, true)
 		end
 	end
 end
@@ -361,6 +376,7 @@ function RoundManager.eliminate(player)
 	local body = ControlManager.getControlledBody(player)
 	if body then
 		body:SetAttribute("GraceProtected", false)
+		setGraceCollision(body, false)
 		BodyManager.sendToLobby(player, body)
 		-- Re-assert ownership after the server pivot (reposition-then-re-own), so the
 		-- teleport replicates onto the client-owned body -- uniform with beginRound's
@@ -441,6 +457,7 @@ local function startMonitor()
 						-- only (avoid per-tick replication spam). graceBlocked == protected.
 						if body:GetAttribute("GraceProtected") ~= graceBlocked then
 							body:SetAttribute("GraceProtected", graceBlocked)
+							setGraceCollision(body, graceBlocked)
 						end
 						samples[#samples + 1] = {
 							position = root.Position,
@@ -466,6 +483,13 @@ local function startMonitor()
 					BodyManager.pivotTo(s.body, s.target)
 					ControlManager.regrantControl(s.player)
 					noteServerReposition(s.body)
+				end
+			end
+			if effects and effects.reseeds then
+				for _, b in ipairs(effects.reseeds) do
+					-- A body being shoved by a beam moves fast with no input; clear its
+					-- validation history so the shove is never scored as a violation.
+					noteServerReposition(b)
 				end
 			end
 			task.wait(0.1)
@@ -496,6 +520,9 @@ local function runCountdown()
 end
 
 local function beginRound()
+	currentArenaId = ArenaRotationModel.next(currentArenaId, ArenaRegistry.ids(), Config.ARENA_OVERRIDE)
+	arena = ArenaRegistry.get(currentArenaId)
+	workspace:SetAttribute("LiveArena", currentArenaId)
 	local eligible = eligibleSet()
 	RoundState.beginRound(model, eligible) -- Lobby -> Active; only valid-bodied present players become alive
 	-- Economy: snapshot participants + zero their swaps-survived for this round.
@@ -511,7 +538,10 @@ local function beginRound()
 	-- Unanchor + reposition bodies BEFORE re-granting ownership: SetNetworkOwner
 	-- errors on an anchored part. (Lobby bodies are already unanchored, so the
 	-- unanchor in resetBody is defensive.)
+	local slotIndex = 0
 	for _, p in ipairs(Players:GetPlayers()) do
+		slotIndex += 1
+		BodyManager.setArenaSlot(p, arena.spawnCFrame(slotIndex)) -- live arena's round spawn slot
 		BodyManager.resetBody(p) -- reposition own body to spawn + unanchor
 		noteServerReposition(BodyManager.getOwnBody(p)) -- don't read the spawn teleport as a violation
 	end
@@ -601,6 +631,7 @@ end
 local function endRound()
 	stopMonitor()
 	arena.stop() -- freeze tiles solid for the Ended/Lobby floor
+	workspace:SetAttribute("LiveArena", "")
 	local winner = RoundState.getWinner(model)
 	print("[BSR] round ended; winner:", winner and winner.Name or "(none)")
 	-- Economy: award every participant exactly once for this round (survival-depth).
@@ -760,7 +791,9 @@ local function healBrokenBody(owner)
 end
 
 function RoundManager.start()
-	arena.build() -- construct the 3-floor hex arena once (replaces the baseplate)
+	for _, a in ipairs(ArenaRegistry.all()) do
+		a.build() -- persistent world: EVERY arena is constructed once at startup
+	end
 	LobbyArea.build() -- construct the elevated lobby balcony once
 	-- Re-embodiment net: a connected player with no own body (every build attempt
 	-- failed on join) is re-embodied here. Arena-/phase-agnostic and idempotent (addPlayer's
