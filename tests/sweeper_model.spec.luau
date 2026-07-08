@@ -52,11 +52,14 @@ do
 end
 
 -- clears: low beam cleared by being airborne; high beam cleared by being grounded.
+-- An unknown class must fail loudly (never silently behave like "high").
 do
 	expect(M.clears("low", true), "low + airborne -> cleared")
 	expect(not M.clears("low", false), "low + grounded -> NOT cleared")
 	expect(M.clears("high", false), "high + grounded -> cleared")
 	expect(not M.clears("high", true), "high + airborne -> NOT cleared")
+	local ok = pcall(M.clears, "sideways", false)
+	expect(not ok, "unknown class -> errors (not silently 'high')")
 	print("sweeper: clears OK")
 end
 
@@ -83,6 +86,21 @@ do
 	}
 	expect(M.isStruck({ radius = 10, angle = math.pi, airborne = false }, two, 0, opts),
 		"second arm at π strikes")
+	-- multi-beam: FIRST beam misses on arc (at angle 0), SECOND beam hits (arc at π) ->
+	-- proves the loop continues past a non-striking beam. Both "low" so a grounded body
+	-- clears neither by vertical state; only the angular arc decides.
+	local pair = {
+		{ baseAngle = 0, direction = 1, baseSpeed = 0, armCount = 1, class = "low",
+		  innerRadius = 3, outerRadius = 30, angularHalfWidth = 0.15 },
+		{ baseAngle = math.pi, direction = 1, baseSpeed = 0, armCount = 1, class = "low",
+		  innerRadius = 3, outerRadius = 30, angularHalfWidth = 0.15 },
+	}
+	-- grounded body at π: outside the first beam's arc (at 0), inside the second's (at π).
+	expect(M.isStruck({ radius = 10, angle = math.pi, airborne = false }, pair, 0, opts),
+		"second beam strikes after first misses")
+	-- body at angle 1.0 (~57°): neither beam's arc covers it -> safe.
+	expect(not M.isStruck({ radius = 10, angle = 1.0, airborne = false }, pair, 0, opts),
+		"neither beam strikes -> safe")
 	print("sweeper: isStruck OK")
 end
 
