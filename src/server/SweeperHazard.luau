@@ -106,7 +106,47 @@ function SweeperHazard.stop() end
 function SweeperHazard.descriptor() return ArenaDescriptor.sweeper() end
 function SweeperHazard.voidY() return Config.SWEEP_VOID_Y end
 
--- step() is filled in Task 9.
-function SweeperHazard.step(_now, _samples) return EMPTY end
+-- Which tier is this Y on? The tier whose surface is at/just above the body within
+-- SWEEP_STAND_BAND. Returns the tier record + its 0-based index, or nil (mid-fall).
+local function tierAt(y)
+	for k = 0, Config.SWEEP_TIER_COUNT - 1 do
+		local surfaceY = tierSurfaceY(k)
+		if y <= surfaceY + Config.SWEEP_STAND_BAND and y >= surfaceY - Config.SWEEP_STAND_BAND then
+			return tiers[k + 1], k
+		end
+	end
+	return nil, nil
+end
+
+function SweeperHazard.step(now, samples)
+	local sweeps = {}
+	if not Config.HAZARDS_ENABLED then
+		return { sweeps = sweeps }
+	end
+	local elapsed = now - startClock
+	local speedOpts = { rampPerSecond = Config.SWEEP_SPEED_RAMP_PER_SEC, maxSpeed = Config.SWEEP_SPEED_MAX }
+	for _, s in ipairs(samples) do
+		if not s.graceBlocked then -- grace-protected bodies are never swept (free immunity)
+			local pos = s.position
+			local tier = tierAt(pos.Y)
+			if tier then
+				local dx, dz = pos.X, pos.Z -- center is (0,0)
+				local radius = math.sqrt(dx * dx + dz * dz)
+				local angle = math.atan2(dz, dx)
+				local airborne = (pos.Y - tier.surfaceY) > Config.SWEEP_AIRBORNE_BAND
+					or (s.velocityY or 0) > Config.SWEEP_AIRBORNE_VY
+				if SweeperModel.isStruck({ radius = radius, angle = angle, airborne = airborne },
+					tier.beams, elapsed, speedOpts) then
+					local tx, tz = SweeperModel.outwardTarget(dx, dz, 0, 0, tier.radius + Config.SWEEP_OFF_MARGIN)
+					-- Horizontal shove to just past the rim at the body's current height;
+					-- gravity then drops it onto the wider tier below (or the void at the bottom).
+					local target = CFrame.new(tx, pos.Y, tz)
+					sweeps[#sweeps + 1] = { player = s.player, body = s.body, target = target }
+				end
+			end
+		end
+	end
+	return { sweeps = sweeps }
+end
 
 return SweeperHazard
