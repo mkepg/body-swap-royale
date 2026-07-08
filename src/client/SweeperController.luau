@@ -24,11 +24,19 @@ local SweeperController = {}
 -- arrive while a tumble is already playing. Fed by authoritative state; never drives it.
 local function watchTumble(getOwnBody)
 	local tumbling = false
+	local currentBody = nil -- the body we're currently watching (or nil between spawns)
+	local conn = nil
 	local function attach(body)
+		if body == currentBody then return end -- unchanged: keep the existing connection
+		-- Body changed (a swap, or dropped to nil between spawns): tear down the prior
+		-- connection FIRST, so a stale SweptAt stamp on a body we no longer control can't
+		-- win the shared `tumbling` flag, and so we never leak a fresh connection each poll.
+		if conn then conn:Disconnect(); conn = nil end
+		currentBody = body
 		local root = body and body:FindFirstChild("HumanoidRootPart")
 		if not root then return end
 		local last = 0
-		body:GetAttributeChangedSignal("SweptAt"):Connect(function()
+		conn = body:GetAttributeChangedSignal("SweptAt"):Connect(function()
 			local t = body:GetAttribute("SweptAt")
 			if not t or t == last or tumbling then return end
 			last = t
@@ -45,7 +53,7 @@ local function watchTumble(getOwnBody)
 			end)
 		end)
 	end
-	-- Re-attach whenever the controlled body changes (SetControlledBody remote already exists).
+	-- Re-poll the controlled body; attach() only rewires when it actually changes.
 	task.spawn(function()
 		while true do
 			attach(getOwnBody())
