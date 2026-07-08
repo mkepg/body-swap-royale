@@ -143,8 +143,10 @@ end
 
 function ArenaDressing.start()
 	local folder = newFolder()
-	local desc = ArenaDescriptor.validate(ArenaDescriptor.forActive())
-	buildFloorTrim(folder, desc)
+	-- Persistent world: dress EVERY registered arena (not just an "active" one).
+	for _, desc in ipairs(ArenaDescriptor.all()) do
+		buildFloorTrim(folder, ArenaDescriptor.validate(desc))
+	end
 	buildBanner(folder)
 end
 
