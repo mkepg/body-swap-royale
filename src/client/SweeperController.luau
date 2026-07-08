@@ -19,6 +19,41 @@ local SweeperModel = require(Shared:WaitForChild("SweeperModel"))
 
 local SweeperController = {}
 
+-- Watch the local player's controlled body for a server sweep stamp and play a brief
+-- cosmetic tumble (a decaying spin on the body's root). Debounced: ignores stamps that
+-- arrive while a tumble is already playing. Fed by authoritative state; never drives it.
+local function watchTumble(getOwnBody)
+	local tumbling = false
+	local function attach(body)
+		local root = body and body:FindFirstChild("HumanoidRootPart")
+		if not root then return end
+		local last = 0
+		body:GetAttributeChangedSignal("SweptAt"):Connect(function()
+			local t = body:GetAttribute("SweptAt")
+			if not t or t == last or tumbling then return end
+			last = t
+			tumbling = true
+			task.spawn(function()
+				local dur = Config.SWEEP_TUMBLE_SECONDS
+				local t0 = os.clock()
+				while os.clock() - t0 < dur do
+					local f = 1 - (os.clock() - t0) / dur -- decay
+					root.CFrame = root.CFrame * CFrame.Angles(0, 0, math.rad(18 * f))
+					RunService.RenderStepped:Wait()
+				end
+				tumbling = false
+			end)
+		end)
+	end
+	-- Re-attach whenever the controlled body changes (SetControlledBody remote already exists).
+	task.spawn(function()
+		while true do
+			attach(getOwnBody())
+			task.wait(1)
+		end
+	end)
+end
+
 local function tierRadius(k) return Config.SWEEP_TOP_RADIUS + k * Config.SWEEP_RADIUS_STEP end
 local function tierSurfaceY(k) return Config.SWEEP_TOP_SURFACE_Y - k * Config.SWEEP_TIER_GAP end
 
@@ -71,7 +106,8 @@ local function placeBar(bar, angle, radius, y)
 	bar.CFrame = CFrame.lookAt(mid, mid + Vector3.new(dirX, 0, dirZ)) * CFrame.Angles(0, math.rad(90), 0)
 end
 
-function SweeperController.start()
+function SweeperController.start(getOwnBody)
+	if getOwnBody then watchTumble(getOwnBody) end
 	local _folder, arms = buildArms()
 	local speedOpts = { rampPerSecond = Config.SWEEP_SPEED_RAMP_PER_SEC, maxSpeed = Config.SWEEP_SPEED_MAX }
 
