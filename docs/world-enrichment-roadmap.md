@@ -35,6 +35,11 @@ This is the **cross-slice source of truth**. Each slice gets its own `docs/specs
 
 Captured so they aren't lost, but deliberately **not** numbered slices and not committed to this roadmap's order.
 
+- **Soul Sweeper arena (Arena #2).** A second playable arena behind the `ArenaHazard` interface
+  with procedural core shipped (stacked downward-widening discs, server-math strikes, cosmetic beams +
+  telegraph + tumble). Hybrid asset layer (materials + hero mesh) pending MCP asset sourcing. See
+  [spec](superpowers/specs/2026-07-07-soul-sweeper-arena-design.md) and [plan](superpowers/plans/2026-07-07-soul-sweeper-arena.md);
+  [smoke test](smoke-tests/2026-07-07-soul-sweeper-smoke-test.md) (Tasks 14–15 deferred).
 - **Dedicated social hub world.** A persistent space players land in *before/around* matches — main menu, shop, cosmetic customization, matchmaking queue, friends, emotes, hanging out (Fall Guys' main-menu/show-select equivalent). Distinct from the in-game balcony ([LobbyArea](../src/server/LobbyArea.luau)), which is between-rounds staging in the match world. A meaty addition: its own world, navigation, and likely a `TeleportService` flow; overlaps TDD §4 (lobby matchmaking) and the `MenuController`/shop systems. If pursued, scope as its **own** roadmap/effort rather than folding into Slice 2.
 
 ---
