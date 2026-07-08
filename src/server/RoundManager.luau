@@ -31,7 +31,7 @@ local ControlModel = require(ReplicatedStorage.Shared.ControlModel)
 local BodyManager = require(script.Parent.BodyManager)
 local ControlManager = require(script.Parent.ControlManager)
 local SwapController = require(script.Parent.SwapController)
-local HazardSystem = require(script.Parent.HazardSystem)
+local ArenaRegistry = require(script.Parent.ArenaRegistry)
 local LobbyArea = require(script.Parent.LobbyArea)
 local EconomyService = require(script.Parent.EconomyService)
 local HintService = require(script.Parent.HintService)
@@ -43,6 +43,8 @@ local SwapPreview = Remotes.get("SwapPreview")
 
 local RoundManager = {}
 local model = RoundState.new(Config.MIN_PLAYERS_TO_START, Config.MIN_PLAYERS_TO_CONTINUE)
+-- The active arena hazard (hex or sweeper), resolved once. RoundManager is arena-agnostic.
+local arena = ArenaRegistry.forActive()
 
 -- Post-swap grace: per-player timers + a server-derived "has moved" flag (pure
 -- decision in GraceModel). swapPos holds each player's controlled-body root
@@ -169,7 +171,7 @@ local function hasFloorBeneath(body)
 	params.FilterDescendantsInstances = bodiesFolder and { bodiesFolder } or {}
 	params.RespectCanCollide = true
 	local origin = root.Position
-	local downTo = Config.VOID_Y - origin.Y -- negative: from root down to the kill-plane
+	local downTo = arena.voidY() - origin.Y -- negative: from root down to the kill-plane
 	if downTo >= 0 then
 		return false -- root is already at/below the kill-plane: no floor "before the void"
 	end
@@ -443,15 +445,29 @@ local function startMonitor()
 						samples[#samples + 1] = {
 							position = root.Position,
 							graceBlocked = graceBlocked,
+							player = player,
+							body = body,
+							velocityY = root.AssemblyLinearVelocity.Y,
 						}
 						-- Void death source, gated by the post-swap grace window.
-						if root.Position.Y < Config.VOID_Y then
+						if root.Position.Y < arena.voidY() then
 							RoundManager.eliminateFromHazard(player)
 						end
 					end
 				end
 			end
-			HazardSystem.step(t, samples)
+			local effects = arena.step(t, samples)
+			-- Apply any sweep requests (Sweeper arena) with reposition-then-re-own: the same
+			-- primitive as elimination/rescue, so a swept body's snap replicates onto the
+			-- client-owned body and is never read as a movement-validation violation.
+			if effects and effects.sweeps then
+				for _, s in ipairs(effects.sweeps) do
+					s.body:SetAttribute("SweptAt", workspace:GetServerTimeNow()) -- client tumble follows this
+					BodyManager.pivotTo(s.body, s.target)
+					ControlManager.regrantControl(s.player)
+					noteServerReposition(s.body)
+				end
+			end
 			task.wait(0.1)
 		end
 	end)
@@ -501,7 +517,7 @@ local function beginRound()
 	end
 	ControlManager.resetControl() -- everyone back on their own body (+ retarget)
 	broadcastState() -- phase Active
-	HazardSystem.start(now()) -- tile floor begins its cycles (solid at round start)
+	arena.start(now()) -- tile floor begins its cycles (solid at round start)
 	startMonitor()
 	print("[BSR] round started")
 end
@@ -584,7 +600,7 @@ end
 
 local function endRound()
 	stopMonitor()
-	HazardSystem.stop() -- freeze tiles solid for the Ended/Lobby floor
+	arena.stop() -- freeze tiles solid for the Ended/Lobby floor
 	local winner = RoundState.getWinner(model)
 	print("[BSR] round ended; winner:", winner and winner.Name or "(none)")
 	-- Economy: award every participant exactly once for this round (survival-depth).
@@ -744,7 +760,7 @@ local function healBrokenBody(owner)
 end
 
 function RoundManager.start()
-	HazardSystem.build() -- construct the 3-floor hex arena once (replaces the baseplate)
+	arena.build() -- construct the 3-floor hex arena once (replaces the baseplate)
 	LobbyArea.build() -- construct the elevated lobby balcony once
 	-- Re-embodiment net: a connected player with no own body (every build attempt
 	-- failed on join) is re-embodied here. Arena-/phase-agnostic and idempotent (addPlayer's
