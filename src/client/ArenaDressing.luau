@@ -143,7 +143,7 @@ end
 
 function ArenaDressing.start()
 	local folder = newFolder()
-	local desc = ArenaDescriptor.validate(ArenaDescriptor.hex())
+	local desc = ArenaDescriptor.validate(ArenaDescriptor.forActive())
 	buildFloorTrim(folder, desc)
 	buildBanner(folder)
 end
