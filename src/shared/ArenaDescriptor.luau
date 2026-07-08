@@ -43,6 +43,37 @@ function ArenaDescriptor.hex()
 	}
 end
 
+-- The Soul Sweeper arena's descriptor. footprint = the bottom (widest) disc's bounding
+-- box, so Layer-2 dressing hugs the whole stack. One dressable level per tier (its
+-- surface Y + color), top -> bottom, mirroring hex's per-floor levels.
+function ArenaDescriptor.sweeper()
+	local bottomRadius = Config.SWEEP_TOP_RADIUS + (Config.SWEEP_TIER_COUNT - 1) * Config.SWEEP_RADIUS_STEP
+	local extent = bottomRadius * 2
+	local levels = {}
+	for k = 0, Config.SWEEP_TIER_COUNT - 1 do
+		levels[#levels + 1] = {
+			y = Config.SWEEP_TOP_SURFACE_Y - k * Config.SWEEP_TIER_GAP,
+			color = Config.SWEEP_TIER_COLORS[math.min(k + 1, #Config.SWEEP_TIER_COLORS)],
+		}
+	end
+	return {
+		center = Vector3.new(0, Config.SWEEP_TOP_SURFACE_Y, 0),
+		footprint = Vector2.new(extent, extent),
+		depth = Config.SWEEP_TIER_GAP * (Config.SWEEP_TIER_COUNT - 1),
+		accent = Config.SWEEP_TIER_COLORS[1],
+		levels = levels,
+	}
+end
+
+-- Resolve the descriptor for the active arena (Config.ACTIVE_ARENA). Client dressing
+-- consumes this instead of hardcoding a specific arena.
+function ArenaDescriptor.forActive()
+	if Config.ACTIVE_ARENA == "sweeper" then
+		return ArenaDescriptor.sweeper()
+	end
+	return ArenaDescriptor.hex()
+end
+
 -- Cheap shape guard so a future arena's hand-built descriptor fails loudly/early
 -- rather than producing silently-wrong dressing. Returns the descriptor for chaining.
 function ArenaDescriptor.validate(desc)
