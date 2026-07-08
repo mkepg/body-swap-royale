@@ -189,6 +189,35 @@ function SweeperHazard.build()
 	buildBeams(folder)
 end
 
+-- Beam angular speed factoring in the ramp (shared by animation + step's near-arc scan).
+local function angleOf(beam, elapsed)
+	local speed = SweeperModel.rampedSpeed(beam.baseSpeed, elapsed,
+		{ rampPerSecond = Config.SWEEP_SPEED_RAMP_PER_SEC, maxSpeed = Config.SWEEP_SPEED_MAX })
+	return SweeperModel.beamAngle(beam, 0, speed, elapsed)
+end
+
+-- Heartbeat animation: connected ONLY while this arena is the live one (start/stop
+-- gate the connection), so a dormant sweeper performs zero per-frame work.
+local function startAnimation()
+	if animConn then return end
+	animConn = RunService.Heartbeat:Connect(function()
+		local elapsed = os.clock() - startClock
+		for _, rec in ipairs(beamRecs) do
+			rec.part.CFrame = beamCFrame(rec.beam, angleOf(rec.beam, elapsed), rec.y)
+		end
+	end)
+end
+
+local function stopAnimation()
+	if animConn then
+		animConn:Disconnect()
+		animConn = nil
+	end
+	for _, rec in ipairs(beamRecs) do
+		rec.part.CFrame = beamCFrame(rec.beam, rec.beam.baseAngle, rec.y) -- park at rest
+	end
+end
+
 function SweeperHazard.start(now)
 	startClock = now
 	-- Publish the round-start time on the SERVER clock -> client, so cosmetic beams
@@ -197,24 +226,78 @@ function SweeperHazard.start(now)
 	if folder then
 		folder:SetAttribute("RoundStartServerT", Workspace:GetServerTimeNow())
 	end
-	-- Heartbeat animation connects here starting Task 5.
+	startAnimation()
 end
 
-function SweeperHazard.stop() end
+function SweeperHazard.stop()
+	stopAnimation()
+end
 
 function SweeperHazard.descriptor() return ArenaDescriptor.sweeper() end
 function SweeperHazard.voidY() return Config.SWEEP_VOID_Y end
 
--- TEMPORARY stub (Task 5 replaces this with the real ring-spawn math per the v2
--- spec) -- exists only so ArenaHazard.validate passes on this geometry.
-function SweeperHazard.spawnCFrame(_index)
-	return CFrame.new(Config.SWEEP_CENTER + Vector3.new(0, 5, 0))
+-- Round spawn slot: an evenly-spaced ring at mid-annulus radius, facing the hub.
+function SweeperHazard.spawnCFrame(index)
+	local c = Config.SWEEP_CENTER
+	local pts = WorldLayout.ring(c.X, c.Z, Config.SWEEP_SPAWN_RADIUS, Config.LOBBY_CAPACITY)
+	local pt = pts[math.min(index, #pts)]
+	local pos = Vector3.new(pt.x, Config.SWEEP_SURFACE_Y + 5, pt.z)
+	return CFrame.lookAt(pos, Vector3.new(c.X, pos.Y, c.Z))
 end
 
--- TEMPORARY stub (Task 5 replaces this with the real backstop + validator-reseed
--- logic driven by SweeperModel).
-function SweeperHazard.step(_now, _samples)
-	return { sweeps = {}, reseeds = {} }
+-- Per monitor tick: on-platform check, validator reseeds near any beam arc, and the
+-- resist backstop (a body that stays inside an arc -- resisting the physics shove --
+-- for SWEEP_RESIST_TICKS consecutive ticks is force-swept + SweptAt-stamped by
+-- RoundManager). Grace-blocked bodies are skipped entirely (physical pass-through +
+-- backstop immunity both apply).
+function SweeperHazard.step(now, samples)
+	local sweeps, reseeds = {}, {}
+	if not Config.HAZARDS_ENABLED then
+		return { sweeps = sweeps, reseeds = reseeds }
+	end
+	local elapsed = now - startClock
+	local speedOpts = { rampPerSecond = Config.SWEEP_SPEED_RAMP_PER_SEC, maxSpeed = Config.SWEEP_SPEED_MAX }
+	local c = Config.SWEEP_CENTER
+	for _, s in ipairs(samples) do
+		local dx, dz = s.position.X - c.X, s.position.Z - c.Z
+		local radius = math.sqrt(dx * dx + dz * dz)
+		local dy = s.position.Y - Config.SWEEP_SURFACE_Y
+		local onPlatform = radius >= Config.SWEEP_HUB_RADIUS and radius <= Config.SWEEP_PLATFORM_RADIUS
+			and math.abs(dy) <= Config.SWEEP_STAND_BAND
+		if onPlatform and not s.graceBlocked then
+			local angle = math.atan2(dz, dx)
+			local airborne = dy > Config.SWEEP_AIRBORNE_BAND or (s.velocityY or 0) > Config.SWEEP_AIRBORNE_VY
+			-- Reseed movement validation for any body in/near an arc (beam shoves are
+			-- huge input-less displacements the validator must not score).
+			local nearArc = false
+			for _, beam in ipairs(activeBeams) do
+				local a = angleOf(beam, elapsed)
+				if SweeperModel.angularDistance(angle, a) < Config.SWEEP_BEAM_HALF_WIDTH + Config.SWEEP_RESEED_MARGIN then
+					nearArc = true
+					break
+				end
+			end
+			if nearArc then reseeds[#reseeds + 1] = s.body end
+			-- Backstop: only a body that STAYS in the arc (resisting the physics shove)
+			-- for SWEEP_RESIST_TICKS consecutive ticks is force-swept.
+			if SweeperModel.isStruck({ radius = radius, angle = angle, airborne = airborne },
+				activeBeams, elapsed, speedOpts) then
+				strikeTicks[s.body] = (strikeTicks[s.body] or 0) + 1
+				if strikeTicks[s.body] >= Config.SWEEP_RESIST_TICKS then
+					strikeTicks[s.body] = nil
+					local tx, tz = SweeperModel.outwardTarget(dx, dz, 0, 0,
+						Config.SWEEP_PLATFORM_RADIUS + Config.SWEEP_OFF_MARGIN)
+					sweeps[#sweeps + 1] = { player = s.player, body = s.body,
+						target = CFrame.new(c.X + tx, s.position.Y, c.Z + tz) }
+				end
+			else
+				strikeTicks[s.body] = nil
+			end
+		else
+			strikeTicks[s.body] = nil
+		end
+	end
+	return { sweeps = sweeps, reseeds = reseeds }
 end
 
 return SweeperHazard
