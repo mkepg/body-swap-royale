@@ -90,6 +90,12 @@ local function buildAnnulus(folder)
 		seg.CFrame = CFrame.lookAt(Vector3.new(pt.x, floorY, pt.z), Vector3.new(nxt.x, floorY, nxt.z))
 		seg.Color = Config.SWEEP_PLATFORM_COLOR
 		seg.Material = Enum.Material.Glass
+		-- Hybrid skin: swap the stock look for the sourced MaterialVariant when
+		-- configured ("" keeps Glass). An unknown variant name renders the base.
+		if Config.SWEEP_DISC_MATERIAL ~= "" then
+			seg.Material = Enum.Material[Config.SWEEP_DISC_MATERIAL_BASE]
+			seg.MaterialVariant = Config.SWEEP_DISC_MATERIAL
+		end
 		seg.Transparency = 0
 		seg.TopSurface = Enum.SurfaceType.Smooth
 		seg.BottomSurface = Enum.SurfaceType.Smooth
@@ -145,6 +151,12 @@ local function buildBeams(folder)
 		part.Size = Vector3.new(span, Config.SWEEP_BEAM_SIZE.Y, Config.SWEEP_BEAM_SIZE.Z)
 		part.CFrame = beamCFrame(beam, beam.baseAngle, y)
 		part.Material = Enum.Material.Neon
+		-- Hybrid skin: deliberately Neon by default (Config.SWEEP_BEAM_MATERIAL = "");
+		-- the slot swaps in a textured variant if one is ever sourced.
+		if Config.SWEEP_BEAM_MATERIAL ~= "" then
+			part.Material = Enum.Material[Config.SWEEP_BEAM_MATERIAL_BASE]
+			part.MaterialVariant = Config.SWEEP_BEAM_MATERIAL
+		end
 		part.Color = beamColor(beam.class)
 		part.Parent = folder
 

@@ -206,6 +206,36 @@ function SweeperController.start(getOwnBody)
 	local rotor1Offset, rotor2Offset = 0, 0
 
 	----------------------------------------------------------------------------
+	-- 3b. Hub hero mesh (hybrid asset, PRESENCE-based): if the place carries
+	--     ReplicatedStorage.SweeperAssets.HubMesh (sourced via Studio MCP; the
+	--     folder lives outside Rojo's Shared mapping so syncs never delete it),
+	--     clone it over the server's collision pillar as the turbine housing.
+	--     Absent => the procedural pillar + rotors above stand alone.
+	----------------------------------------------------------------------------
+	do
+		local assets = ReplicatedStorage:FindFirstChild("SweeperAssets")
+		local hubMesh = assets and assets:FindFirstChild("HubMesh")
+		if hubMesh then
+			local m = hubMesh:Clone()
+			for _, d in ipairs(m:GetDescendants()) do
+				if d:IsA("BasePart") then
+					d.Anchored = true -- clone-time defense; the source is pre-normalized
+					d.CanCollide = false
+					d.CanQuery = false
+					d.CanTouch = false
+					counted(d)
+				end
+			end
+			-- Seat the housing's bounding box on the hub base (pillar spans
+			-- surface-6..+8), centered on the hub, whatever the model's own pivot.
+			local bbox, size = m:GetBoundingBox()
+			local target = CFrame.new(c.X, surfaceY - 6 + size.Y / 2, c.Z)
+			m:PivotTo(target * (bbox:Inverse() * m:GetPivot()))
+			m.Parent = folder
+		end
+	end
+
+	----------------------------------------------------------------------------
 	-- 4. Light shaft: translucent Neon cylinder through the hole.
 	----------------------------------------------------------------------------
 	local shaftPart
