@@ -63,19 +63,16 @@ function SweeperModel.clears(class, airborne)
 	return airborne == false
 end
 
--- Is a body struck by ANY arm of ANY beam on its tier right now?
--- body = { radius, angle, airborne }; beams = array of beam configs, each also carrying
--- { baseSpeed, class, innerRadius, outerRadius, angularHalfWidth }; opts = { rampPerSecond, maxSpeed }.
-function SweeperModel.isStruck(body, beams, elapsed, opts)
+-- Is a body struck by ANY beam, given each beam's MEASURED current angle?
+-- body = { radius, angle, airborne }; beams = array of
+-- { angle, class, innerRadius, outerRadius, angularHalfWidth }. The glue derives
+-- `angle` from the physical bar's replicated pose (atan2 of its center offset from
+-- the hub) -- physics, authority, and cosmetics observe one object by construction.
+function SweeperModel.isStruckAt(body, beams)
 	for _, beam in ipairs(beams) do
-		if not SweeperModel.clears(beam.class, body.airborne) then
-			local speed = SweeperModel.rampedSpeed(beam.baseSpeed, elapsed, opts)
-			for armIndex = 0, beam.armCount - 1 do
-				local a = SweeperModel.beamAngle(beam, armIndex, speed, elapsed)
-				if SweeperModel.overlaps(body.radius, body.angle, a, beam) then
-					return true
-				end
-			end
+		if not SweeperModel.clears(beam.class, body.airborne)
+			and SweeperModel.overlaps(body.radius, body.angle, beam.angle, beam) then
+			return true
 		end
 	end
 	return false
