@@ -44,8 +44,12 @@ Captured so they aren't lost, but deliberately **not** numbered slices and not c
   art pass (137 parts, ≤180 budget): procedural annulus + hub + wake channels + rotor + light shaft +
   marquee + under-structure + spotlights; three sourced asset slots (fallback-complete). Verified: 24/24
   lune. See [spec](superpowers/specs/2026-07-08-soul-sweeper-v2-turbine-design.md) and
-  [plan](superpowers/plans/2026-07-08-soul-sweeper-v2-turbine.md); [smoke test](smoke-tests/2026-07-08-soul-sweeper-v2-smoke-test.md)
-  (Tasks 9–10: Studio MCP verification + asset sourcing pending).
+  [plan](superpowers/plans/2026-07-08-soul-sweeper-v2-turbine.md). **v2.1 refinement** (2026-07-09):
+  true-circle platform (EditableMesh annulus over densified 48-segment collision), telegraphs removed,
+  motorized solid striped machine-bar beams (HingeConstraint physics), measured-angle strikes. See
+  [v2.1 spec](superpowers/specs/2026-07-09-soul-sweeper-v2_1-jumpclub-refinement-design.md) and
+  [v2.1 plan](superpowers/plans/2026-07-09-soul-sweeper-v2_1-jumpclub-refinement.md); [smoke test](smoke-tests/2026-07-08-soul-sweeper-v2-smoke-test.md).
+  Tasks 9–10: Studio MCP verification + asset sourcing pending.
 - **Dedicated social hub world.** A persistent space players land in *before/around* matches — main menu, shop, cosmetic customization, matchmaking queue, friends, emotes, hanging out (Fall Guys' main-menu/show-select equivalent). Distinct from the in-game balcony ([LobbyArea](../src/server/LobbyArea.luau)), which is between-rounds staging in the match world. A meaty addition: its own world, navigation, and likely a `TeleportService` flow; overlaps TDD §4 (lobby matchmaking) and the `MenuController`/shop systems. If pursued, scope as its **own** roadmap/effort rather than folding into Slice 2.
 
 ---

@@ -4,6 +4,27 @@ All notable changes to this project are documented here.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2026-07-09]
+
+### Added
+- **Soul Sweeper v2.1 — "Jump Club" refinement.** Platform scaled up (`SWEEP_PLATFORM_RADIUS 38→52`,
+  `SWEEP_HOLE_RADIUS 10→12`, `SWEEP_HUB_RADIUS 5→6`, anchor offset); true-circle visual via client
+  EditableMesh annulus over densified invisible-locally 48-segment collision ring (0.1 stud max
+  deviation; `LocalTransparencyModifier = 1` hides server segments when available; fallback: segments
+  stay visible). Telegraph arcs removed entirely (readability restored: the two chunky physical bars
+  + wake channels are the sole visual feedback). Beams rebuilt as solid striped machine-bar
+  assemblies: unanchored welded parts driven by `HingeConstraint` motors on an anchored hub axle
+  (real angular velocity → real contact impulses → players flung naturally and consistently). Low
+  beam thin (~1×1 cross-section, bottom at 0.6 studs: jumpable); high beam thick (~3×3, bottom at
+  5.5 studs: the grounded-clearance knob). Alternating colored segments (cream/amber and cream/crimson
+  stripes, `SmoothPlastic`, no Neon). Server-owned physics (`SetNetworkOwner(nil)`); server updates
+  motor `AngularVelocity` per Heartbeat tick via `rampedSpeed` (the ramp survives; Heartbeat CFrame
+  stepping deleted). Strike backstop and client wake cosmetics now read each beam's **measured**
+  angle from its replicated physical pose (`atan2` of bar-center offset from hub) via new pure
+  `SweeperModel.isStruckAt` (replaces elapsed-based `isStruck` — the yaw-sign risk class is retired
+  entirely: geometry, physics, authority, and cosmetics observe one physical object). Verified: 24/24
+  lune suites. Live verification + MCP asset sourcing pending (Task 6).
+
 ## [2026-07-08]
 
 ### Added

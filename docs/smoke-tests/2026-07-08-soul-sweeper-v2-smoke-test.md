@@ -83,6 +83,58 @@
 - After the shove, if they try to fly/teleport, the validator should catch and correct them (normal exploit protection resumes).
 - Confirm: **validator reseeds bodies in/near beam arcs**, no interference during legitimate shoves, exploit detection still works elsewhere.
 
+## v2.1 Addendum — Jump Club Refinement Cases
+
+> These cases verify the v2.1 motorized solid-beam and true-circle refinements. Run after v2 Cases 1–11 confirm.
+
+### 12. **Fling feel — real velocity, not penetration-shove (solo or 2-client)**
+- Spawn a test body (via command bar: `Instance.new("Part"); part.CanCollide = true; part.Parent = workspace`)
+  directly in the path of a rotating bar.
+- Watch the body as the bar makes contact: it should be **launched with real velocity** (not nudged or
+  penetration-pushed).
+- Observe the trajectory: angular momentum from the spinning bar transfers to the body's linear velocity;
+  the fling is smooth and repeatable.
+- **Knob:** `Config.SWEEP_BEAM_DENSITY` (density tuning for fling magnitude if feel is off).
+- Confirm: **fling feels natural and consistent**, body receives real impulse, not jank.
+
+### 13. **Stall attempt — bar wins (solo or 2-client)**
+- Have a player stand grounded in a beam's arc and resist (e.g., via an anchor cheat or simply by holding
+  position in a simulator).
+- Observe the backstop counter: after **~3 consecutive struck ticks** (`Config.SWEEP_RESIST_TICKS`), the
+  beam wins — body is hard re-swept outward (force re-pivot), regardless of resistance.
+- Verify the timing: a resister is backstop-swept within **~0.3 seconds** (3 ticks × 0.1 s sampler).
+- Confirm: **bar cannot be stalled**, backstop fires reliably.
+
+### 14. **True-circle visual — smooth annulus, local segment hide (solo)**
+- Observe the sweeper platform floor: it should render as a **smooth seamless annulus** (no visible
+  polygon segments, true circle appearance).
+- This is the client `EditableMesh` annulus; on success, the server's 48 collision segments are hidden
+  locally via `LocalTransparencyModifier = 1` (collision still active, visuals hidden).
+- **Fallback case (if EditableMesh unavailable):** the server segments remain visible (the pre-v2.1 look);
+  everything still works, just segmented appearance.
+- Confirm: **annulus renders as true circle** (or visibly segmented if fallback), no visual jank.
+
+### 15. **High-bar clearance — 3-stud thickness at grounded (solo or 2-client)**
+- Have a player stand grounded at various radii in the high beam's path as it rotates.
+- The high bar (now 3 studs thick, bottom at `SWEEP_BEAM_HIGH_BOTTOM = 5.5`) should pass cleanly over
+  a grounded body's head.
+- Verify the knob: if a grounded body is caught, **reduce** `SWEEP_BEAM_HIGH_BOTTOM`; if too low,
+  increase it. Target: clearance just over a normalized R15 head.
+- Confirm: **grounded body clears the high bar**, jumping into it gets swept.
+
+### 16. **Exactly two rotating bars visible, telegraphs gone (solo or 2-client)**
+- Observe the sweeper arena during a round: **exactly two solid striped bars** should be rotating
+  around the hub.
+- The old telegraph arcs (thin faded leading beams) should **not be visible** — they are deleted in v2.1.
+- Readability now comes from the solid bars themselves + wake channels (thin radial floor strips lighting up).
+- Confirm: **two bars only, no phantom telegraphs**, visual clutter reduced.
+
+### 17. **Rotor ring 2 clears the thick bar (solo or 2-client)**
+- Observe the cosmetic rotor rings near the hub as they spin.
+- Rotor ring 2 (the outer visual ring) should **clear the high beam** (moved to `surfaceY + 9.5` in v2.1)
+  without clipping through the bar (which tops out at ~8.5 studs with the 3-thick sizing).
+- Confirm: **rotor ring 2 animation is clean**, no visual intersections with the beam.
+
 ## Results
 
 ### 2026-07-08 — Studio MCP Play-Solo verification (Task 9, deterministic pass)
