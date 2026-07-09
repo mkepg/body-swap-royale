@@ -29,15 +29,8 @@ do
 	print("sweeper: rampedSpeed OK")
 end
 
--- overlaps: inside the radius band AND within the beam's angular half-width.
-do
-	local opts = { innerRadius = 3, outerRadius = 30, angularHalfWidth = 0.15 }
-	expect(M.overlaps(10, 0.0, 0.1, opts), "within band + arc -> true")
-	expect(not M.overlaps(10, 0.0, 0.3, opts), "outside arc -> false")
-	expect(not M.overlaps(1, 0.0, 0.0, opts), "inside inner radius (hub) -> false")
-	expect(not M.overlaps(40, 0.0, 0.0, opts), "beyond outer radius -> false")
-	print("sweeper: overlaps OK")
-end
+-- (overlaps was removed in v2.3 with the angular kill-zone model; the constant-width
+-- radius/pad behavior is covered by the isStruckSwept block below.)
 
 -- clears: low beam cleared by being airborne; high beam cleared by being grounded.
 -- An unknown class must fail loudly (never silently behave like "high").
