@@ -90,10 +90,14 @@ Config.HEX_FLOOR_COLORS = {
 -- ACTIVE_ARENA build switch: ALL arenas are always built (persistent world).
 Config.ARENA_OVERRIDE = ""
 
--- ===== Soul Sweeper arena v2 -- "Soul Turbine" (see 2026-07-08 spec) =====
--- One annulus platform around a central turbine hub; two solid stacked beams
--- (low amber = JUMP, high crimson = STAY GROUNDED) server-animated from the pure
--- SweeperModel angle(t). Fall off the rim or into the hub gap -> void.
+-- ===== Soul Sweeper arena v2.2 -- "Soul Turbine" touch elimination (see
+-- 2026-07-09 v2.2 spec) =====
+-- One annulus platform around a central turbine hub; two beams (low amber =
+-- JUMP, high crimson = STAY GROUNDED) are non-collidable deterministic
+-- touch-elimination zones -- a struck non-grace body dies via the grace-gated
+-- hazard chokepoint (RoundManager.eliminateFromHazard), no shove/knockback.
+-- Motors still physically spin the (non-collidable) assemblies for the
+-- visual. Fall off the rim or into the hub gap -> void.
 Config.SWEEP_CENTER = Vector3.new(140, 0, 0) -- platform center (hex stays at origin)
 Config.SWEEP_SURFACE_Y = 0
 Config.SWEEP_PLATFORM_RADIUS = 52   -- outer rim
@@ -119,9 +123,6 @@ Config.SWEEP_SPEED_RAMP_PER_SEC = 0.02
 Config.SWEEP_SPEED_MAX = 2.5
 Config.SWEEP_AIRBORNE_BAND = 3
 Config.SWEEP_AIRBORNE_VY = 8
-Config.SWEEP_OFF_MARGIN = 4          -- backstop re-pivot pushes this far past the rim
-Config.SWEEP_RESIST_TICKS = 3        -- consecutive struck ticks before the backstop fires
-Config.SWEEP_RESEED_MARGIN = math.rad(12) -- extra arc where movement validation is reseeded
 
 -- Solid machine-bar beams (Jump Club idiom): unanchored welded assemblies driven by
 -- HingeConstraint motors on the hub axle (spec 2026-07-09 §2-4/§2-6). BOTTOM faces are
@@ -134,12 +135,10 @@ Config.SWEEP_BEAM_HIGH_THICKNESS = 3
 Config.SWEEP_BEAM_STRIPES = 6         -- alternating colored segments per bar
 Config.SWEEP_BEAM_STRIPE_COLOR = Color3.fromRGB(245, 238, 220) -- warm cream (both bars)
 Config.SWEEP_BEAM_MOTOR_TORQUE = 1e9  -- players can never stall a bar
-Config.SWEEP_BEAM_DENSITY = 8         -- heavy bars: convincing flings, stable under contact
 Config.SWEEP_HUB_TOP = 10             -- hub pillar top (studs above surface; axle must
                                       -- reach past the thick bar's top at 5.5+3)
 Config.SWEEP_BEAM_LOW_COLOR = Color3.fromRGB(244, 162, 97)  -- amber: JUMP
 Config.SWEEP_BEAM_HIGH_COLOR = Color3.fromRGB(225, 75, 75)  -- crimson: STAY GROUNDED
-Config.SWEEP_TUMBLE_SECONDS = 0.6
 
 -- Soul Turbine dressing (client; budgets: <=180 parts, one shared loop, <=40 writes/frame).
 Config.SWEEP_WAKE_CHANNELS = 36      -- radial floor strips igniting in the low beam's wake

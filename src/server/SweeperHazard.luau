@@ -1,22 +1,25 @@
 --[[
-	SweeperHazard (server) -- the Soul Sweeper v2.1 "Jump Club" arena behind the
-	ArenaHazard interface. One annulus platform (segmented tangent-box floor) around
-	a non-walkable hub pillar, with a fall-gap ring between hub and hole. Two SOLID
-	striped machine-bar beams (low/high) are unanchored welded assemblies driven by
-	HingeConstraint motors on the anchored hub axle (spec 2026-07-09 §2-4): the
-	PHYSICS ENGINE rotates them, so contact impulses (flings, stalls) are real --
-	there is no Heartbeat CFrame stepping to desync from what a body actually feels.
-	The strike backstop and the reseed scan both read each beam's MEASURED angle off
-	its replicated root pose (spec §2-5), so geometry, physics, authority, and (via
-	replication) client cosmetics all observe one physical object; there is no
-	computed-vs-physical mapping left that could disagree. The backstop remains as a
-	force-sweep for a body that RESISTS the shove for SWEEP_RESIST_TICKS in a row.
+	SweeperHazard (server) -- the Soul Sweeper v2.2 touch-elimination arena behind
+	the ArenaHazard interface. One annulus platform (segmented tangent-box floor)
+	around a non-walkable hub pillar, with a fall-gap ring between hub and hole. Two
+	NON-COLLIDABLE striped machine-bar beams (low/high) are unanchored welded
+	assemblies driven by HingeConstraint motors on the anchored hub axle (spec
+	2026-07-09 v2.2 §2-4): the PHYSICS ENGINE still rotates them for a smooth,
+	desync-proof visual, but CanCollide = false means bodies pass through them
+	physically -- a beam TOUCH is not a contact, it is read off the same measured
+	pose and turned into an instant elimination (spec §2-1/§2-5): the strike test
+	reads each beam's MEASURED angle off its replicated root pose, so geometry,
+	physics, authority, and (via replication) client cosmetics all observe one
+	physical object; there is no computed-vs-physical mapping left that could
+	disagree. No shove, no re-pivot, no knockback, no collision groups: a struck
+	non-grace body is routed through RoundManager.eliminateFromHazard, the SAME
+	grace-gated chokepoint as void death.
 
 	Lifecycle (called by RoundManager):
-	  build()            -- once at startup: collision groups, annulus, hub, beam assemblies
+	  build()            -- once at startup: annulus, hub, beam assemblies
 	  start(now)         -- beginRound: reset clock, publish RoundStartServerT, spin up motors
-	  step(now, samples) -- per monitor tick: refresh motor targets + backstop sweeps + reseeds
-	  stop()             -- endRound: brake motors, re-park assemblies at baseAngle
+	  step(now, samples) -- per monitor tick: refresh motor targets + touch-elimination scan
+	  stop()             -- endRound: brake motors, re-park assemblies at baseAngle, clear prevAngle
 	  descriptor()/voidY()/id/spawnCFrame -- ArenaHazard interface
 
 	Depends on: Config / SweeperModel / ArenaDescriptor / WorldLayout.
@@ -24,7 +27,6 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
-local PhysicsService = game:GetService("PhysicsService")
 local Config = require(ReplicatedStorage.Shared.Config)
 local SweeperModel = require(ReplicatedStorage.Shared.SweeperModel)
 local ArenaDescriptor = require(ReplicatedStorage.Shared.ArenaDescriptor)
@@ -35,23 +37,9 @@ SweeperHazard.id = "sweeper"
 
 local built = false
 local startClock = 0   -- os.clock() at round start; elapsed = now - startClock
--- { { beam = config, part = Part (the assembly's collidable root spine),
---     hinge = HingeConstraint (the motor), y = centerY }, ... }
+-- { { beam = config, part = Part (the assembly's non-collidable root spine),
+--     hinge = HingeConstraint (the motor), y = centerY, prevAngle = number? }, ... }
 local beamRecs = {}
-
--- strikeTicks[body] = consecutive struck ticks (anti-cheat resist-backstop debounce).
--- Cleared explicitly whenever a body stops being struck / leaves the platform (the
--- practical cases); keyed weakly so a destroyed body's stray entry can never leak.
-local strikeTicks = setmetatable({}, { __mode = "k" })
-
--- Collision groups: registered ONCE in build() (before any body can be flagged), so
--- solid beams never collide with a just-swapped grace body. pcall-guarded because
--- RegisterCollisionGroup errors if the group already exists (hot Studio reloads).
-local function ensureCollisionGroups()
-	pcall(function() PhysicsService:RegisterCollisionGroup("SweepBeam") end)
-	pcall(function() PhysicsService:RegisterCollisionGroup("GraceBody") end)
-	PhysicsService:CollisionGroupSetCollidable("SweepBeam", "GraceBody", false)
-end
 
 -- World pose of a beam assembly's ROOT at a given angle + height: a radial bar
 -- spanning hub-to-rim, centered on that span. Shared by the initial build placement
@@ -142,39 +130,37 @@ local function beamBottom(class)
 	return Config.SWEEP_BEAM_HIGH_BOTTOM
 end
 
--- One solid striped machine bar: a collidable root spine + alternating welded
+-- One striped machine bar: a non-collidable root spine + alternating welded
 -- stripe shells + a rounded end cap + a hub collar, all rigidly welded (so they
 -- move as one body), hinged to the anchored hub axle by a torque-capped motor.
--- Everything here is group "SweepBeam" so grace pass-through covers the whole bar,
--- not just the spine.
+-- Every part is CanCollide = false (spec v2.2 §2-4): the bar physically touches
+-- nothing, so no collision group is needed either -- a touch is read off the
+-- measured pose (SweeperHazard.step), not felt as a physics contact.
 local function buildBeamAssembly(folder, hubPart, beam)
 	local span = Config.SWEEP_PLATFORM_RADIUS - Config.SWEEP_HUB_RADIUS
 	local thick = beamThickness(beam.class)
 	local bottom = beamBottom(beam.class)
 	local centerY = Config.SWEEP_SURFACE_Y + bottom + thick / 2
 	local color = beamColor(beam.class)
-	local props = PhysicalProperties.new(Config.SWEEP_BEAM_DENSITY, 0.3, 0.5)
 	local c = Config.SWEEP_CENTER
 
-	-- Root spine: the full-span collidable bar (the physics contact surface). Built
-	-- and welded while still part of a rigid structure that has NOTHING anchored yet
-	-- (default Anchored = false) -- that's safe because no physics step runs between
-	-- Instance.new/Parent here and the hinge attachment below (all synchronous Luau,
-	-- no yields), so the engine never gets a chance to drop it before the hinge exists.
+	-- Root spine: the full-span bar (drives the assembly's pose + is the strike
+	-- test's measured-angle source). Built and welded while still part of a rigid
+	-- structure that has NOTHING anchored yet (default Anchored = false) -- that's
+	-- safe because no physics step runs between Instance.new/Parent here and the
+	-- hinge attachment below (all synchronous Luau, no yields), so the engine never
+	-- gets a chance to drop it before the hinge exists.
 	local root = Instance.new("Part")
 	root.Name = "SweepBeam_" .. beam.class
 	root.Size = Vector3.new(span, thick, thick)
 	root.CFrame = beamPose(beam.baseAngle, centerY)
 	root.Color = color
 	root.Material = Enum.Material.SmoothPlastic
-	root.CanCollide = true
-	root.CollisionGroup = "SweepBeam"
-	root.CustomPhysicalProperties = props
+	root.CanCollide = false
 	root.Parent = folder
 
 	-- Stripes: alternating cream shells welded onto the spine (slightly proud so the
-	-- stripe reads over the base color; non-colliding + massless so the contact
-	-- surface and the mass distribution both stay exactly the root spine's box).
+	-- stripe reads over the base color; non-colliding + massless).
 	local stripeLen = span / Config.SWEEP_BEAM_STRIPES
 	for i = 0, Config.SWEEP_BEAM_STRIPES - 1 do
 		if i % 2 == 1 then
@@ -185,7 +171,6 @@ local function buildBeamAssembly(folder, hubPart, beam)
 			stripe.Color = Config.SWEEP_BEAM_STRIPE_COLOR
 			stripe.Material = Enum.Material.SmoothPlastic
 			stripe.CanCollide = false
-			stripe.CollisionGroup = "SweepBeam"
 			stripe.Massless = true
 			stripe.Parent = folder
 			local weld = Instance.new("WeldConstraint")
@@ -204,7 +189,6 @@ local function buildBeamAssembly(folder, hubPart, beam)
 	cap.Color = color
 	cap.Material = Enum.Material.SmoothPlastic
 	cap.CanCollide = false
-	cap.CollisionGroup = "SweepBeam"
 	cap.Massless = true
 	cap.Parent = folder
 	local capWeld = Instance.new("WeldConstraint")
@@ -223,7 +207,6 @@ local function buildBeamAssembly(folder, hubPart, beam)
 	collar.Color = Config.SWEEP_BEAM_STRIPE_COLOR
 	collar.Material = Enum.Material.SmoothPlastic
 	collar.CanCollide = false
-	collar.CollisionGroup = "SweepBeam"
 	collar.Massless = true
 	collar.Parent = folder
 	local collarWeld = Instance.new("WeldConstraint")
@@ -294,8 +277,6 @@ function SweeperHazard.build()
 	if built then return end
 	built = true
 
-	ensureCollisionGroups()
-
 	-- The sweeper field IS the floor: remove the place template's baseplate + spawns
 	-- (idempotent alongside HexHazard.build -- whichever arena builds first destroys
 	-- them; the second no-ops since the children are already gone).
@@ -319,9 +300,9 @@ end
 
 -- The bar's CURRENT physical angle: atan2 of its root center's offset from the hub.
 -- This is the single angle source of truth (spec 2026-07-09 §2-5) -- the strike
--- backstop, the reseed scan, and (via the replicated CFrame, independently on the
--- client) cosmetics all read this SAME physical pose, so there is no
--- computed-vs-physical mapping left that geometry and authority could disagree on.
+-- test and (via the replicated CFrame, independently on the client) cosmetics all
+-- read this SAME physical pose, so there is no computed-vs-physical mapping left
+-- that geometry and authority could disagree on.
 local function measuredAngle(rec)
 	local c = Config.SWEEP_CENTER
 	local pos = rec.part.Position
@@ -359,10 +340,14 @@ function SweeperHazard.stop()
 	-- at rest via PivotTo -- welded parts follow rigidly, so one call re-seats the
 	-- whole bar (spine + stripes + cap + collar) in one atomic move. Dormant cost is
 	-- ~zero: a braked motor holding a resting bar against gravity does no per-frame
-	-- Luau work (no Heartbeat connection exists to stop, unlike v2).
+	-- Luau work (no Heartbeat connection exists to stop, unlike v2). Clearing
+	-- prevAngle means the NEXT round's first step() tick has no prior sample, so
+	-- SweeperModel.isStruckSwept falls back to the instantaneous check instead of
+	-- reading this re-park jump as a (potentially kill-wide) swept arc.
 	for _, rec in ipairs(beamRecs) do
 		rec.hinge.AngularVelocity = 0
 		rec.part:PivotTo(beamPose(rec.beam.baseAngle, rec.y))
+		rec.prevAngle = nil
 	end
 end
 
@@ -379,16 +364,17 @@ function SweeperHazard.spawnCFrame(index)
 end
 
 -- Per monitor tick: refresh each motor's ramped target speed, read back each bar's
--- MEASURED angle once (shared by the reseed scan and the strike test below, so both
--- see the identical physical snapshot), then run the on-platform check, validator
--- reseeds near any beam arc, and the resist backstop (a body that stays inside an
--- arc -- resisting the physics shove -- for SWEEP_RESIST_TICKS consecutive ticks is
--- force-swept + SweptAt-stamped by RoundManager). Grace-blocked bodies are skipped
--- entirely (physical pass-through + backstop immunity both apply).
+-- MEASURED angle once (shared by every sample this tick), build the beams table for
+-- SweeperModel.isStruckSwept (swept-interval strike test -- the arc's motion since
+-- the LAST tick, not just its instantaneous position, so no rotation speed can
+-- tunnel past a player between 10 Hz samples), then STORE that angle as the next
+-- tick's prevAngle. A struck non-grace on-platform body is queued for elimination
+-- via the SAME grace-gated chokepoint as void death (RoundManager.eliminateFromHazard).
+-- Grace-blocked / off-platform bodies are skipped entirely (no strike test run).
 function SweeperHazard.step(now, samples)
-	local sweeps, reseeds = {}, {}
+	local eliminations = {}
 	if not Config.HAZARDS_ENABLED then
-		return { sweeps = sweeps, reseeds = reseeds }
+		return { eliminations = eliminations }
 	end
 	local elapsed = now - startClock
 	local speedOpts = { rampPerSecond = Config.SWEEP_SPEED_RAMP_PER_SEC, maxSpeed = Config.SWEEP_SPEED_MAX }
@@ -397,13 +383,17 @@ function SweeperHazard.step(now, samples)
 	local beamsNow = {}
 	for i, rec in ipairs(beamRecs) do
 		rec.hinge.AngularVelocity = motorTarget(rec.beam, elapsed, speedOpts)
+		local angle = measuredAngle(rec)
 		beamsNow[i] = {
-			angle = measuredAngle(rec),
+			angle = angle,
+			prevAngle = rec.prevAngle,
+			direction = rec.beam.direction,
 			class = rec.beam.class,
 			innerRadius = Config.SWEEP_HUB_RADIUS,
 			outerRadius = Config.SWEEP_PLATFORM_RADIUS,
 			angularHalfWidth = Config.SWEEP_BEAM_HALF_WIDTH,
 		}
+		rec.prevAngle = angle
 	end
 
 	for _, s in ipairs(samples) do
@@ -415,35 +405,12 @@ function SweeperHazard.step(now, samples)
 		if onPlatform and not s.graceBlocked then
 			local angle = math.atan2(dz, dx)
 			local airborne = dy > Config.SWEEP_AIRBORNE_BAND or (s.velocityY or 0) > Config.SWEEP_AIRBORNE_VY
-			-- Reseed movement validation for any body in/near an arc (beam shoves are
-			-- huge input-less displacements the validator must not score).
-			local nearArc = false
-			for _, b in ipairs(beamsNow) do
-				if SweeperModel.angularDistance(angle, b.angle) < Config.SWEEP_BEAM_HALF_WIDTH + Config.SWEEP_RESEED_MARGIN then
-					nearArc = true
-					break
-				end
+			if SweeperModel.isStruckSwept({ radius = radius, angle = angle, airborne = airborne }, beamsNow) then
+				eliminations[#eliminations + 1] = s.player
 			end
-			if nearArc then reseeds[#reseeds + 1] = s.body end
-			-- Backstop: only a body that STAYS in the arc (resisting the physics shove)
-			-- for SWEEP_RESIST_TICKS consecutive ticks is force-swept.
-			if SweeperModel.isStruckAt({ radius = radius, angle = angle, airborne = airborne }, beamsNow) then
-				strikeTicks[s.body] = (strikeTicks[s.body] or 0) + 1
-				if strikeTicks[s.body] >= Config.SWEEP_RESIST_TICKS then
-					strikeTicks[s.body] = nil
-					local tx, tz = SweeperModel.outwardTarget(dx, dz, 0, 0,
-						Config.SWEEP_PLATFORM_RADIUS + Config.SWEEP_OFF_MARGIN)
-					sweeps[#sweeps + 1] = { player = s.player, body = s.body,
-						target = CFrame.new(c.X + tx, s.position.Y, c.Z + tz) }
-				end
-			else
-				strikeTicks[s.body] = nil
-			end
-		else
-			strikeTicks[s.body] = nil
 		end
 	end
-	return { sweeps = sweeps, reseeds = reseeds }
+	return { eliminations = eliminations }
 end
 
 return SweeperHazard

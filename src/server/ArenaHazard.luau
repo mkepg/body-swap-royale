@@ -14,12 +14,11 @@
 
 	`samples` = array of { position: Vector3, graceBlocked: boolean, player: Player,
 	                       body: Model, velocityY: number } (one per alive body).
-	`effects` (v2) = { sweeps = { { player, body, target: CFrame }, ... },
-	                    reseeds = { body, ... } }
-	            -- RoundManager applies each sweep with reposition-then-re-own, and
-	            -- reseeds movement validation for each body in `reseeds` (a hazard
-	            -- shove is a huge input-less displacement that must not be scored
-	            -- as a violation).
+	`effects` (v3, spec 2026-07-09 v2.2) = { eliminations = { player, ... } }
+	            -- RoundManager routes each struck player through the SAME
+	            -- grace-gated chokepoint as void death (RoundManager.eliminateFromHazard),
+	            -- which double-checks the grace gate. Deterministic server math on
+	            -- server-owned physics state -- no shove, no knockback, nothing to desync.
 --]]
 
 local ArenaHazard = {}

@@ -173,12 +173,9 @@ local function hasFloorBeneath(body)
 	local bodiesFolder = Workspace:FindFirstChild("Bodies")
 	params.FilterDescendantsInstances = bodiesFolder and { bodiesFolder } or {}
 	params.RespectCanCollide = true
-	-- Moving hazard parts must never count as "floor": cast the ray AS a grace body
-	-- (the GraceBody group ignores SweepBeam), so a beam sweeping under a falling
-	-- body can't fake a floor and pollute doom-exclusion or the hover check. Real
-	-- floors are unaffected (GraceBody collides with everything else). Groups are
-	-- registered in SweeperHazard.build(), which runs at server start before any round.
-	params.CollisionGroup = "GraceBody"
+	-- Sweeper beams are CanCollide = false, so RespectCanCollide rays ignore them
+	-- natively -- no collision-group trick needed to keep a moving beam from faking
+	-- a floor under a falling body.
 	local origin = root.Position
 	local downTo = arena.voidY() - origin.Y -- negative: from root down to the kill-plane
 	if downTo >= 0 then
@@ -283,33 +280,6 @@ local function firePreview(plan)
 	end
 end
 
--- Grace bodies must not collide with the solid sweep beams (spec §4): mirror the
--- GraceProtected attribute into the body's collision group. The monitor call site
--- is change-gated (per-tick discipline); the swap / elimination / round-boundary
--- sites re-assert unconditionally (idempotent one-shot writes).
-local function setGraceCollision(body, protected)
-	local group = protected and "GraceBody" or "Default"
-	for _, part in ipairs(body:GetDescendants()) do
-		if part:IsA("BasePart") then
-			part.CollisionGroup = group
-		end
-	end
-end
-
--- Round-boundary sweep: put every controlled body back in the Default group.
--- ControlManager.resetControl force-clears GraceProtected WITHOUT mirroring the
--- collision group, and the cleared attribute then masks the monitor's on-change
--- check -- so re-assert Default here or a round-boundary grace body stays in
--- GraceBody forever (ghosts through beams, then gets backstop-swept as a "resister").
-local function clearAllGraceCollision()
-	for _, p in ipairs(Players:GetPlayers()) do
-		local b = ControlManager.getControlledBody(p)
-		if b then
-			setGraceCollision(b, false)
-		end
-	end
-end
-
 -- After control has been committed, open the post-swap grace window for `players`
 -- and record each one's new controlled-body position so the void monitor can
 -- derive "has moved" (horizontal travel since the swap).
@@ -322,7 +292,6 @@ local function stampGrace(players)
 		swapPos[player] = root and root.Position or nil
 		if body then
 			body:SetAttribute("GraceProtected", true) -- client shimmer follows this
-			setGraceCollision(body, true)
 		end
 	end
 end
@@ -398,7 +367,6 @@ function RoundManager.eliminate(player)
 	local body = ControlManager.getControlledBody(player)
 	if body then
 		body:SetAttribute("GraceProtected", false)
-		setGraceCollision(body, false)
 		BodyManager.sendToLobby(player, body)
 		-- Re-assert ownership after the server pivot (reposition-then-re-own), so the
 		-- teleport replicates onto the client-owned body -- uniform with beginRound's
@@ -479,7 +447,6 @@ local function startMonitor()
 						-- only (avoid per-tick replication spam). graceBlocked == protected.
 						if body:GetAttribute("GraceProtected") ~= graceBlocked then
 							body:SetAttribute("GraceProtected", graceBlocked)
-							setGraceCollision(body, graceBlocked)
 						end
 						samples[#samples + 1] = {
 							position = root.Position,
@@ -496,22 +463,12 @@ local function startMonitor()
 				end
 			end
 			local effects = arena.step(t, samples)
-			-- Apply any sweep requests (Sweeper arena) with reposition-then-re-own: the same
-			-- primitive as elimination/rescue, so a swept body's snap replicates onto the
-			-- client-owned body and is never read as a movement-validation violation.
-			if effects and effects.sweeps then
-				for _, s in ipairs(effects.sweeps) do
-					s.body:SetAttribute("SweptAt", workspace:GetServerTimeNow()) -- client tumble follows this
-					BodyManager.pivotTo(s.body, s.target)
-					ControlManager.regrantControl(s.player)
-					noteServerReposition(s.body)
-				end
-			end
-			if effects and effects.reseeds then
-				for _, b in ipairs(effects.reseeds) do
-					-- A body being shoved by a beam moves fast with no input; clear its
-					-- validation history so the shove is never scored as a violation.
-					noteServerReposition(b)
+			-- Beam touch = elimination (spec 2026-07-09 v2.2): route each struck player
+			-- through the SAME grace-gated chokepoint as void death. Deterministic server
+			-- math on server-owned physics state -- no knockback, nothing to desync.
+			if effects and effects.eliminations then
+				for _, p in ipairs(effects.eliminations) do
+					RoundManager.eliminateFromHazard(p)
 				end
 			end
 			task.wait(0.1)
@@ -568,7 +525,14 @@ local function beginRound()
 		noteServerReposition(BodyManager.getOwnBody(p)) -- don't read the spawn teleport as a violation
 	end
 	ControlManager.resetControl() -- everyone back on their own body (+ retarget)
-	clearAllGraceCollision() -- resetControl cleared GraceProtected; mirror the collision group too
+	-- Round-start grace (2026-07-03 review recommendation, now load-bearing: beams
+	-- kill on touch, so every player gets the standard orient beat before the bars
+	-- -- or the hex tiles -- can hurt them).
+	local participants = {}
+	for player in pairs(roundParticipants) do
+		participants[#participants + 1] = player
+	end
+	stampGrace(participants)
 	broadcastState() -- phase Active
 	arena.start(now()) -- tile floor begins its cycles (solid at round start)
 	startMonitor()
@@ -697,7 +661,6 @@ local function endRound()
 		noteServerReposition(BodyManager.getOwnBody(p))
 	end
 	ControlManager.resetControl()
-	clearAllGraceCollision() -- resetControl cleared GraceProtected; mirror the collision group too
 	RoundState.reset(model) -- Ended -> Lobby
 	broadcastState() -- phase Lobby
 end
