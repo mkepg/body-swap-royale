@@ -154,10 +154,8 @@ Config.SWEEP_STANDBY_TRANSPARENCY = 0.85 -- dormant-arena Neon dim (one-time fli
 -- Material equals its BaseMaterial, hence the *_BASE key. "" => stock Glass look.
 Config.SWEEP_DISC_MATERIAL = "SweeperStageFloor"
 Config.SWEEP_DISC_MATERIAL_BASE = "Metal"
--- Beams stay Neon DELIBERATELY (the emissive glow IS the "energy vane" read); the
--- slot exists for a future textured beam look. "" => Neon.
-Config.SWEEP_BEAM_MATERIAL = ""
-Config.SWEEP_BEAM_MATERIAL_BASE = "Metal"
+-- (v2.1: the beams are solid striped SmoothPlastic machine bars now -- the old Neon
+-- beam-material slot was retired with the light-beam look.)
 -- The hub hero mesh is PRESENCE-based, not ID-based: the client clones
 -- ReplicatedStorage.SweeperAssets.HubMesh when it exists. That folder lives in the
 -- place file, OUTSIDE Rojo's ReplicatedStorage.Shared mapping, so syncs never touch
