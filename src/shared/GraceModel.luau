@@ -10,7 +10,9 @@
 	tests).
 
 	Decision (TDD §2 Grace Window Logic):
-	  no entry                          -> can die (no grace; e.g. round-start spawn)
+	  no entry                          -> can die (no grace; genuinely unstamped --
+	                                        round start now stamps grace for every
+	                                        participant, RoundManager.beginRound, v2.2)
 	  now < graceMinFloor               -> protected (hard floor, checked first)
 	  now < graceUntil and not hasMoved -> protected (still orienting)
 	  otherwise                         -> can die

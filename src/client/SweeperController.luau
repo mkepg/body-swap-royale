@@ -1,18 +1,25 @@
 --[[
 	SweeperController (client) -- "Soul Turbine" cosmetics for the Soul Sweeper
-	v2.1 "Jump Club" arena. 100% cosmetic; the server owns the physical beams and
-	all gameplay geometry (SweeperHazard) -- this module only renders the
-	machine: wake channels, rim marquee, rotor spin, a seamless smooth annulus,
-	light shaft, and the static under-structure/spotlights that make the
-	platform read as a built broadcast stage. Fully self-gating on the
+	v2.2 "Touch Elimination" arena. 100% cosmetic; the server owns the physical
+	beams and all gameplay geometry (SweeperHazard) -- this module only renders
+	the machine: wake channels, rim marquee, rotor spin, a seamless smooth
+	annulus, light shaft, and the static under-structure/spotlights that make
+	the platform read as a built broadcast stage. Fully self-gating on the
 	`LiveArena` workspace attribute, so it is safe to start unconditionally: an
 	idle Soul Sweeper performs ZERO per-frame writes.
 
+	Touch = elimination (spec 2026-07-09 v2.2 §2): a bar's strike is now a pure
+	server-side kill via the grace-gated hazard chokepoint, not a physics shove.
+	Beams are non-collidable server kill zones -- there is no client-visible
+	contact response to render, so the cosmetic tumble watcher (which followed a
+	server body-attribute stamp on strike) is gone. Everything else below --
+	annulus, wake, chase, rotors, dormancy -- is unchanged from v2.1.
+
 	Angle source of truth: the wake channel's ignition angle is read directly
 	off the low beam's REPLICATED root pose (atan2 of its center offset from
-	SWEEP_CENTER) -- the SAME measured-pose convention the server's strike
-	backstop uses (spec 2026-07-09 §2-5) -- so cosmetics can never drift from
-	the physical bar. No client math derives an angle from elapsed time anymore;
+	SWEEP_CENTER) -- the SAME measured-pose convention the server's strike math
+	uses (spec 2026-07-09 §2-5) -- so cosmetics can never drift from the
+	physical bar. No client math derives an angle from elapsed time anymore;
 	the floor telegraph arcs that used to do that are gone (v2 playtest: they
 	read as two extra phantom beams -- spec 2026-07-09 §1-3).
 
@@ -52,53 +59,6 @@ local ROTOR_SPIN_SPEED = 0.4 -- rad/s, cosmetic only
 -- the v2.1 measured pose has no elapsed term to scale by, so a fixed width is
 -- simpler and reads fine across the whole ramp (idle-look implementer's call).
 local WAKE_WINDOW = 0.9
-
---------------------------------------------------------------------------------
--- Tumble watcher (verbatim from v1 -- dedupe + disconnect version).
---------------------------------------------------------------------------------
-
--- Watch the local player's controlled body for a server sweep stamp and play a brief
--- cosmetic tumble (a decaying spin on the body's root). Debounced: ignores stamps that
--- arrive while a tumble is already playing. Fed by authoritative state; never drives it.
-local function watchTumble(getOwnBody)
-	local tumbling = false
-	local currentBody = nil -- the body we're currently watching (or nil between spawns)
-	local conn = nil
-	local function attach(body)
-		if body == currentBody then return end -- unchanged: keep the existing connection
-		-- Body changed (a swap, or dropped to nil between spawns): tear down the prior
-		-- connection FIRST, so a stale SweptAt stamp on a body we no longer control can't
-		-- win the shared `tumbling` flag, and so we never leak a fresh connection each poll.
-		if conn then conn:Disconnect(); conn = nil end
-		currentBody = body
-		local root = body and body:FindFirstChild("HumanoidRootPart")
-		if not root then return end
-		local last = 0
-		conn = body:GetAttributeChangedSignal("SweptAt"):Connect(function()
-			local t = body:GetAttribute("SweptAt")
-			if not t or t == last or tumbling then return end
-			last = t
-			tumbling = true
-			task.spawn(function()
-				local dur = Config.SWEEP_TUMBLE_SECONDS
-				local t0 = os.clock()
-				while os.clock() - t0 < dur do
-					local f = 1 - (os.clock() - t0) / dur -- decay
-					root.CFrame = root.CFrame * CFrame.Angles(0, 0, math.rad(18 * f))
-					RunService.RenderStepped:Wait()
-				end
-				tumbling = false
-			end)
-		end)
-	end
-	-- Re-poll the controlled body; attach() only rewires when it actually changes.
-	task.spawn(function()
-		while true do
-			attach(getOwnBody())
-			task.wait(1)
-		end
-	end)
-end
 
 --------------------------------------------------------------------------------
 -- Build helpers.
@@ -168,9 +128,7 @@ local function buildEditableAnnulus(innerR, outerR, thickness, sides)
 	return mp
 end
 
-function SweeperController.start(getOwnBody)
-	if getOwnBody then watchTumble(getOwnBody) end
-
+function SweeperController.start()
 	local folder = workspace:FindFirstChild("SweeperDressing")
 	if folder then folder:Destroy() end
 	folder = Instance.new("Folder")
