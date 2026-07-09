@@ -358,3 +358,23 @@ Fully synced Play-Solo session; clean boot, no console errors.
 
 **Still MANUAL (2-client):** the v2.3 addendum cases — the four-way vertical-state matrix in a
 live round, constant-width feel near the rim, the round-start formation beat.
+
+### 2026-07-09 — SOLO_TEST_MODE live rounds + formation-fix verification
+
+First-ever live solo rounds (SOLO_TEST_MODE=true, ARENA_OVERRIDE="sweeper", Play-Solo):
+
+- **Touch elimination verified in a real round:** the low bar swept into a standing player
+  and eliminated them exactly within its constant-width pad (bar measured at 103–107° as it
+  crossed the stander at 110°; pad at r=32 ≈ 3.6°). Body → balcony, round ended (no winner),
+  next round cycled — the full solo loop runs unattended.
+- That first run exposed **three formation defects**, all fixed + re-verified live:
+  1. *Re-park didn't stick* (active HingeConstraint snapped pivoted bars back to leftover
+     angles ~41°). After the disable→zero-velocity→pivot→re-enable fix: bars measured at
+     **+1° / −1°** at round start.
+  2. *Round-start grace ended at the 0.5 s floor* (spawn-drop landing bounce read as
+     movement). After standing-height spawns (Y = +3, zero drop): grace measured **true at
+     0.6 s and 1.2 s, false at 1.8 s** — the full 1.5 s window holds.
+  3. *Solo spawn sat at the arc edge* (110°, nearest the sweep). After middle-out slots:
+     solo spawn measured at **175°** (arc center, farthest point).
+- **Elimination timing is physics-exact:** the stander died at **4.12 s** — the low bar's
+  travel time from 1° to 175° at 0.7 rad/s + ramp predicts ~4.2 s.
