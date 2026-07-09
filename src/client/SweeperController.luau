@@ -1,15 +1,20 @@
 --[[
-	SweeperController (client) -- "Soul Turbine" cosmetics for the Soul Sweeper v2
-	arena. 100% cosmetic; the server owns the physical beams and all gameplay
-	geometry now (SweeperHazard v2) -- this module only renders the machine: wake
-	channels, rim marquee, rotor spin, floor telegraph, light shaft, and the static
-	under-structure/spotlights that make the platform read as a built broadcast
-	stage. Fully self-gating on the `LiveArena` workspace attribute, so it is safe
-	to start unconditionally: an idle Soul Sweeper performs ZERO per-frame writes.
+	SweeperController (client) -- "Soul Turbine" cosmetics for the Soul Sweeper
+	v2.1 "Jump Club" arena. 100% cosmetic; the server owns the physical beams and
+	all gameplay geometry (SweeperHazard) -- this module only renders the
+	machine: wake channels, rim marquee, rotor spin, a seamless smooth annulus,
+	light shaft, and the static under-structure/spotlights that make the
+	platform read as a built broadcast stage. Fully self-gating on the
+	`LiveArena` workspace attribute, so it is safe to start unconditionally: an
+	idle Soul Sweeper performs ZERO per-frame writes.
 
-	Angles come from the SAME pure SweeperModel math the server's strike backstop
-	uses (round-start server time read off SweeperField.RoundStartServerT), so
-	cosmetics can never drift from the authoritative beam positions.
+	Angle source of truth: the wake channel's ignition angle is read directly
+	off the low beam's REPLICATED root pose (atan2 of its center offset from
+	SWEEP_CENTER) -- the SAME measured-pose convention the server's strike
+	backstop uses (spec 2026-07-09 §2-5) -- so cosmetics can never drift from
+	the physical bar. No client math derives an angle from elapsed time anymore;
+	the floor telegraph arcs that used to do that are gone (v2 playtest: they
+	read as two extra phantom beams -- spec 2026-07-09 §1-3).
 
 	Location: StarterPlayerScripts/Client/SweeperController (ModuleScript)
 --]]
@@ -17,10 +22,10 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
+local AssetService = game:GetService("AssetService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
-local SweeperModel = require(Shared:WaitForChild("SweeperModel"))
 local WorldLayout = require(Shared:WaitForChild("WorldLayout"))
 
 local SweeperController = {}
@@ -34,12 +39,19 @@ local WAKE_BASE_TRANSPARENCY = 0.9
 local WAKE_LIT_TRANSPARENCY = 0.15
 local CHASE_BASE_TRANSPARENCY = 0.6
 local CHASE_LIT_TRANSPARENCY = 0.1
-local TELEGRAPH_TRANSPARENCY = 0.5
 local ROTOR_TRANSPARENCY = 0.35
 local SHAFT_TRANSPARENCY = 0.7
 local LENS_TRANSPARENCY = 0.2
 local RIM_ACCENT_TRANSPARENCY = 0
 local ROTOR_SPIN_SPEED = 0.4 -- rad/s, cosmetic only
+
+-- Wake fade-window width in RADIANS (fixed, not speed-scaled): the lit trail
+-- behind the low bar spans this angular arc regardless of the bar's current
+-- speed. v2's window was speed-scaled (SWEEP_WAKE_FADE seconds * angular
+-- speed) because it derived the low bar's angle from the elapsed round clock;
+-- the v2.1 measured pose has no elapsed term to scale by, so a fixed width is
+-- simpler and reads fine across the whole ramp (idle-look implementer's call).
+local WAKE_WINDOW = 0.9
 
 --------------------------------------------------------------------------------
 -- Tumble watcher (verbatim from v1 -- dedupe + disconnect version).
@@ -127,6 +139,35 @@ local function tangentCFrame(pos, angle)
 	return CFrame.lookAt(pos, pos + dir)
 end
 
+-- A seamless TRUE-CIRCLE annulus (EditableMesh): inner/outer vertex rings top
+-- and bottom, top & bottom quad strips + outer and inner skirts (the lobby's
+-- `buildEditableCyl` pattern -- LobbyStage -- adapted to a ring). The caller
+-- pcall-wraps this: on any client where EditableMesh is unavailable, the build
+-- simply fails and the server's segmented floor stays visible (current look).
+local function buildEditableAnnulus(innerR, outerR, thickness, sides)
+	local em = AssetService:CreateEditableMesh()
+	local ti, to, bi, bo = {}, {}, {}, {}
+	for i = 0, sides - 1 do
+		local a = (2 * math.pi * i) / sides
+		local cx, sz = math.cos(a), math.sin(a)
+		ti[i] = em:AddVertex(Vector3.new(innerR * cx, thickness / 2, innerR * sz))
+		to[i] = em:AddVertex(Vector3.new(outerR * cx, thickness / 2, outerR * sz))
+		bi[i] = em:AddVertex(Vector3.new(innerR * cx, -thickness / 2, innerR * sz))
+		bo[i] = em:AddVertex(Vector3.new(outerR * cx, -thickness / 2, outerR * sz))
+	end
+	for i = 0, sides - 1 do
+		local j = (i + 1) % sides
+		em:AddTriangle(ti[i], to[j], to[i]); em:AddTriangle(ti[i], ti[j], to[j])   -- top
+		em:AddTriangle(bi[i], bo[i], bo[j]); em:AddTriangle(bi[i], bo[j], bi[j])   -- bottom
+		em:AddTriangle(to[i], bo[j], bo[i]); em:AddTriangle(to[i], to[j], bo[j])   -- outer skirt
+		em:AddTriangle(ti[i], bi[i], bi[j]); em:AddTriangle(ti[i], bi[j], ti[j])   -- inner skirt
+	end
+	local mp = AssetService:CreateMeshPartAsync(Content.fromObject(em),
+		{ CollisionFidelity = Enum.CollisionFidelity.Box }) -- cosmetic + non-colliding anyway
+	mp.Size = Vector3.new(outerR * 2, thickness, outerR * 2)
+	return mp
+end
+
 function SweeperController.start(getOwnBody)
 	if getOwnBody then watchTumble(getOwnBody) end
 
@@ -148,7 +189,10 @@ function SweeperController.start(getOwnBody)
 		if beam.class == "low" then lowBeam = beam end
 	end
 	assert(lowBeam, "SweeperController: Config.SWEEP_BEAMS has no 'low' class beam")
-	local speedOpts = { rampPerSecond = Config.SWEEP_SPEED_RAMP_PER_SEC, maxSpeed = Config.SWEEP_SPEED_MAX }
+	-- Cached ref to the low bar's collidable root (workspace.SweeperField.SweepBeam_low);
+	-- re-found in the Heartbeat loop whenever nil/destroyed (build order or a hot
+	-- Studio reload can have the client running before SweeperField replicates).
+	local lowBeamPart = nil
 
 	----------------------------------------------------------------------------
 	-- 1. Wake channels: 36 radial Neon strips flush with the surface.
@@ -202,7 +246,9 @@ function SweeperController.start(getOwnBody)
 		return bars
 	end
 	local rotor1Bars = buildRotorRing("Rotor1", surfaceY + 2)
-	local rotor2Bars = buildRotorRing("Rotor2", surfaceY + 6)
+	-- Ring 2 sits above the thick high bar now (bottom 5.5 + thickness 3 = top 8.5;
+	-- v2.1 scale-up -- was +6 when the bar was a thin light beam).
+	local rotor2Bars = buildRotorRing("Rotor2", surfaceY + 9.5)
 	local rotor1Offset, rotor2Offset = 0, 0
 
 	----------------------------------------------------------------------------
@@ -318,20 +364,52 @@ function SweeperController.start(getOwnBody)
 	end
 
 	----------------------------------------------------------------------------
-	-- 8. Telegraph arcs: one per beam, repositioned per frame ahead of the beam.
+	-- 8. Smooth annulus (the lobby technique): one seamless EditableMesh MeshPart
+	--    laid directly over the server's segmented collision floor, carrying the
+	--    SweeperStageFloor MaterialVariant. pcall-wrapped like LobbyStage.smoothCyl:
+	--    on any client where EditableMesh is unavailable, the build simply fails
+	--    and the server's segments (still fully visible + collidable) are the look
+	--    -- nothing else breaks. On SUCCESS, the segments are hidden LOCALLY ONLY
+	--    (LocalTransparencyModifier) so their collision stays exactly as-is for
+	--    the server and every other client.
 	----------------------------------------------------------------------------
-	local telegraphs = {}
-	local telegraphLen = Config.SWEEP_PLATFORM_RADIUS - Config.SWEEP_HUB_RADIUS
-	local telegraphMid = Config.SWEEP_HUB_RADIUS + telegraphLen / 2
-	local telegraphY = surfaceY + 0.15
 	do
-		for _, beam in ipairs(Config.SWEEP_BEAMS) do
-			local color = beam.class == "low" and Config.SWEEP_BEAM_LOW_COLOR or Config.SWEEP_BEAM_HIGH_COLOR
-			local cf = radialCFrame(c, beam.baseAngle, telegraphY, telegraphMid)
-			local p = counted(newPart(folder, "Telegraph_" .. beam.class, Vector3.new(telegraphLen, 0.2, 1.2),
-				cf, color, Enum.Material.Neon, TELEGRAPH_TRANSPARENCY))
-			telegraphs[#telegraphs + 1] = { part = p, beam = beam }
+		local th = Config.SWEEP_PLATFORM_THICKNESS
+		local topY = surfaceY + 0.02
+		local ok, mp = pcall(buildEditableAnnulus,
+			Config.SWEEP_HOLE_RADIUS, Config.SWEEP_PLATFORM_RADIUS, th, 96)
+		if ok and mp then
+			mp.Name = "SmoothAnnulus"
+			mp.CFrame = CFrame.new(c.X, topY - th / 2, c.Z)
+			mp.Anchored = true
+			mp.CanCollide = false
+			mp.CanQuery = false
+			mp.CanTouch = false
+			mp.CastShadow = false
+			mp.Color = Config.SWEEP_PLATFORM_COLOR
+			mp.Material = Enum.Material.Glass
+			if Config.SWEEP_DISC_MATERIAL ~= "" then
+				mp.Material = Enum.Material[Config.SWEEP_DISC_MATERIAL_BASE]
+				mp.MaterialVariant = Config.SWEEP_DISC_MATERIAL
+			end
+			mp.Parent = folder
+			counted(mp)
+
+			-- SweeperField is server-built at startup (SweeperHazard.build), so it
+			-- should already exist by the time a client runs this -- but wait a
+			-- short beat and degrade gracefully (segments stay visible) rather than
+			-- assume replication order.
+			local field = Workspace:WaitForChild("SweeperField", 5)
+			if field then
+				for _, seg in ipairs(field:GetChildren()) do
+					if seg:IsA("BasePart") and seg.Name:match("^SweepFloor_") then
+						seg.LocalTransparencyModifier = 1
+					end
+				end
+			end
 		end
+		-- pcall failure: skip both the smooth mesh and the segment hide, so the
+		-- server's segmented floor stays fully visible (the pre-v2.1 look).
 	end
 
 	assert(partCount <= 180, "SweeperController: dressing part budget exceeded (" .. partCount .. " > 180)")
@@ -345,8 +423,8 @@ function SweeperController.start(getOwnBody)
 	----------------------------------------------------------------------------
 	-- Dormancy sync: one pass over every Neon element. Static elements (shaft,
 	-- rim accent, spotlight lens) flip between a fixed live value and the
-	-- standby dim. Animated elements (wake/chase/rotor/telegraph) reset to a
-	-- safe rest/synced state on flip; the live loop repaints them once running.
+	-- standby dim. Animated elements (wake/chase/rotor) reset to a safe
+	-- rest/synced state on flip; the live loop repaints them once running.
 	----------------------------------------------------------------------------
 	local staticNeon = { { part = shaftPart, liveTransparency = SHAFT_TRANSPARENCY } }
 	for _, b in ipairs(rimAccentBars) do
@@ -370,12 +448,6 @@ function SweeperController.start(getOwnBody)
 			local lit = ((i - 1 - chaseIndex) % Config.SWEEP_CHASE_STUDS) < chaseWindow
 			cstud.part.Transparency = resetTo or (lit and CHASE_LIT_TRANSPARENCY or CHASE_BASE_TRANSPARENCY)
 		end
-		for _, t in ipairs(telegraphs) do
-			t.part.Transparency = resetTo or TELEGRAPH_TRANSPARENCY
-			if not live then
-				t.part.CFrame = radialCFrame(c, t.beam.baseAngle, telegraphY, telegraphMid) -- park
-			end
-		end
 		for _, b in ipairs(rotor1Bars) do b.part.Transparency = resetTo or ROTOR_TRANSPARENCY end
 		for _, b in ipairs(rotor2Bars) do b.part.Transparency = resetTo or ROTOR_TRANSPARENCY end
 	end
@@ -391,33 +463,30 @@ function SweeperController.start(getOwnBody)
 	RunService.Heartbeat:Connect(function(dt)
 		if workspace:GetAttribute("LiveArena") ~= "sweeper" then return end
 		local field = Workspace:FindFirstChild("SweeperField")
-		local startT = field and field:GetAttribute("RoundStartServerT")
-		if not startT then return end
-		local elapsed = Workspace:GetServerTimeNow() - startT
+		if not field then return end
 
-		-- Telegraph: leading arc ahead of each beam.
-		for _, t in ipairs(telegraphs) do
-			local speed = SweeperModel.rampedSpeed(t.beam.baseSpeed, elapsed, speedOpts)
-			local angle = SweeperModel.beamAngle(t.beam, 0, speed, elapsed)
-			local lead = angle + t.beam.direction * Config.SWEEP_TELEGRAPH_LEAD
-			t.part.CFrame = radialCFrame(c, lead, telegraphY, telegraphMid)
+		-- Wake channels: ignite behind the low beam's MEASURED pose (atan2 of its
+		-- replicated root's offset from SWEEP_CENTER -- spec 2026-07-09 §2-5/§2-7),
+		-- fading back to base over a fixed WAKE_WINDOW. Re-find the part if it's
+		-- ever nil (not yet replicated, or a hot reload); tolerate its absence.
+		if not lowBeamPart or not lowBeamPart.Parent then
+			lowBeamPart = field:FindFirstChild("SweepBeam_low")
 		end
-
-		-- Wake channels: ignite behind the low beam, fade back to base over the window.
-		local lowSpeed = SweeperModel.rampedSpeed(lowBeam.baseSpeed, elapsed, speedOpts)
-		local lowAngle = SweeperModel.beamAngle(lowBeam, 0, lowSpeed, elapsed)
-		local window = math.max(Config.SWEEP_WAKE_FADE * lowSpeed, 1e-3)
-		for _, w in ipairs(wakeStrips) do
-			local behind = (lowBeam.direction * (lowAngle - w.angle)) % TAU
-			local target
-			if behind >= window then
-				target = WAKE_BASE_TRANSPARENCY
-			else
-				target = WAKE_LIT_TRANSPARENCY + (WAKE_BASE_TRANSPARENCY - WAKE_LIT_TRANSPARENCY) * (behind / window)
-			end
-			if w.lastTransparency == nil or math.abs(target - w.lastTransparency) > 0.02 then
-				w.part.Transparency = target
-				w.lastTransparency = target
+		if lowBeamPart then
+			local lowAngle = math.atan2(lowBeamPart.Position.Z - c.Z, lowBeamPart.Position.X - c.X)
+			for _, w in ipairs(wakeStrips) do
+				local behind = (lowBeam.direction * (lowAngle - w.angle)) % TAU
+				local target
+				if behind >= WAKE_WINDOW then
+					target = WAKE_BASE_TRANSPARENCY
+				else
+					target = WAKE_LIT_TRANSPARENCY
+						+ (WAKE_BASE_TRANSPARENCY - WAKE_LIT_TRANSPARENCY) * (behind / WAKE_WINDOW)
+				end
+				if w.lastTransparency == nil or math.abs(target - w.lastTransparency) > 0.02 then
+					w.part.Transparency = target
+					w.lastTransparency = target
+				end
 			end
 		end
 
