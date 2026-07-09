@@ -40,14 +40,8 @@ function SweeperModel.rampedSpeed(baseSpeed, elapsed, opts)
 	return s
 end
 
--- Is a body at polar (radius, angle) under a beam arm currently at beamAngle?
--- opts = { innerRadius, outerRadius, angularHalfWidth }. The hub (< innerRadius) is safe.
-function SweeperModel.overlaps(radius, angle, beamAngle, opts)
-	if radius < opts.innerRadius or radius > opts.outerRadius then
-		return false
-	end
-	return SweeperModel.angularDistance(angle, beamAngle) < opts.angularHalfWidth
-end
+-- (v2.3: `overlaps` -- the angular-half-width test -- was removed with the retired
+-- angular kill-zone model; isStruckSwept below derives a constant-width pad instead.)
 
 -- Does a body's vertical state clear this beam class?
 -- "low" is cleared by jumping (airborne); "high" is cleared by staying grounded.

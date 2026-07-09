@@ -151,8 +151,7 @@ Config.SWEEP_BEAM_LOW_BOTTOM = 0.6    -- low bar underside (jumpable; top = bott
 Config.SWEEP_BEAM_LOW_THICKNESS = 1
 Config.SWEEP_BEAM_HIGH_BOTTOM = 5.5   -- high bar underside: THE grounded-clearance knob
 Config.SWEEP_BEAM_HIGH_THICKNESS = 3
-Config.SWEEP_BEAM_STRIPES = 6         -- alternating colored segments per bar
-Config.SWEEP_BEAM_STRIPE_COLOR = Color3.fromRGB(245, 238, 220) -- warm cream (both bars)
+-- (v2.3: the cream stripe keys were retired with the machine-arm + energy-edge redress.)
 Config.SWEEP_BEAM_MOTOR_TORQUE = 1e9  -- players can never stall a bar
 Config.SWEEP_HUB_TOP = 10             -- hub pillar top (studs above surface; axle must
                                       -- reach past the thick bar's top at 5.5+3)
