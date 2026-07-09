@@ -63,45 +63,25 @@ do
 	print("sweeper: clears OK")
 end
 
--- isStruck: composes ramp -> beamAngle -> overlaps -> (not clears) over a tier's beams.
+-- isStruckAt: measured-angle strike test (beams carry their CURRENT physical angle).
 do
-	local opts = { rampPerSecond = 0, maxSpeed = 10 }
 	local beams = {
-		{ baseAngle = 0, direction = 1, baseSpeed = 0, armCount = 1, class = "low",
-		  innerRadius = 3, outerRadius = 30, angularHalfWidth = 0.15 },
+		{ angle = 0, class = "low", innerRadius = 6, outerRadius = 52, angularHalfWidth = 0.15 },
+		{ angle = math.pi, class = "high", innerRadius = 6, outerRadius = 52, angularHalfWidth = 0.15 },
 	}
-	-- grounded body directly under the low beam at angle 0 -> struck.
-	expect(M.isStruck({ radius = 10, angle = 0, airborne = false }, beams, 0, opts),
-		"grounded under low beam -> struck")
-	-- same body but airborne -> clears the low beam.
-	expect(not M.isStruck({ radius = 10, angle = 0, airborne = true }, beams, 0, opts),
-		"airborne clears the low beam")
-	-- body away from the arc -> safe.
-	expect(not M.isStruck({ radius = 10, angle = 1.0, airborne = false }, beams, 0, opts),
-		"outside the arc -> safe")
-	-- two-arm beam: arm 1 is at π, so a grounded body at π is struck.
-	local two = {
-		{ baseAngle = 0, direction = 1, baseSpeed = 0, armCount = 2, class = "low",
-		  innerRadius = 3, outerRadius = 30, angularHalfWidth = 0.15 },
-	}
-	expect(M.isStruck({ radius = 10, angle = math.pi, airborne = false }, two, 0, opts),
-		"second arm at π strikes")
-	-- multi-beam: FIRST beam misses on arc (at angle 0), SECOND beam hits (arc at π) ->
-	-- proves the loop continues past a non-striking beam. Both "low" so a grounded body
-	-- clears neither by vertical state; only the angular arc decides.
-	local pair = {
-		{ baseAngle = 0, direction = 1, baseSpeed = 0, armCount = 1, class = "low",
-		  innerRadius = 3, outerRadius = 30, angularHalfWidth = 0.15 },
-		{ baseAngle = math.pi, direction = 1, baseSpeed = 0, armCount = 1, class = "low",
-		  innerRadius = 3, outerRadius = 30, angularHalfWidth = 0.15 },
-	}
-	-- grounded body at π: outside the first beam's arc (at 0), inside the second's (at π).
-	expect(M.isStruck({ radius = 10, angle = math.pi, airborne = false }, pair, 0, opts),
-		"second beam strikes after first misses")
-	-- body at angle 1.0 (~57°): neither beam's arc covers it -> safe.
-	expect(not M.isStruck({ radius = 10, angle = 1.0, airborne = false }, pair, 0, opts),
-		"neither beam strikes -> safe")
-	print("sweeper: isStruck OK")
+	expect(M.isStruckAt({ radius = 20, angle = 0, airborne = false }, beams),
+		"grounded under the low bar -> struck")
+	expect(not M.isStruckAt({ radius = 20, angle = 0, airborne = true }, beams),
+		"airborne clears the low bar")
+	expect(not M.isStruckAt({ radius = 20, angle = math.pi, airborne = false }, beams),
+		"grounded clears the high bar")
+	expect(M.isStruckAt({ radius = 20, angle = math.pi, airborne = true }, beams),
+		"airborne into the high bar -> struck")
+	expect(not M.isStruckAt({ radius = 20, angle = 1.5, airborne = false }, beams),
+		"between bars -> safe")
+	expect(not M.isStruckAt({ radius = 3, angle = 0, airborne = false }, beams),
+		"inside the hub radius -> safe")
+	print("sweeper: isStruckAt OK")
 end
 
 -- outwardTarget: unit radial from center through the body, scaled to outRadius.
