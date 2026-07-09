@@ -60,30 +60,32 @@ function SweeperModel.clears(class, airborne)
 	return airborne == false
 end
 
--- Is a body struck by ANY beam, given each beam's MEASURED current angle?
--- body = { radius, angle, airborne }; beams = array of
--- { angle, class, innerRadius, outerRadius, angularHalfWidth }. The glue derives
--- `angle` from the physical bar's replicated pose (atan2 of its center offset from
--- the hub) -- physics, authority, and cosmetics observe one object by construction.
-function SweeperModel.isStruckAt(body, beams)
+-- Swept-interval strike test on MEASURED angles: did any beam's arc cross the body
+-- since the last tick? beams[i] = { angle, prevAngle?, direction (+1/-1), class,
+-- innerRadius, outerRadius, angularHalfWidth }. direction follows the system-wide
+-- convention (+1 => measured angle increases; see SweeperHazard.motorTarget).
+-- prevAngle == nil (first tick) or a sweep span > 1 rad (a re-park/teleport jump,
+-- not real rotation) falls back to the instantaneous half-width check, so a parked
+-- bar snapping home can never kill across the jumped arc.
+function SweeperModel.isStruckSwept(body, beams)
 	for _, beam in ipairs(beams) do
 		if not SweeperModel.clears(beam.class, body.airborne)
-			and SweeperModel.overlaps(body.radius, body.angle, beam.angle, beam) then
-			return true
+			and body.radius >= beam.innerRadius and body.radius <= beam.outerRadius then
+			local hit
+			local span = beam.prevAngle
+				and (((beam.angle - beam.prevAngle) * beam.direction) % TAU) or nil
+			if span == nil or span > 1 then
+				hit = SweeperModel.angularDistance(body.angle, beam.angle) < beam.angularHalfWidth
+			else
+				local o = ((body.angle - beam.prevAngle) * beam.direction) % TAU
+				hit = o <= span + beam.angularHalfWidth or o >= TAU - beam.angularHalfWidth
+			end
+			if hit then
+				return true
+			end
 		end
 	end
 	return false
-end
-
--- Outward radial target for a swept body: the point at `outRadius` from center along the
--- center->body direction. Plain numbers (no Vector3); the glue lifts (x,z) to a CFrame.
-function SweeperModel.outwardTarget(bx, bz, cx, cz, outRadius)
-	local dx, dz = bx - cx, bz - cz
-	local len = math.sqrt(dx * dx + dz * dz)
-	if len < 1e-6 then
-		return cx + outRadius, cz -- degenerate: body on center, pick +x
-	end
-	return cx + dx / len * outRadius, cz + dz / len * outRadius
 end
 
 return SweeperModel
