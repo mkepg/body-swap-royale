@@ -328,6 +328,16 @@ local function measuredAngle(rec)
 	return math.atan2(pos.Z - c.Z, pos.X - c.X)
 end
 
+-- Motor target for a beam. NEGATED on purpose: the hinge's +AngularVelocity spins
+-- by the right-hand rule about the world-up axis (+X toward -Z), which DECREASES
+-- our measured atan2(Z, X) angle -- verified live via the Task 6 spin probe. The
+-- negation restores the system-wide convention every consumer assumes (Config
+-- comments, the client wake's "behind" math): direction = +1 means the bar's
+-- MEASURED angle increases over time.
+local function motorTarget(beam, elapsed, speedOpts)
+	return -beam.direction * SweeperModel.rampedSpeed(beam.baseSpeed, elapsed, speedOpts)
+end
+
 function SweeperHazard.start(now)
 	startClock = now
 	-- Publish the round-start time on the SERVER clock -> client. Beams themselves no
@@ -340,7 +350,7 @@ function SweeperHazard.start(now)
 	end
 	local speedOpts = { rampPerSecond = Config.SWEEP_SPEED_RAMP_PER_SEC, maxSpeed = Config.SWEEP_SPEED_MAX }
 	for _, rec in ipairs(beamRecs) do
-		rec.hinge.AngularVelocity = rec.beam.direction * SweeperModel.rampedSpeed(rec.beam.baseSpeed, 0, speedOpts)
+		rec.hinge.AngularVelocity = motorTarget(rec.beam, 0, speedOpts)
 	end
 end
 
@@ -386,7 +396,7 @@ function SweeperHazard.step(now, samples)
 
 	local beamsNow = {}
 	for i, rec in ipairs(beamRecs) do
-		rec.hinge.AngularVelocity = rec.beam.direction * SweeperModel.rampedSpeed(rec.beam.baseSpeed, elapsed, speedOpts)
+		rec.hinge.AngularVelocity = motorTarget(rec.beam, elapsed, speedOpts)
 		beamsNow[i] = {
 			angle = measuredAngle(rec),
 			class = rec.beam.class,
