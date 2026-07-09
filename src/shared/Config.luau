@@ -183,8 +183,18 @@ Config.SWEEP_DISC_MATERIAL_BASE = "Metal"
 -- no logic change. MIN_PLAYERS_TO_CONTINUE encodes the last-one-standing rule:
 -- the round ends the instant fewer than this many remain alive. Keep it at 2
 -- (end at 1 survivor); values > 2 have no single winner and are unsupported.
-Config.MIN_PLAYERS_TO_START = 2
-Config.MIN_PLAYERS_TO_CONTINUE = 2
+--
+-- SOLO_TEST_MODE: dev/test switch (like HAZARDS_ENABLED, NOT a gameplay tunable).
+-- When true, both thresholds drop to 1 so a round starts -- and keeps running --
+-- with a single player: solo gameplay testing of arenas/hazards without a second
+-- client. Swaps simply never fire (the derangement needs >= 2); the round ends
+-- when the solo player dies (no winner). Leave false in production AND for
+-- 2-client smoke sessions (a min-start of 1 would begin the round before the
+-- second client finishes loading). Pair with ARENA_OVERRIDE to pin the arena
+-- under test. Read once at server boot (RoundState.new) -- set before playing.
+Config.SOLO_TEST_MODE = false
+Config.MIN_PLAYERS_TO_START = Config.SOLO_TEST_MODE and 1 or 2
+Config.MIN_PLAYERS_TO_CONTINUE = Config.SOLO_TEST_MODE and 1 or 2
 
 -- Movement, normalized so avatar choice never confers an advantage.
 Config.WALK_SPEED = 16
