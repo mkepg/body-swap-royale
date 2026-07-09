@@ -118,7 +118,25 @@ parts** + **SweeperField 31 parts** = 28 floor segments + hub + 2 beams); no Bas
 **Still MANUAL (2-client)** — cases 1, 4, 5, 7–11: shove feel under latency, high-beam clearance
 tuning, grace pass-through in a live round, resist backstop on a real client, full rotation
 (hex → sweeper → hex) with `LiveArena` flips + ring spawns, wake/telegraph readability after a
-swap cut, validator non-interference. Task 10 (asset sourcing) pending.
+swap cut, validator non-interference.
+
+### 2026-07-09 — Task 10 asset sourcing (Studio MCP)
+
+- **Stage-floor material:** generated MaterialVariant **`SweeperStageFloor`** (base `Metal`,
+  dark indigo glass-metal with amber circuitry; 3 alternate takes parked under
+  `MaterialService.AssistantMaterials` for later eyeballing). Runtime-verified in Play: the
+  variant resolves from MaterialService and applies to a floor segment. Wired via
+  `Config.SWEEP_DISC_MATERIAL` / `_BASE` (commit `b30346c`); `""` still falls back to Glass.
+- **Beams:** deliberately left Neon (`SWEEP_BEAM_MATERIAL = ""`) — the emissive glow IS the
+  energy-vane read; the slot remains for a future textured look.
+- **Hub hero mesh:** generated turbine-core mesh (~6×14×6 textured MeshPart), parked as
+  `ReplicatedStorage.SweeperAssets.HubMesh` — the folder lives in the PLACE file outside
+  Rojo's `Shared` mapping, so syncs never delete it. Runtime-verified: replicates to the
+  client and clones cleanly. The client seats its bounding box on the hub base
+  (presence-based; absent ⇒ procedural pillar + rotors stand alone).
+- **Pending one Rojo connect:** the wiring code (`b30346c`) postdates the last Studio sync —
+  on the next Rojo connect, verify visually: annulus renders the `SweeperStageFloor` skin and
+  the turbine housing appears at the hub with rotors spinning around it.
 
 ### Tuning Knobs (if issues found)
 - `Config.SWEEP_BEAM_HIGH_Y` — clearance for high beam (tuned via Case 5 if bodies snag).
