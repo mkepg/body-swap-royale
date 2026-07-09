@@ -88,4 +88,46 @@ do
 	print("worldlayout: cluster OK")
 end
 
+-- arc(cx, cz, radius, count, centerAngle, spread): `count` evenly spaced points across
+-- the arc [centerAngle - spread/2, centerAngle + spread/2], each exactly `radius` from
+-- center; count == 1 collapses to the single center point.
+do
+	local cx, cz, radius = 4, -9, 25
+	local centerAngle, spread = math.pi, math.pi
+	local pts = WorldLayout.arc(cx, cz, radius, 5, centerAngle, spread)
+	expect(#pts == 5, "arc must return `count` points")
+	for _, p in ipairs(pts) do
+		local d = math.sqrt((p.x - cx) ^ 2 + (p.z - cz) ^ 2)
+		expect(approx(d, radius, 1e-4), "each arc point must be `radius` from center, got " .. d)
+	end
+	-- endpoints at centerAngle - spread/2 (= pi/2) and centerAngle + spread/2 (= 3pi/2)
+	local aStart, aEnd = centerAngle - spread / 2, centerAngle + spread / 2
+	expect(approx(pts[1].x, cx + radius * math.cos(aStart)) and approx(pts[1].z, cz + radius * math.sin(aStart)),
+		"arc first point at centerAngle - spread/2")
+	expect(approx(pts[5].x, cx + radius * math.cos(aEnd)) and approx(pts[5].z, cz + radius * math.sin(aEnd)),
+		"arc last point at centerAngle + spread/2")
+	-- middle point (i=3 of 5) sits at centerAngle exactly
+	expect(approx(pts[3].x, cx + radius * math.cos(centerAngle)) and approx(pts[3].z, cz + radius * math.sin(centerAngle)),
+		"arc middle point at centerAngle")
+
+	-- count == 1 collapses to the single center point
+	local single = WorldLayout.arc(cx, cz, radius, 1, centerAngle, spread)
+	expect(#single == 1, "arc count=1 returns exactly one point")
+	expect(approx(single[1].x, cx + radius * math.cos(centerAngle))
+		and approx(single[1].z, cz + radius * math.sin(centerAngle)),
+		"arc count=1 point sits at centerAngle")
+
+	-- even spacing between consecutive points: measure the angle BETWEEN consecutive
+	-- points via the dot product (robust to the atan2 +-pi seam, which this arc crosses).
+	local function stepAngle(p1, p2)
+		local cosStep = ((p1.x - cx) * (p2.x - cx) + (p1.z - cz) * (p2.z - cz)) / (radius * radius)
+		return math.acos(math.clamp(cosStep, -1, 1))
+	end
+	local step = stepAngle(pts[1], pts[2])
+	for i = 2, #pts - 1 do
+		expect(approx(stepAngle(pts[i], pts[i + 1]), step, 1e-4), "arc points evenly spaced")
+	end
+	print("worldlayout: arc OK")
+end
+
 print("ALL WorldLayout TESTS PASSED")

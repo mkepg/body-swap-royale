@@ -62,23 +62,28 @@ end
 
 -- Swept-interval strike test on MEASURED angles: did any beam's arc cross the body
 -- since the last tick? beams[i] = { angle, prevAngle?, direction (+1/-1), class,
--- innerRadius, outerRadius, angularHalfWidth }. direction follows the system-wide
+-- innerRadius, outerRadius, killHalfWidth }. direction follows the system-wide
 -- convention (+1 => measured angle increases; see SweeperHazard.motorTarget).
+-- killHalfWidth is a constant STUD half-width (the bar's physical kill band), not an
+-- angle -- converted per body to `halfAngle = asin(min(1, killHalfWidth / body.radius))`
+-- so the same visible bar width kills identically at the hub and at the rim (an angular
+-- pad would grow with radius and kill players long before the bar visually reaches them).
 -- prevAngle == nil (first tick) or a sweep span > 1 rad (a re-park/teleport jump,
--- not real rotation) falls back to the instantaneous half-width check, so a parked
+-- not real rotation) falls back to the instantaneous halfAngle check, so a parked
 -- bar snapping home can never kill across the jumped arc.
 function SweeperModel.isStruckSwept(body, beams)
 	for _, beam in ipairs(beams) do
 		if not SweeperModel.clears(beam.class, body.airborne)
 			and body.radius >= beam.innerRadius and body.radius <= beam.outerRadius then
+			local halfAngle = math.asin(math.min(1, beam.killHalfWidth / body.radius))
 			local hit
 			local span = beam.prevAngle
 				and (((beam.angle - beam.prevAngle) * beam.direction) % TAU) or nil
 			if span == nil or span > 1 then
-				hit = SweeperModel.angularDistance(body.angle, beam.angle) < beam.angularHalfWidth
+				hit = SweeperModel.angularDistance(body.angle, beam.angle) < halfAngle
 			else
 				local o = ((body.angle - beam.prevAngle) * beam.direction) % TAU
-				hit = o <= span + beam.angularHalfWidth or o >= TAU - beam.angularHalfWidth
+				hit = o <= span + halfAngle or o >= TAU - halfAngle
 			end
 			if hit then
 				return true

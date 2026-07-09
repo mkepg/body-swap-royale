@@ -53,12 +53,14 @@ end
 
 -- isStruckSwept: swept-interval strike test on measured angles. A beam kills if its
 -- arc CROSSED the body's angle since last tick (prevAngle -> angle along direction),
--- padded by the half-width; nil prevAngle or a >1 rad jump (re-park) falls back to
--- the instantaneous check.
+-- padded by a per-body local half-angle derived from the beam's constant STUD
+-- half-width (killHalfWidth) at that body's radius; nil prevAngle or a >1 rad jump
+-- (re-park) falls back to the instantaneous check. killHalfWidth = 2 at radius 30 ->
+-- localHalfAngle = asin(2/30) ~= 0.0667 rad for every case below.
 do
 	local function beam(prev, ang, dir, class)
 		return { prevAngle = prev, angle = ang, direction = dir, class = class,
-			innerRadius = 6, outerRadius = 52, angularHalfWidth = 0.15 }
+			innerRadius = 6, outerRadius = 52, killHalfWidth = 2 }
 	end
 	local grounded = { radius = 30, angle = 0.3, airborne = false }
 	-- bar swept 0.1 -> 0.5 (dir +1): body at 0.3 was crossed -> struck.
@@ -88,6 +90,18 @@ do
 	-- radius band still applies.
 	expect(not M.isStruckSwept({ radius = 3, angle = 0.3, airborne = false },
 		{ beam(0.1, 0.5, 1, "low") }), "inside hub radius -> safe")
+
+	-- Constant-width property: the SAME 1.5-stud offset from the bar kills at every
+	-- radius; the ANGULAR offset that equals 1.5 studs at r=15 (0.1 rad) is a MISS at
+	-- r=50 (where 0.1 rad = 5 studs > the 2-stud kill half-width).
+	local b = { prevAngle = nil, angle = 0, direction = 1, class = "low",
+		innerRadius = 6, outerRadius = 52, killHalfWidth = 2 }
+	expect(M.isStruckSwept({ radius = 15, angle = 1.5 / 15, airborne = false }, { b }),
+		"1.5 studs off at r=15 -> struck")
+	expect(M.isStruckSwept({ radius = 50, angle = 1.5 / 50, airborne = false }, { b }),
+		"1.5 studs off at r=50 -> struck (constant width)")
+	expect(not M.isStruckSwept({ radius = 50, angle = 0.1, airborne = false }, { b }),
+		"0.1 rad at r=50 is 5 studs off -> miss (no angular widening)")
 	print("sweeper: isStruckSwept OK")
 end
 

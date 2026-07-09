@@ -77,4 +77,16 @@ function WorldLayout.cluster(cx, cz, baseY, n, spacing)
 	return out
 end
 
+-- Evenly spaced points across an ARC of `spread` radians centered on `centerAngle`
+-- (count == 1 -> the single center point). Same {x, z} rows as ring().
+function WorldLayout.arc(cx, cz, radius, count, centerAngle, spread)
+	local pts = {}
+	for i = 1, count do
+		local t = count == 1 and 0.5 or (i - 1) / (count - 1)
+		local a = centerAngle - spread / 2 + spread * t
+		pts[i] = { x = cx + radius * math.cos(a), z = cz + radius * math.sin(a) }
+	end
+	return pts
+end
+
 return WorldLayout
