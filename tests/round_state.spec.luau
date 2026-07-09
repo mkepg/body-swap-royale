@@ -273,4 +273,22 @@ do
 	print("reset: refuses outside Ended OK")
 end
 
+-- Solo test mode (Config.SOLO_TEST_MODE wires thresholds to 1/1): a single player
+-- can start a round, the round does NOT auto-end at 1 alive, and the solo player
+-- dying ends it with NO winner (0 alive is not a win).
+do
+	local m = RoundState.new(1, 1)
+	RoundState.addPlayer(m, "A")
+	expect(RoundState.canStart(m), "solo mode: 1 present can start")
+	local roster = RoundState.beginRound(m)
+	expect(#roster == 1 and RoundState.getPhase(m) == "Active", "solo round is Active with 1 alive")
+	expect(RoundState.aliveCount(m) == 1, "solo player is alive")
+	local r = RoundState.eliminate(m, "A")
+	expect(r.ended == true and r.winner == nil, "solo death ends the round with no winner")
+	expect(RoundState.getPhase(m) == "Ended", "phase is Ended after the solo death")
+	RoundState.reset(m)
+	expect(RoundState.canStart(m), "solo mode: next round can start again")
+	print("solo mode: 1/1 thresholds OK")
+end
+
 print("ALL ROUNDSTATE TESTS PASSED")
