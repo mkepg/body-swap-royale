@@ -340,3 +340,21 @@ non-interference during normal play.
   ("hop over the amber line" — matches its amber wake).
 - HIGH bar reads as a heavy dark boom with CRIMSON underglow + end lamps ("danger above").
 - Both mount the hub via platform-metal collars; no cream stripes remain.
+
+### 2026-07-09 — v2.3 Studio MCP Play-Solo verification
+
+Fully synced Play-Solo session; clean boot, no console errors.
+
+- **Airborne fix confirmed:** a standing body measures dy = 3.001 vs the new band 4.5 →
+  **NOT airborne** (the root cause of the inverted bars is dead: standers now fail the low
+  bar and clear the high bar, per intent).
+- **Formation:** both bars parked at measured angle exactly **0**; the 16 spawn-arc slots
+  span **110°–250°** (the 140° arc centered opposite at 180°).
+- **Dressing:** low bar = Metal root + Metal housing + Neon amber Blade + Neon Emitter +
+  Metal collar; high bar = Metal root + Neon crimson Underglow + Neon Lamps + Metal collar.
+  No stripes remain.
+- **Regressions:** 0 collidable beam parts (v2.2 holds); HexField 2135 parts; suite 24/24
+  (incl. the constant-width property test and WorldLayout.arc).
+
+**Still MANUAL (2-client):** the v2.3 addendum cases — the four-way vertical-state matrix in a
+live round, constant-width feel near the rim, the round-start formation beat.
