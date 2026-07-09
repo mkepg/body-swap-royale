@@ -369,15 +369,29 @@ end
 function SweeperHazard.stop()
 	-- Brake the motors, then re-park each (still unanchored, server-owned) assembly
 	-- at rest via PivotTo -- welded parts follow rigidly, so one call re-seats the
-	-- whole bar (spine + dressing + collar) in one atomic move. Dormant cost is
-	-- ~zero: a braked motor holding a resting bar against gravity does no per-frame
-	-- Luau work (no Heartbeat connection exists to stop, unlike v2). Clearing
-	-- prevAngle means the NEXT round's first step() tick has no prior sample, so
-	-- SweeperModel.isStruckSwept falls back to the instantaneous check instead of
-	-- reading this re-park jump as a (potentially kill-wide) swept arc.
+	-- whole bar (spine + dressing + collar) in one atomic move.
+	--
+	-- The hinge MUST be disabled around the pivot (verified live 2026-07-09): an
+	-- ACTIVE HingeConstraint maintains its own accumulated-angle state, and the
+	-- solver snaps a pivoted assembly straight back to that angle on the next
+	-- physics step -- bars were starting rounds at arbitrary leftover angles
+	-- (~41 deg) instead of baseAngle, breaking the same-side formation. Disabling
+	-- the hinge, zeroing the assembly's residual velocities, pivoting, and
+	-- re-enabling makes the constraint re-derive its angle from the new attachment
+	-- poses, so the park sticks.
+	--
+	-- Dormant cost stays ~zero (a braked motor holding a resting bar does no
+	-- per-frame Luau work). Clearing prevAngle means the NEXT round's first step()
+	-- tick has no prior sample, so SweeperModel.isStruckSwept falls back to the
+	-- instantaneous check instead of reading this re-park jump as a
+	-- (potentially kill-wide) swept arc.
 	for _, rec in ipairs(beamRecs) do
 		rec.hinge.AngularVelocity = 0
+		rec.hinge.Enabled = false
+		rec.part.AssemblyLinearVelocity = Vector3.zero
+		rec.part.AssemblyAngularVelocity = Vector3.zero
 		rec.part:PivotTo(beamPose(rec.beam.baseAngle, rec.y))
+		rec.hinge.Enabled = true
 		rec.prevAngle = nil
 	end
 end
@@ -387,12 +401,24 @@ function SweeperHazard.voidY() return Config.SWEEP_VOID_Y end
 
 -- Round spawn slot: an evenly-spaced ARC at mid-annulus radius, centered on the far
 -- side from where both beams park (spec v2.3 §2-4), facing the hub.
+-- Slots are assigned MIDDLE-OUT (player 1 takes the arc center, later players
+-- alternate outward), so small rosters cluster at the point farthest from the
+-- parked bars instead of stacking up at one arc edge nearest the incoming sweep
+-- (found live 2026-07-09: a solo tester spawned at the 110-degree edge and met
+-- the low bar ~1.5 s early).
 function SweeperHazard.spawnCFrame(index)
 	local c = Config.SWEEP_CENTER
 	local pts = WorldLayout.arc(c.X, c.Z, Config.SWEEP_SPAWN_RADIUS, Config.LOBBY_CAPACITY,
 		Config.SWEEP_SPAWN_CENTER_ANGLE, Config.SWEEP_SPAWN_ARC)
-	local pt = pts[math.min(index, #pts)]
-	local pos = Vector3.new(pt.x, Config.SWEEP_SURFACE_Y + 5, pt.z)
+	local n = #pts
+	local k = math.min(index, n)
+	local center = math.ceil(n / 2)
+	local mag = math.floor(k / 2)
+	local pt = pts[math.clamp(center + ((k % 2 == 0) and mag or -mag), 1, n)]
+	-- Spawn AT standing root height (measured 3.0; see SWEEP_AIRBORNE_BAND): a
+	-- taller drop's landing bounce read as horizontal movement and ended the
+	-- round-start grace at the 0.5 s floor instead of the full window.
+	local pos = Vector3.new(pt.x, Config.SWEEP_SURFACE_Y + 3, pt.z)
 	return CFrame.lookAt(pos, Vector3.new(c.X, pos.Y, c.Z))
 end
 
