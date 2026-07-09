@@ -313,3 +313,30 @@ Fully Rojo-synced Play-Solo session; clean boot, no console errors.
 touch = instant elimination (both bars, jump/stand rules), anti-tunneling at max ramp,
 round-start grace beat (both arenas), grace pass-through after swaps, validator
 non-interference during normal play.
+
+## v2.3 Addendum — Collision Fix + Formation (2026-07-09)
+
+> Root cause of the inverted bars was verified live (standing root = 3.001 > old airborne band
+> 3 — every stander read as airborne). Re-run the vertical-state matrix with the fixed
+> thresholds; the earlier v2.2 addendum cases stand except as amended here.
+
+### 23. **Vertical-state matrix (2-client, THE core check)**
+- Stand still in the LOW bar's path → **eliminated** when it reaches you.
+- Jump over the LOW bar as it passes → **survive**.
+- Stand still under the HIGH bar → **survive** (it passes overhead).
+- Jump into the HIGH bar → **eliminated**.
+
+### 24. **Constant-width kill zone (2-client)**
+- Near the RIM (r≈50), stand just outside the bar's visible body: you should only die within
+  ~2–3 studs of the bar (`SWEEP_BEAM_*_KILL_HALF`), NOT ~8 studs early as before.
+
+### 25. **Round-start formation (2-client)**
+- At round start both bars are parked together on one side (angle 0); all players spawn on a
+  140° arc on the opposite side, facing the hub.
+- The first bar reaches the spawn arc in ~4.5 s — layered on the 1.5 s round-start grace.
+
+### 26. **Beam dressing eyeball (solo-able)**
+- LOW bar reads as a dark machine arm with a glowing AMBER blade underside + end emitter
+  ("hop over the amber line" — matches its amber wake).
+- HIGH bar reads as a heavy dark boom with CRIMSON underglow + end lamps ("danger above").
+- Both mount the hub via platform-metal collars; no cream stripes remain.

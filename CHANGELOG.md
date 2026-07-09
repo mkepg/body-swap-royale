@@ -7,6 +7,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [2026-07-09]
 
 ### Added
+- **Soul Sweeper v2.3 — collision fix, round-start formation, beam redesign.** Playtest report:
+  the HIGH bar killed standing players and the LOW bar spared them — inverted behavior. **Root
+  cause (verified live):** a standing normalized-R15 root sits at **3.001 studs** above the
+  surface, a hair over `SWEEP_AIRBORNE_BAND = 3`, so every stander was classified *airborne*
+  (clears low / fails high — one threshold, both symptoms). Fixed: `SWEEP_AIRBORNE_BAND = 4.5`
+  (measurement recorded in the comment). Also fixed while investigating: (1) the kill zone was an
+  **angular** half-width that widened to ~8 studs at the rim — replaced by constant stud
+  half-widths (`SWEEP_BEAM_LOW/HIGH_KILL_HALF`, pure `isStruckSwept` converts per body radius;
+  regression-tested constant-width property); (2) the on-platform band's symmetric ±6 made a
+  jump-apex body (root 10.2) unhittable — now asymmetric via `SWEEP_STAND_BAND_UP = 13`.
+  **Round start:** both bars park together at angle 0; players spawn on a 140° arc centered
+  opposite (new pure `WorldLayout.arc`, lune-tested) — the first bar arrives in ~4.5 s on top of
+  the 1.5 s round-start grace. **Beam redesign:** machine-arm + energy-edge (dark platform-metal
+  arms carrying the class read as Neon: amber underside blade on the low bar = "hop over me",
+  crimson underglow + end lamps on the high boom = "danger above, stay grounded"); cream stripes,
+  the dead angular `overlaps`, and the stripe Config keys retired. Verified: 24/24 lune suites.
 - **Soul Sweeper v2.2 — Touch Elimination.** Playtest verdict: physics knockback was unreliable
   in practice — honest players sometimes got "magically teleported off the platform." Root cause:
   the anti-cheat resist backstop misfired when the physics shove failed to clear a body from the
