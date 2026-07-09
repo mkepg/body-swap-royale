@@ -94,19 +94,19 @@ Config.ARENA_OVERRIDE = ""
 -- One annulus platform around a central turbine hub; two solid stacked beams
 -- (low amber = JUMP, high crimson = STAY GROUNDED) server-animated from the pure
 -- SweeperModel angle(t). Fall off the rim or into the hub gap -> void.
-Config.SWEEP_CENTER = Vector3.new(110, 0, 0) -- platform center (hex stays at origin)
+Config.SWEEP_CENTER = Vector3.new(140, 0, 0) -- platform center (hex stays at origin)
 Config.SWEEP_SURFACE_Y = 0
-Config.SWEEP_PLATFORM_RADIUS = 38    -- outer rim
-Config.SWEEP_HOLE_RADIUS = 10        -- center hole (gap ring = HUB..HOLE radius)
-Config.SWEEP_HUB_RADIUS = 5          -- turbine pillar inside the hole
-Config.SWEEP_PLATFORM_SEGMENTS = 28  -- tangent boxes approximating the annulus
+Config.SWEEP_PLATFORM_RADIUS = 52   -- outer rim
+Config.SWEEP_HOLE_RADIUS = 12       -- center hole (gap ring = HUB..HOLE radius)
+Config.SWEEP_HUB_RADIUS = 6         -- turbine pillar inside the hole
+Config.SWEEP_PLATFORM_SEGMENTS = 48 -- tangent boxes approximating the annulus
 Config.SWEEP_SEGMENT_SLACK = 1.08    -- segment length vs chord (overlap => no seams)
 Config.SWEEP_PLATFORM_THICKNESS = 2
 Config.SWEEP_PLATFORM_COLOR = Color3.fromRGB(20, 26, 48)   -- dark glass/metal indigo
 Config.SWEEP_ACCENT = Color3.fromRGB(244, 162, 97)         -- turbine amber
 Config.SWEEP_VOID_Y = Config.SWEEP_SURFACE_Y - 24 -- kill-plane (a visible fall beat)
 Config.SWEEP_STAND_BAND = 6          -- Y band above/below the surface that counts as "on" it
-Config.SWEEP_SPAWN_RADIUS = 24       -- spawn ring (mid-annulus)
+Config.SWEEP_SPAWN_RADIUS = 32      -- spawn ring (mid-annulus)
 
 -- The two beams (flat list -- one platform). Each: baseAngle, direction, baseSpeed
 -- (rad/s), armCount, class. Radius band + arc half-width attached at build time.
@@ -123,13 +123,22 @@ Config.SWEEP_OFF_MARGIN = 4          -- backstop re-pivot pushes this far past t
 Config.SWEEP_RESIST_TICKS = 3        -- consecutive struck ticks before the backstop fires
 Config.SWEEP_RESEED_MARGIN = math.rad(12) -- extra arc where movement validation is reseeded
 
--- Physical beams (server parts) + cosmetics.
-Config.SWEEP_BEAM_LOW_Y = 1.2
-Config.SWEEP_BEAM_HIGH_Y = 5.5       -- must clear a grounded body; live-tuning knob
-Config.SWEEP_BEAM_SIZE = Vector3.new(1.2, 1.0, 1.0) -- cross-section (length computed)
+-- Solid machine-bar beams (Jump Club idiom): unanchored welded assemblies driven by
+-- HingeConstraint motors on the hub axle (spec 2026-07-09 §2-4/§2-6). BOTTOM faces are
+-- the gameplay knobs: the low bar must be jumpable, the high bar must clear a grounded
+-- body. Stripes are alternating welded segments (no textures needed).
+Config.SWEEP_BEAM_LOW_BOTTOM = 0.6    -- low bar underside (jumpable; top = bottom + thickness)
+Config.SWEEP_BEAM_LOW_THICKNESS = 1
+Config.SWEEP_BEAM_HIGH_BOTTOM = 5.5   -- high bar underside: THE grounded-clearance knob
+Config.SWEEP_BEAM_HIGH_THICKNESS = 3
+Config.SWEEP_BEAM_STRIPES = 6         -- alternating colored segments per bar
+Config.SWEEP_BEAM_STRIPE_COLOR = Color3.fromRGB(245, 238, 220) -- warm cream (both bars)
+Config.SWEEP_BEAM_MOTOR_TORQUE = 1e9  -- players can never stall a bar
+Config.SWEEP_BEAM_DENSITY = 8         -- heavy bars: convincing flings, stable under contact
+Config.SWEEP_HUB_TOP = 10             -- hub pillar top (studs above surface; axle must
+                                      -- reach past the thick bar's top at 5.5+3)
 Config.SWEEP_BEAM_LOW_COLOR = Color3.fromRGB(244, 162, 97)  -- amber: JUMP
 Config.SWEEP_BEAM_HIGH_COLOR = Color3.fromRGB(225, 75, 75)  -- crimson: STAY GROUNDED
-Config.SWEEP_TELEGRAPH_LEAD = 0.35
 Config.SWEEP_TUMBLE_SECONDS = 0.6
 
 -- Soul Turbine dressing (client; budgets: <=180 parts, one shared loop, <=40 writes/frame).
@@ -220,7 +229,7 @@ Config.LOBBY_CAPACITY = 16 -- grid sized for up to this many bodies
 Config.LOBBY_PER_ROW = 4 -- body grid columns (rows = ceil(CAPACITY/PER_ROW))
 Config.LOBBY_SPACING = 10 -- studs between grid slots
 Config.LOBBY_SPAWN_DROP = 5 -- studs above the disc a body spawns at (settles down)
-Config.LOBBY_FACE_TARGET = Vector3.new(55, 0, 0) -- bodies face this (midpoint between the two arenas)
+Config.LOBBY_FACE_TARGET = Vector3.new(70, 0, 0) -- bodies face this (midpoint between the two arenas)
 
 -- Default R15 animation asset IDs, consumed by the client animation driver.
 -- Bodies aren't player Characters, so the engine's Animate script can't drive
