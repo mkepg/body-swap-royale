@@ -292,3 +292,24 @@ half), high-bar clearance vs a real avatar (case 5/15), grace pass-through in a 
 (case 6), backstop on a real resisting client (case 7/13 player half), rotation + spawn rings
 (case 8), dormancy from the lobby (case 9), wake readability after a swap cut (case 10),
 validator non-interference (case 11).
+
+### 2026-07-09 — v2.2 Studio MCP Play-Solo verification (touch elimination)
+
+Fully Rojo-synced Play-Solo session; clean boot, no console errors.
+
+- **Beams are true non-contact zones:** every `SweepBeam*` assembly part is
+  `CanCollide = false` with the Default collision group (no groups registered by code);
+  a physical test body placed in the bar's path was **not pushed at all** — the bar
+  passed through it (velocity ~0, position unchanged). The "magic teleport" bug's
+  physical precondition (shove + backstop fighting) no longer exists.
+- **Motors + sign convention intact:** the low bar sweeps at **+0.699 rad/s measured**
+  for its `direction = +1` motor target — the measured-pose convention all strike math
+  and cosmetics share.
+- **Hex regression:** HexField 2135 parts, boot unchanged.
+- **Pure strike math:** `isStruckSwept` fully lune-covered (crossed/ahead/reverse/seam
+  wrap/re-park guard/first-tick/radius band/class clears — 10 assertions).
+
+**Still MANUAL (2-client, needs an Active round):** the v2.2 addendum cases —
+touch = instant elimination (both bars, jump/stand rules), anti-tunneling at max ramp,
+round-start grace beat (both arenas), grace pass-through after swaps, validator
+non-interference during normal play.
