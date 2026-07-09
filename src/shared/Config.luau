@@ -143,7 +143,6 @@ Config.SWEEP_TUMBLE_SECONDS = 0.6
 
 -- Soul Turbine dressing (client; budgets: <=180 parts, one shared loop, <=40 writes/frame).
 Config.SWEEP_WAKE_CHANNELS = 36      -- radial floor strips igniting in the low beam's wake
-Config.SWEEP_WAKE_FADE = 1.2         -- seconds a wake strip takes to fade
 Config.SWEEP_CHASE_STUDS = 32        -- rim marquee chase lights
 Config.SWEEP_STANDBY_TRANSPARENCY = 0.85 -- dormant-arena Neon dim (one-time flip)
 

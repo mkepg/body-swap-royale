@@ -14,13 +14,13 @@
 
 ### 1. **Annulus walk + seam crossing (2-client)**
 - Walk around the annulus in a complete circle on both the annulus and mid-ring.
-- Cross seams between adjacent segments (28 tangent boxes) — body should not catch or trip; no gaps visible.
+- Cross seams between adjacent segments (48 tangent boxes as of v2.1) — body should not catch or trip; no gaps visible.
 - Confirm: **annulus walkable and seamless** (coplanar overlap absorbs the geometry transition).
 
 ### 2. **Gap-ring fall (solo)**
-- Walk inward toward the center hole (r=10); the gap ring (r 5→10) is an open fall.
+- Walk inward toward the center hole (r=12); the gap ring (r 6→12) is an open fall.
 - Crossing the inner edge should void the body; confirm **body eliminated and moved to balcony** after falling below `SWEEP_VOID_Y` (24 studs below surface).
-- Confirm: **hub pillar (r=5) is non-walkable** — trying to stand on it fails (sheer geometry).
+- Confirm: **hub pillar (r=6) is non-walkable** — trying to stand on it fails (sheer geometry).
 
 ### 3. **Hub non-walkable (solo)**
 - Attempt to walk on the central hub pillar (`SweepHub`); it should not support the body.
@@ -34,10 +34,10 @@
 - Have one player stand in the high beam's path while grounded; beam should pass over them without sweeping (high beam is above head height).
 - Confirm: **solid beam shove is smooth, network latency does not cause jank**, high beam clears grounded bodies.
 
-### 5. **High-beam clearance — grounded vs jumping (knob: `SWEEP_BEAM_HIGH_Y`, 2-client)**
+### 5. **High-beam clearance — grounded vs jumping (knob: `SWEEP_BEAM_HIGH_BOTTOM`, 2-client)**
 - Player stands grounded in the high beam's path; beam should pass over (no sweep).
 - Player jumps into the high beam as it passes; body should be swept outward.
-- Tune `Config.SWEEP_BEAM_HIGH_Y` if needed: confirm it must clear a normalized R15 avatar's head (~5 studs height) when grounded but **not** when airborne/jumping.
+- Tune `Config.SWEEP_BEAM_HIGH_BOTTOM` (the bar's BOTTOM face height, v2.1) if needed: confirm it must clear a normalized R15 avatar's head (~5 studs height) when grounded but **not** when airborne/jumping.
 - Confirm: **clearance rule works as designed** — high beam tuning affects sweep behavior predictably.
 
 ### 6. **Grace pass-through (swap then stand in arc, 2-client)**
@@ -71,9 +71,9 @@
 
 ### 10. **Wake/telegraph readability after swap cut (2-client)**
 - In an active sweeper round, move one player close to the low beam's path.
-- Watch the wake channels (thin radial floor strips igniting amber) and telegraph (thin arc ahead of the beam).
+- Watch the wake channels (thin radial floor strips igniting amber) behind the low bar (v2.1: the telegraph arcs were removed).
 - Perform a swap (or wait for one); the visual telegraph should remain readable even as control switches.
-- Wake strips should fade over ~1.2 seconds, reflecting the low beam's recent position.
+- Wake strips should fade across a fixed ~0.9-radian trailing arc (v2.1), reflecting the low bar's measured position.
 - Confirm: **wake channels + telegraph are visible and readable, not obscured by swap cuts**, cosmetic loop handles dormancy switches correctly.
 
 ### 11. **Validator non-interference during shoves (2-client, exploit-resistance)**
@@ -179,7 +179,8 @@ swap cut, validator non-interference.
   `MaterialService.AssistantMaterials` for later eyeballing). Runtime-verified in Play: the
   variant resolves from MaterialService and applies to a floor segment. Wired via
   `Config.SWEEP_DISC_MATERIAL` / `_BASE` (commit `b30346c`); `""` still falls back to Glass.
-- **Beams:** deliberately left Neon (`SWEEP_BEAM_MATERIAL = ""`) — the emissive glow IS the
+- **Beams:** deliberately left Neon at the time (`SWEEP_BEAM_MATERIAL = ""`) — [superseded by
+  v2.1: solid striped SmoothPlastic machine bars; the slot was retired] — the emissive glow WAS the
   energy-vane read; the slot remains for a future textured look.
 - **Hub hero mesh:** generated turbine-core mesh (~6×14×6 textured MeshPart), parked as
   `ReplicatedStorage.SweeperAssets.HubMesh` — the folder lives in the PLACE file outside
@@ -191,7 +192,7 @@ swap cut, validator non-interference.
   the turbine housing appears at the hub with rotors spinning around it.
 
 ### Tuning Knobs (if issues found)
-- `Config.SWEEP_BEAM_HIGH_Y` — clearance for high beam (tuned via Case 5 if bodies snag).
+- `Config.SWEEP_BEAM_HIGH_BOTTOM` — high-bar underside clearance (tuned via Case 5 if bodies snag).
 - `Config.SWEEP_RESIST_TICKS` — consecutive struck ticks before backstop (tuned via Case 7 if resisting feels too lenient).
 - `Config.SWEEP_RESEED_MARGIN` — arc band for validator reseeding (tuned via Case 11 if validation jank occurs).
 - `Config.SWEEP_STAND_BAND` — Y margin for "on platform" detection (tuned if edge cases allow false kills).

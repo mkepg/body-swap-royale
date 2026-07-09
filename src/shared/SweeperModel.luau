@@ -27,12 +27,9 @@ function SweeperModel.angularDistance(a, b)
 	return d
 end
 
--- Current angle of one arm of a beam. beam = { baseAngle, direction (+1/-1), armCount }.
--- speed is the (already ramped) angular speed; armIndex is 0-based.
-function SweeperModel.beamAngle(beam, armIndex, speed, elapsed)
-	local arm = armIndex * (TAU / beam.armCount)
-	return norm(beam.baseAngle + beam.direction * speed * elapsed + arm)
-end
+-- (v2.1: the elapsed-based beamAngle was removed with the CFrame-stepped beams --
+-- the physics engine owns beam poses now, and every consumer reads the MEASURED
+-- angle off the bar's replicated root. rampedSpeed below still drives the motors.)
 
 -- Monotonic angular speed-up over the round, clamped. opts = { rampPerSecond, maxSpeed }.
 function SweeperModel.rampedSpeed(baseSpeed, elapsed, opts)

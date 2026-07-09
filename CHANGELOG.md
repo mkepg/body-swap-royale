@@ -18,8 +18,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   beam thin (~1×1 cross-section, bottom at 0.6 studs: jumpable); high beam thick (~3×3, bottom at
   5.5 studs: the grounded-clearance knob). Alternating colored segments (cream/amber and cream/crimson
   stripes, `SmoothPlastic`, no Neon). Server-owned physics (`SetNetworkOwner(nil)`); server updates
-  motor `AngularVelocity` per Heartbeat tick via `rampedSpeed` (the ramp survives; Heartbeat CFrame
-  stepping deleted). Strike backstop and client wake cosmetics now read each beam's **measured**
+  motor `AngularVelocity` each 10 Hz monitor tick via `rampedSpeed` (the ramp survives; the v2
+  Heartbeat CFrame stepping is deleted). Strike backstop and client wake cosmetics now read each beam's **measured**
   angle from its replicated physical pose (`atan2` of bar-center offset from hub) via new pure
   `SweeperModel.isStruckAt` (replaces elapsed-based `isStruck` — the yaw-sign risk class is retired
   entirely: geometry, physics, authority, and cosmetics observe one physical object). Verified: 24/24
