@@ -138,10 +138,21 @@ Config.SWEEP_WAKE_FADE = 1.2         -- seconds a wake strip takes to fade
 Config.SWEEP_CHASE_STUDS = 32        -- rim marquee chase lights
 Config.SWEEP_STANDBY_TRANSPARENCY = 0.85 -- dormant-arena Neon dim (one-time flip)
 
--- Hybrid assets ("" => procedural fallback; filled by the MCP sourcing task).
-Config.SWEEP_DISC_MATERIAL = ""
+-- ===== Hybrid assets (each with a code-only fallback) =====
+-- SWEEP_DISC_MATERIAL: a MaterialVariant NAME resolved against the place's
+-- MaterialService (sourced via Studio MCP 2026-07-09; alternate takes parked in
+-- MaterialService.AssistantMaterials). A variant only renders when the part's
+-- Material equals its BaseMaterial, hence the *_BASE key. "" => stock Glass look.
+Config.SWEEP_DISC_MATERIAL = "SweeperStageFloor"
+Config.SWEEP_DISC_MATERIAL_BASE = "Metal"
+-- Beams stay Neon DELIBERATELY (the emissive glow IS the "energy vane" read); the
+-- slot exists for a future textured beam look. "" => Neon.
 Config.SWEEP_BEAM_MATERIAL = ""
-Config.SWEEP_HUB_MESH = ""
+Config.SWEEP_BEAM_MATERIAL_BASE = "Metal"
+-- The hub hero mesh is PRESENCE-based, not ID-based: the client clones
+-- ReplicatedStorage.SweeperAssets.HubMesh when it exists. That folder lives in the
+-- place file, OUTSIDE Rojo's ReplicatedStorage.Shared mapping, so syncs never touch
+-- it. Absent => the procedural hub pillar + rotor rings stand alone.
 
 -- Round population thresholds (consumed by RoundState via the server glue).
 -- MIN_PLAYERS_TO_START gates beginning a round; default 2 keeps the MVP playable
