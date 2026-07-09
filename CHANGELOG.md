@@ -7,6 +7,33 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [2026-07-09]
 
 ### Added
+- **Soul Sweeper v2.2 — Touch Elimination.** Playtest verdict: physics knockback was unreliable
+  in practice — honest players sometimes got "magically teleported off the platform." Root cause:
+  the anti-cheat resist backstop misfired when the physics shove failed to clear a body from the
+  bar's arc within `SWEEP_RESIST_TICKS`, hard re-pivoting them past the rim. **Directive: stop
+  relying on physics knockback entirely.** Beams are now non-collidable (`CanCollide = false`,
+  no `CollisionGroup`) deterministic kill zones: a swept-interval strike test on measured poses
+  (`SweeperModel.isStruckSwept`, replacing `isStruckAt`) checks whether the bar's arc crossed the
+  body's angle since the last tick — anti-tunneling at any ramp speed, with a re-park/teleport
+  jump guard (span > 1 rad falls back to the instantaneous check). A struck non-grace body is
+  eliminated via the same grace-gated chokepoint as void death (`RoundManager.eliminateFromHazard`)
+  — no shove, no re-pivot. Class rules unchanged: jump the low bar, stay grounded under the high
+  bar. **Deleted:** the physics knockback + resist backstop (`strikeTicks`, `SWEEP_RESIST_TICKS`),
+  validator reseeds (`effects.reseeds`, `SWEEP_RESEED_MARGIN`), the outward re-pivot
+  (`SweeperModel.outwardTarget`, `SWEEP_OFF_MARGIN`, `effects.sweeps`), the `SweptAt` client tumble
+  (server stamp + `SweeperController.watchTumble` + `SWEEP_TUMBLE_SECONDS` + `ClientControl.getBody`),
+  and the entire collision-group system (`ensureCollisionGroups`, `SweepBeam`/`GraceBody` groups,
+  `setGraceCollision`/`clearAllGraceCollision`, the floor probe's `GraceBody` ray group) — all
+  existed solely for physical beam↔body interaction, which no longer happens. `SWEEP_BEAM_DENSITY`
+  also retired (density only mattered for contact impulses). **Added:** round-start grace —
+  `RoundManager.beginRound` now stamps the standard grace window for every participant (the
+  2026-07-03 review recommendation, now load-bearing: with instant kill, a player spawned near a
+  parked bar's angle would otherwise die in second one with zero warning); side effect on hex:
+  spawn tiles don't arm for the first `GRACE_SECONDS` either (review-endorsed). With physics
+  knockback gone, the movement validator no longer needs beam-zone exceptions — full validator
+  coverage is restored platform-wide (no rubber-banding anywhere during normal play). Verified:
+  24/24 lune suites. See [spec](superpowers/specs/2026-07-09-soul-sweeper-v2_2-touch-elimination-design.md)
+  and [plan](superpowers/plans/2026-07-09-soul-sweeper-v2_2-touch-elimination.md).
 - **Soul Sweeper v2.1 — "Jump Club" refinement.** Platform scaled up (`SWEEP_PLATFORM_RADIUS 38→52`,
   `SWEEP_HOLE_RADIUS 10→12`, `SWEEP_HUB_RADIUS 5→6`, anchor offset); true-circle visual via client
   EditableMesh annulus over densified invisible-locally 48-segment collision ring (0.1 stud max

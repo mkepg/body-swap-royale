@@ -135,6 +135,63 @@
   without clipping through the bar (which tops out at ~8.5 studs with the 3-thick sizing).
 - Confirm: **rotor ring 2 animation is clean**, no visual intersections with the beam.
 
+## v2.2 Addendum — Touch Elimination
+
+> Beams are now non-collidable deterministic kill zones (spec 2026-07-09 v2.2): touch = instant
+> elimination via the grace-gated chokepoint, no physics knockback. Physics-contact cases from v2
+> and v2.1 no longer apply and are retired below; run the new cases after the retired ones are
+> confirmed gone (no shove/tumble/rubber-band of any kind on beam contact).
+
+### Retired cases (no physics contact in v2.2)
+- **Case 4 (beam shove feel + consistency under latency):** RETIRED by v2.2 (no physics contact).
+- **Case 7 (resist backstop):** RETIRED by v2.2 (no physics contact).
+- **Case 11 (validator non-interference during shoves):** RETIRED by v2.2 (no physics contact).
+- **Case 12 (fling feel):** RETIRED by v2.2 (no physics contact).
+- **Case 13 (stall attempt):** RETIRED by v2.2 (no physics contact).
+
+### New cases
+
+#### a. **Touch = instant elimination (2-client, needs an Active round)**
+- Grounded in the low bar's path: eliminated the moment the bar reaches you (confirm body → balcony,
+  `EliminationEvent` broadcast).
+- Airborne (jump) over the low bar as it passes: survive.
+- Grounded under the high bar: survive (beam passes over).
+- Jump into the high bar as it passes: eliminated.
+- Confirm: **class rules unchanged (jump the low bar, stay grounded under the high bar)**, but a
+  failed read now kills instead of shoving.
+
+#### b. **Anti-tunneling (2-client or solo geometry probe, needs an Active round for the live-death half)**
+- At max ramp speed (late-round), stand in the bar's path and hold position.
+- Confirm: **still eliminated** — the swept-interval strike (`SweeperModel.isStruckSwept`) checks
+  whether the bar's arc crossed your angle since the last tick, so no rotation speed can skip over
+  a stationary body between 10 Hz samples.
+
+#### c. **Round-start grace (2-client only — can't start a round solo)**
+- Spawn into a round such that a bar's path will reach your spawn angle almost immediately.
+- Confirm: **you survive the first ~1.5 s** (`GRACE_SECONDS`) even if the bar sweeps over your
+  spawn point during that window; moving early ends your grace before the window naturally.
+- On the hex arena, confirm: **spawn tiles do not arm during the same ~1.5 s window** (round-start
+  grace's intended side effect on hex).
+
+#### d. **Grace pass-through after swaps (unchanged, 2-client)**
+- Force a swap via command bar (`RoundManager.forceSwap()`); while in the post-swap grace window,
+  move the swapped player into an incoming beam's arc.
+- Confirm: **the bar passes through with no death** during the window (grace behavior is unchanged
+  from v2/v2.1 — only the physics collision machinery that used to enforce it was deleted; the
+  `graceBlocked` strike skip + `eliminateFromHazard`'s own grace re-check now do the whole job).
+
+#### e. **Validator fully active (solo or 2-client)**
+- Play normally near and through beam arcs (walking, jumping, swap-timed movement) for a full round.
+- Confirm: **no rubber-banding anywhere on the platform during normal play** — the validator no
+  longer carries beam-zone exceptions (there are no shove displacements to exempt).
+- Attempt a fly/teleport exploit (command bar `CFrame` jump): confirm the validator **still catches
+  and corrects it** — exploit protection is unaffected, just no longer punched-through near beams.
+
+**Solo-able:** case (e) fully; case (b)'s geometry/timing half (a dropped test part in the bar's
+path, observed to be caught every tick) is solo-probeable, but confirming actual elimination
+requires an Active round. **2-client required:** (a), (c), (d), and the live-death half of (b) —
+all need `RoundManager` in an Active round state, which is not reachable solo.
+
 ## Results
 
 ### 2026-07-08 — Studio MCP Play-Solo verification (Task 9, deterministic pass)
