@@ -202,3 +202,36 @@ swap cut, validator non-interference.
 - **Case 1, 8, 9, 10:** Manual 2-client (swap state, network timing, cosmetic readability, round lifecycle).
 - **Task 9 (Controller-executed):** Geometry probes (annulus seam walk via dropped-part slide, gap-ring drop-through, hub block); yaw convention (stationary probe animated to angle, overlap with beam part); collision groups (grace body vs beam pass-through); backstop trigger (anchored body in arc → swept after 3 ticks); rotation + `LiveArena` + spawn rings across two forced rounds; dormancy (no Heartbeat writes when idle — assert beam CFrame frozen); hex regression.
 - **Task 10 (Controller-executed):** Asset sourcing (disc material, beam material, hub mesh) → set Config slots + verify sourced + fallback both render.
+
+### 2026-07-09 — v2.1 Studio MCP Play-Solo verification (plan Task 6)
+
+Run against a fully Rojo-synced Play-Solo session (v2.1 markers confirmed in Source before
+Play). Clean boot, no console errors.
+
+- **Geometry:** 48 floor segments; hub spans −6..+10 (r 6); low bar 46×1×1 SmoothPlastic at
+  bottom 0.6; high bar 46×3×3 at bottom 5.5; both parked at base angles; 6 stripe shells;
+  roots unanchored, `GetNetworkOwner() = nil` (server), group `SweepBeam`, motors
+  `ActuatorType=Motor`, torque 1e9.
+- **Spin stability (case 13/17 prerequisite):** motor-driven rotation is **perfectly clean** —
+  max tilt 0°, max vertical drift 0 studs over 1.5 s (the hinge attachment axis math holds).
+- **⚠ Sign inversion caught + fixed:** the probe showed hinge +ω DECREASES the measured
+  `atan2(Z,X)` angle (right-hand rule about world-up), silently inverting the `direction`
+  convention (the client wake would trail on the wrong side). Fixed at one point —
+  `motorTarget()` negates (`fix(sweeper-v2.1): negate motor target`) — and re-verified live:
+  a `direction=+1` bar now sweeps at **+0.701 rad/s measured** for a 0.7 target.
+- **Case 12 (fling):** an unanchored 2×2×2 dummy in the bar's path was launched at
+  **27 studs/s peak** and thrown ~35 studs — real momentum transfer, not penetration-shove.
+- **Case 13 (stall):** rotation rate unchanged (0.70) through the collision — the motor holds
+  its target under contact. Brake leaves residual angular speed ≈ 0.001.
+- **Case 14 (true circle):** `SmoothAnnulus` EditableMesh MeshPart rendered (104-stud diameter,
+  top at +0.02, `Metal` + `SweeperStageFloor` variant applied); server segments hidden locally
+  (`LocalTransparencyModifier = 1`, collision untouched).
+- **Case 16 (two bars):** **zero** telegraph parts in the dressing — exactly two rotating bars.
+- **Case 17 (rotor clearance):** rotor ring 2 at Y=9.5, above the thick bar's 8.5 top.
+- **Budget:** 157 dressing parts (≤180 assert holds; includes the hub hero mesh).
+
+**Still MANUAL (2-client):** shove FEEL on a real player body under latency (case 4/12 feel
+half), high-bar clearance vs a real avatar (case 5/15), grace pass-through in a live round
+(case 6), backstop on a real resisting client (case 7/13 player half), rotation + spawn rings
+(case 8), dormancy from the lobby (case 9), wake readability after a swap cut (case 10),
+validator non-interference (case 11).
