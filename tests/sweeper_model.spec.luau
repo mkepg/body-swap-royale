@@ -16,20 +16,8 @@ do
 	print("sweeper: angularDistance seam OK")
 end
 
--- beamAngle: base + direction*speed*elapsed + arm offset, normalized to [0, 2π).
-do
-	local beam = { baseAngle = 0, direction = 1, armCount = 1 }
-	expect(near(M.beamAngle(beam, 0, 2, 0), 0), "t=0 -> baseAngle")
-	expect(near(M.beamAngle(beam, 0, 2, 1), 2), "advances by speed*elapsed")
-	-- direction -1 wraps to just under 2π
-	local rev = { baseAngle = 0, direction = -1, armCount = 1 }
-	expect(near(M.beamAngle(rev, 0, 1, 1), TAU - 1), "reverse wraps into [0,2π)")
-	-- 2 arms are π apart
-	local two = { baseAngle = 0, direction = 1, armCount = 2 }
-	expect(near(M.beamAngle(two, 0, 0, 0), 0), "arm 0 at base")
-	expect(near(M.beamAngle(two, 1, 0, 0), math.pi), "arm 1 offset by π")
-	print("sweeper: beamAngle OK")
-end
+-- (beamAngle was removed in v2.1: the physics engine owns beam poses; consumers
+-- read the MEASURED angle off the bar's replicated root instead.)
 
 -- rampedSpeed: monotonic increase from base, clamped to maxSpeed, floored at elapsed 0.
 do
