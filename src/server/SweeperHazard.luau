@@ -1,9 +1,10 @@
 --[[
-	SweeperHazard (server) -- the Soul Sweeper v2.2 touch-elimination arena behind
+	SweeperHazard (server) -- the Soul Sweeper v2.3 touch-elimination arena behind
 	the ArenaHazard interface. One annulus platform (segmented tangent-box floor)
 	around a non-walkable hub pillar, with a fall-gap ring between hub and hole. Two
-	NON-COLLIDABLE striped machine-bar beams (low/high) are unanchored welded
-	assemblies driven by HingeConstraint motors on the anchored hub axle (spec
+	NON-COLLIDABLE machine-bar beams (low/high) -- dark-metal spine + class-colored
+	Neon energy edge (spec v2.3 §2-5) -- are unanchored welded assemblies driven by
+	HingeConstraint motors on the anchored hub axle (spec
 	2026-07-09 v2.2 §2-4): the PHYSICS ENGINE still rotates them for a smooth,
 	desync-proof visual, but CanCollide = false means bodies pass through them
 	physically -- a beam TOUCH is not a contact, it is read off the same measured
@@ -120,6 +121,12 @@ local function beamColor(class)
 	return Config.SWEEP_BEAM_HIGH_COLOR
 end
 
+-- Constant stud half-width of a beam class's kill band (spec v2.3 §2-3).
+local function killHalf(class)
+	if class == "low" then return Config.SWEEP_BEAM_LOW_KILL_HALF end
+	return Config.SWEEP_BEAM_HIGH_KILL_HALF
+end
+
 local function beamThickness(class)
 	if class == "low" then return Config.SWEEP_BEAM_LOW_THICKNESS end
 	return Config.SWEEP_BEAM_HIGH_THICKNESS
@@ -130,12 +137,12 @@ local function beamBottom(class)
 	return Config.SWEEP_BEAM_HIGH_BOTTOM
 end
 
--- One striped machine bar: a non-collidable root spine + alternating welded
--- stripe shells + a rounded end cap + a hub collar, all rigidly welded (so they
--- move as one body), hinged to the anchored hub axle by a torque-capped motor.
--- Every part is CanCollide = false (spec v2.2 §2-4): the bar physically touches
--- nothing, so no collision group is needed either -- a touch is read off the
--- measured pose (SweeperHazard.step), not felt as a physics contact.
+-- One machine-arm bar: a non-collidable root spine + welded "machine arm + energy
+-- edge" dressing (spec v2.3 §2-5) + a hub collar, all rigidly welded (so they move
+-- as one body), hinged to the anchored hub axle by a torque-capped motor. Every
+-- part is CanCollide = false (spec v2.2 §2-4): the bar physically touches nothing,
+-- so no collision group is needed either -- a touch is read off the measured pose
+-- (SweeperHazard.step), not felt as a physics contact.
 local function buildBeamAssembly(folder, hubPart, beam)
 	local span = Config.SWEEP_PLATFORM_RADIUS - Config.SWEEP_HUB_RADIUS
 	local thick = beamThickness(beam.class)
@@ -154,47 +161,77 @@ local function buildBeamAssembly(folder, hubPart, beam)
 	root.Name = "SweepBeam_" .. beam.class
 	root.Size = Vector3.new(span, thick, thick)
 	root.CFrame = beamPose(beam.baseAngle, centerY)
-	root.Color = color
-	root.Material = Enum.Material.SmoothPlastic
+	root.Color = Config.SWEEP_PLATFORM_COLOR
+	root.Material = Enum.Material.Metal
 	root.CanCollide = false
 	root.Parent = folder
 
-	-- Stripes: alternating cream shells welded onto the spine (slightly proud so the
-	-- stripe reads over the base color; non-colliding + massless).
-	local stripeLen = span / Config.SWEEP_BEAM_STRIPES
-	for i = 0, Config.SWEEP_BEAM_STRIPES - 1 do
-		if i % 2 == 1 then
-			local stripe = Instance.new("Part")
-			stripe.Name = root.Name .. "_Stripe" .. i
-			stripe.Size = Vector3.new(stripeLen, thick + 0.1, thick + 0.1)
-			stripe.CFrame = root.CFrame * CFrame.new(-span / 2 + stripeLen * (i + 0.5), 0, 0)
-			stripe.Color = Config.SWEEP_BEAM_STRIPE_COLOR
-			stripe.Material = Enum.Material.SmoothPlastic
-			stripe.CanCollide = false
-			stripe.Massless = true
-			stripe.Parent = folder
-			local weld = Instance.new("WeldConstraint")
-			weld.Part0 = root
-			weld.Part1 = stripe
-			weld.Parent = stripe
-		end
+	-- Dressing only (spec v2.3 §2-5): the root's SIZE/POSE above stays the strike-math
+	-- + wake reference -- everything below is welded, massless, non-colliding cosmetic
+	-- that reads "machine arm + energy edge": the class color lives on a Neon strip,
+	-- not the spine body, so the visible energy edge IS the gameplay tell (amber
+	-- blade -> jump it; crimson underglow -> stay under it).
+	local function weldOn(part)
+		part.CanCollide = false
+		part.Massless = true
+		part.Parent = folder
+		local weld = Instance.new("WeldConstraint")
+		weld.Part0 = root
+		weld.Part1 = part
+		weld.Parent = part
 	end
 
-	-- End cap (rounded outer tip).
-	local cap = Instance.new("Part")
-	cap.Name = root.Name .. "_Cap"
-	cap.Shape = Enum.PartType.Ball
-	cap.Size = Vector3.new(thick + 0.4, thick + 0.4, thick + 0.4)
-	cap.CFrame = root.CFrame * CFrame.new(span / 2, 0, 0)
-	cap.Color = color
-	cap.Material = Enum.Material.SmoothPlastic
-	cap.CanCollide = false
-	cap.Massless = true
-	cap.Parent = folder
-	local capWeld = Instance.new("WeldConstraint")
-	capWeld.Part0 = root
-	capWeld.Part1 = cap
-	capWeld.Parent = cap
+	if beam.class == "low" then
+		-- Dark-metal housing on TOP of the spine.
+		local housing = Instance.new("Part")
+		housing.Name = root.Name .. "_Housing"
+		housing.Size = Vector3.new(span, 0.6, 0.8)
+		housing.CFrame = root.CFrame * CFrame.new(0, thick / 2 + 0.3, 0)
+		housing.Color = Config.SWEEP_PLATFORM_COLOR
+		housing.Material = Enum.Material.Metal
+		weldOn(housing)
+
+		-- Amber Neon blade strip along the UNDERSIDE (the energy edge: jump it).
+		local blade = Instance.new("Part")
+		blade.Name = root.Name .. "_Blade"
+		blade.Size = Vector3.new(span, 0.35, 0.9)
+		blade.CFrame = root.CFrame * CFrame.new(0, -(thick / 2 + 0.175), 0)
+		blade.Color = color
+		blade.Material = Enum.Material.Neon
+		weldOn(blade)
+
+		-- End-emitter orb (replaces the old cap).
+		local emitter = Instance.new("Part")
+		emitter.Name = root.Name .. "_Emitter"
+		emitter.Shape = Enum.PartType.Ball
+		emitter.Size = Vector3.new(1.6, 1.6, 1.6)
+		emitter.CFrame = root.CFrame * CFrame.new(span / 2, 0, 0)
+		emitter.Color = color
+		emitter.Material = Enum.Material.Neon
+		weldOn(emitter)
+	else
+		-- Crimson Neon underglow strip on the BOTTOM face (the energy edge: stay
+		-- under it).
+		local underglow = Instance.new("Part")
+		underglow.Name = root.Name .. "_Underglow"
+		underglow.Size = Vector3.new(span, 0.3, 2.4)
+		underglow.CFrame = root.CFrame * CFrame.new(0, -(thick / 2 + 0.15), 0)
+		underglow.Color = color
+		underglow.Material = Enum.Material.Neon
+		weldOn(underglow)
+
+		-- Two crimson end lamps at the outer tip, side-by-side.
+		for _, zOffset in ipairs({ -0.9, 0.9 }) do
+			local lamp = Instance.new("Part")
+			lamp.Name = root.Name .. "_Lamp"
+			lamp.Shape = Enum.PartType.Ball
+			lamp.Size = Vector3.new(1.2, 1.2, 1.2)
+			lamp.CFrame = root.CFrame * CFrame.new(span / 2, 0, zOffset)
+			lamp.Color = color
+			lamp.Material = Enum.Material.Neon
+			weldOn(lamp)
+		end
+	end
 
 	-- Hub collar (mounts the bar on the axle visually): a short disc, same up/down
 	-- cylinder convention as buildHub, radius just past the hub so it never covers
@@ -204,15 +241,9 @@ local function buildBeamAssembly(folder, hubPart, beam)
 	collar.Shape = Enum.PartType.Cylinder
 	collar.Size = Vector3.new(thick + 1, (Config.SWEEP_HUB_RADIUS + 1) * 2, (Config.SWEEP_HUB_RADIUS + 1) * 2)
 	collar.CFrame = CFrame.new(c.X, centerY, c.Z) * CFrame.Angles(0, 0, math.rad(90))
-	collar.Color = Config.SWEEP_BEAM_STRIPE_COLOR
-	collar.Material = Enum.Material.SmoothPlastic
-	collar.CanCollide = false
-	collar.Massless = true
-	collar.Parent = folder
-	local collarWeld = Instance.new("WeldConstraint")
-	collarWeld.Part0 = root
-	collarWeld.Part1 = collar
-	collarWeld.Parent = collar
+	collar.Color = Config.SWEEP_PLATFORM_COLOR
+	collar.Material = Enum.Material.Metal
+	weldOn(collar)
 
 	-- Motor: anchored hub -> bar assembly, a vertical hinge axis at the hub center.
 	--
@@ -338,7 +369,7 @@ end
 function SweeperHazard.stop()
 	-- Brake the motors, then re-park each (still unanchored, server-owned) assembly
 	-- at rest via PivotTo -- welded parts follow rigidly, so one call re-seats the
-	-- whole bar (spine + stripes + cap + collar) in one atomic move. Dormant cost is
+	-- whole bar (spine + dressing + collar) in one atomic move. Dormant cost is
 	-- ~zero: a braked motor holding a resting bar against gravity does no per-frame
 	-- Luau work (no Heartbeat connection exists to stop, unlike v2). Clearing
 	-- prevAngle means the NEXT round's first step() tick has no prior sample, so
@@ -354,10 +385,12 @@ end
 function SweeperHazard.descriptor() return ArenaDescriptor.sweeper() end
 function SweeperHazard.voidY() return Config.SWEEP_VOID_Y end
 
--- Round spawn slot: an evenly-spaced ring at mid-annulus radius, facing the hub.
+-- Round spawn slot: an evenly-spaced ARC at mid-annulus radius, centered on the far
+-- side from where both beams park (spec v2.3 §2-4), facing the hub.
 function SweeperHazard.spawnCFrame(index)
 	local c = Config.SWEEP_CENTER
-	local pts = WorldLayout.ring(c.X, c.Z, Config.SWEEP_SPAWN_RADIUS, Config.LOBBY_CAPACITY)
+	local pts = WorldLayout.arc(c.X, c.Z, Config.SWEEP_SPAWN_RADIUS, Config.LOBBY_CAPACITY,
+		Config.SWEEP_SPAWN_CENTER_ANGLE, Config.SWEEP_SPAWN_ARC)
 	local pt = pts[math.min(index, #pts)]
 	local pos = Vector3.new(pt.x, Config.SWEEP_SURFACE_Y + 5, pt.z)
 	return CFrame.lookAt(pos, Vector3.new(c.X, pos.Y, c.Z))
@@ -391,7 +424,7 @@ function SweeperHazard.step(now, samples)
 			class = rec.beam.class,
 			innerRadius = Config.SWEEP_HUB_RADIUS,
 			outerRadius = Config.SWEEP_PLATFORM_RADIUS,
-			angularHalfWidth = Config.SWEEP_BEAM_HALF_WIDTH,
+			killHalfWidth = killHalf(rec.beam.class),
 		}
 		rec.prevAngle = angle
 	end
@@ -400,8 +433,11 @@ function SweeperHazard.step(now, samples)
 		local dx, dz = s.position.X - c.X, s.position.Z - c.Z
 		local radius = math.sqrt(dx * dx + dz * dz)
 		local dy = s.position.Y - Config.SWEEP_SURFACE_Y
+		-- Asymmetric vertical band (spec v2.3 §2-2): a jump-apex root reaches 10.2
+		-- studs, so the old symmetric +/-6 made a jumper unhittable near apex. Below
+		-- -SWEEP_STAND_BAND still skips a body fallen into the gap.
 		local onPlatform = radius >= Config.SWEEP_HUB_RADIUS and radius <= Config.SWEEP_PLATFORM_RADIUS
-			and math.abs(dy) <= Config.SWEEP_STAND_BAND
+			and dy >= -Config.SWEEP_STAND_BAND and dy <= Config.SWEEP_STAND_BAND_UP
 		if onPlatform and not s.graceBlocked then
 			local angle = math.atan2(dz, dx)
 			local airborne = dy > Config.SWEEP_AIRBORNE_BAND or (s.velocityY or 0) > Config.SWEEP_AIRBORNE_VY

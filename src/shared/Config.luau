@@ -109,19 +109,38 @@ Config.SWEEP_PLATFORM_THICKNESS = 2
 Config.SWEEP_PLATFORM_COLOR = Color3.fromRGB(20, 26, 48)   -- dark glass/metal indigo
 Config.SWEEP_ACCENT = Color3.fromRGB(244, 162, 97)         -- turbine amber
 Config.SWEEP_VOID_Y = Config.SWEEP_SURFACE_Y - 24 -- kill-plane (a visible fall beat)
-Config.SWEEP_STAND_BAND = 6          -- Y band above/below the surface that counts as "on" it
+Config.SWEEP_STAND_BAND = 6          -- Y band BELOW the surface that counts as "on" it
+                                     -- (below this = fallen into the gap; see STAND_BAND_UP for above)
+-- Upper on-platform band: must exceed the jump-apex root height (10.2 = measured
+-- standing root 3.0 + JUMP_HEIGHT 7.2) so a jumper stays strikeable at apex; the
+-- asymmetric lower SWEEP_STAND_BAND above still skips a body fallen below the surface.
+Config.SWEEP_STAND_BAND_UP = 13
 Config.SWEEP_SPAWN_RADIUS = 32      -- spawn ring (mid-annulus)
+-- Round-start spawn arc: players cluster on the FAR side from where both beams park
+-- (angle 0 -- see SWEEP_BEAMS below), a 140-degree arc centered on angle pi.
+Config.SWEEP_SPAWN_CENTER_ANGLE = math.pi
+Config.SWEEP_SPAWN_ARC = math.rad(140)
 
 -- The two beams (flat list -- one platform). Each: baseAngle, direction, baseSpeed
--- (rad/s), armCount, class. Radius band + arc half-width attached at build time.
+-- (rad/s), armCount, class. Radius band + kill half-width attached at build time.
+-- Both bars PARK TOGETHER at angle 0 (spec v2.3 SS2-4); players spawn on the
+-- opposite arc (SWEEP_SPAWN_CENTER_ANGLE/ARC above). They still rotate opposite
+-- directions at different speeds, so they sweep apart and converge on the far side.
 Config.SWEEP_BEAMS = {
 	{ baseAngle = 0, direction = 1, baseSpeed = 0.7, armCount = 1, class = "low" },
-	{ baseAngle = math.pi, direction = -1, baseSpeed = 0.55, armCount = 1, class = "high" },
+	{ baseAngle = 0, direction = -1, baseSpeed = 0.55, armCount = 1, class = "high" },
 }
-Config.SWEEP_BEAM_HALF_WIDTH = math.rad(9)
+-- Constant stud half-width of each bar's kill band = visible half-thickness +
+-- body/latency pad. Replaces the old angular half-width (v2.2), whose physical
+-- width grew with radius (~2 studs near the hub, ~8 studs at the rim). Tuning knobs.
+Config.SWEEP_BEAM_LOW_KILL_HALF = 2.0
+Config.SWEEP_BEAM_HIGH_KILL_HALF = 3.0
 Config.SWEEP_SPEED_RAMP_PER_SEC = 0.02
 Config.SWEEP_SPEED_MAX = 2.5
-Config.SWEEP_AIRBORNE_BAND = 3
+-- Measured 2026-07-09: a standing normalized-R15 root sits 3.001 studs above the
+-- surface it stands on; 4.5 requires ~1.5 studs of real jump (apex = 10.2). Re-derive
+-- if NORMALIZED_SCALES change.
+Config.SWEEP_AIRBORNE_BAND = 4.5
 Config.SWEEP_AIRBORNE_VY = 8
 
 -- Solid machine-bar beams (Jump Club idiom): unanchored welded assemblies driven by
