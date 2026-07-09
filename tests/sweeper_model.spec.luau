@@ -51,34 +51,44 @@ do
 	print("sweeper: clears OK")
 end
 
--- isStruckAt: measured-angle strike test (beams carry their CURRENT physical angle).
+-- isStruckSwept: swept-interval strike test on measured angles. A beam kills if its
+-- arc CROSSED the body's angle since last tick (prevAngle -> angle along direction),
+-- padded by the half-width; nil prevAngle or a >1 rad jump (re-park) falls back to
+-- the instantaneous check.
 do
-	local beams = {
-		{ angle = 0, class = "low", innerRadius = 6, outerRadius = 52, angularHalfWidth = 0.15 },
-		{ angle = math.pi, class = "high", innerRadius = 6, outerRadius = 52, angularHalfWidth = 0.15 },
-	}
-	expect(M.isStruckAt({ radius = 20, angle = 0, airborne = false }, beams),
-		"grounded under the low bar -> struck")
-	expect(not M.isStruckAt({ radius = 20, angle = 0, airborne = true }, beams),
-		"airborne clears the low bar")
-	expect(not M.isStruckAt({ radius = 20, angle = math.pi, airborne = false }, beams),
-		"grounded clears the high bar")
-	expect(M.isStruckAt({ radius = 20, angle = math.pi, airborne = true }, beams),
-		"airborne into the high bar -> struck")
-	expect(not M.isStruckAt({ radius = 20, angle = 1.5, airborne = false }, beams),
-		"between bars -> safe")
-	expect(not M.isStruckAt({ radius = 3, angle = 0, airborne = false }, beams),
-		"inside the hub radius -> safe")
-	print("sweeper: isStruckAt OK")
-end
-
--- outwardTarget: unit radial from center through the body, scaled to outRadius.
-do
-	local x, z = M.outwardTarget(5, 0, 0, 0, 30) -- body east of center
-	expect(near(x, 30) and near(z, 0), "pushes straight out east to outRadius")
-	local x2, z2 = M.outwardTarget(0, 0, 0, 0, 30) -- body exactly on center (degenerate)
-	expect(near(x2, 30) and near(z2, 0), "degenerate center -> default +x")
-	print("sweeper: outwardTarget OK")
+	local function beam(prev, ang, dir, class)
+		return { prevAngle = prev, angle = ang, direction = dir, class = class,
+			innerRadius = 6, outerRadius = 52, angularHalfWidth = 0.15 }
+	end
+	local grounded = { radius = 30, angle = 0.3, airborne = false }
+	-- bar swept 0.1 -> 0.5 (dir +1): body at 0.3 was crossed -> struck.
+	expect(M.isStruckSwept(grounded, { beam(0.1, 0.5, 1, "low") }), "crossed body -> struck")
+	-- same sweep but body at 0.8 (ahead, outside pad) -> safe.
+	expect(not M.isStruckSwept({ radius = 30, angle = 0.8, airborne = false },
+		{ beam(0.1, 0.5, 1, "low") }), "ahead of the sweep -> safe")
+	-- airborne clears the low bar even when crossed.
+	expect(not M.isStruckSwept({ radius = 30, angle = 0.3, airborne = true },
+		{ beam(0.1, 0.5, 1, "low") }), "airborne clears low even when crossed")
+	-- grounded clears the high bar even when crossed.
+	expect(not M.isStruckSwept(grounded, { beam(0.1, 0.5, 1, "high") }),
+		"grounded clears high even when crossed")
+	-- direction -1: bar swept 0.5 -> 0.1; body at 0.3 crossed.
+	expect(M.isStruckSwept(grounded, { beam(0.5, 0.1, -1, "low") }), "reverse sweep crosses too")
+	-- wrap at the seam: bar swept (TAU-0.1) -> 0.1 (dir +1); body at 0.02 crossed.
+	expect(M.isStruckSwept({ radius = 30, angle = 0.02, airborne = false },
+		{ beam(TAU - 0.1, 0.1, 1, "low") }), "seam wrap crossed")
+	-- re-park jump guard: span > 1 rad falls back to instantaneous -> body 1.5 away is safe.
+	expect(not M.isStruckSwept({ radius = 30, angle = 1.5, airborne = false },
+		{ beam(0, 3, 1, "low") }), "re-park jump cannot kill across the span")
+	-- nil prevAngle: instantaneous only.
+	expect(M.isStruckSwept({ radius = 30, angle = 0.05, airborne = false },
+		{ beam(nil, 0, 1, "low") }), "first tick instantaneous hit")
+	expect(not M.isStruckSwept({ radius = 30, angle = 0.5, airborne = false },
+		{ beam(nil, 0, 1, "low") }), "first tick instantaneous miss")
+	-- radius band still applies.
+	expect(not M.isStruckSwept({ radius = 3, angle = 0.3, airborne = false },
+		{ beam(0.1, 0.5, 1, "low") }), "inside hub radius -> safe")
+	print("sweeper: isStruckSwept OK")
 end
 
 print("ALL SweeperModel TESTS PASSED")
