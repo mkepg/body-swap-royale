@@ -107,6 +107,7 @@ function InputController.releaseControls()
 		controls:OnCharacterRemoving()
 		if jumpButton then
 			jumpButton.Visible = false
+			jumpButton.ImageRectOffset = RECT_NORMAL
 		end
 		jumpHeld = false
 	end
@@ -163,10 +164,15 @@ function InputController.setupJump()
 		button.Size = UDim2.new(0, l.size, 0, l.size)
 		button.Position = UDim2.new(1, l.xOffset, 1, l.yOffset)
 	end
+	local viewportConn = nil
 	local function bindCamera()
+		if viewportConn then
+			viewportConn:Disconnect()
+			viewportConn = nil
+		end
 		local cam = workspace.CurrentCamera
 		if cam then
-			cam:GetPropertyChangedSignal("ViewportSize"):Connect(applyLayout)
+			viewportConn = cam:GetPropertyChangedSignal("ViewportSize"):Connect(applyLayout)
 		end
 		applyLayout()
 	end
