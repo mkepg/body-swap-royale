@@ -44,6 +44,15 @@ do
 	print("sweeper: clears OK")
 end
 
+-- killHalfWidth (v2.4): kill band DERIVED from the bar's visible thickness + the
+-- body contact pad, so hitbox and mesh share one knob and cannot drift.
+do
+	expect(near(M.killHalfWidth(1, 0.5), 1.0), "low bar: 1 thick + 0.5 pad -> 1.0")
+	expect(near(M.killHalfWidth(3, 0.5), 2.0), "high bar: 3 thick + 0.5 pad -> 2.0")
+	expect(near(M.killHalfWidth(2, 0), 1.0), "zero pad -> exactly the visible half")
+	print("sweeper: killHalfWidth OK")
+end
+
 -- isStruckSwept: swept-interval strike test on measured angles. A beam kills if its
 -- arc CROSSED the body's angle since last tick (prevAngle -> angle along direction),
 -- padded by a per-body local half-angle derived from the beam's constant STUD

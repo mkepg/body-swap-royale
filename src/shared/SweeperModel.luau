@@ -54,6 +54,14 @@ function SweeperModel.clears(class, airborne)
 	return airborne == false
 end
 
+-- v2.4: the kill band half-width is DERIVED from the bar's visible thickness --
+-- half the root-spine thickness (the visible bar edge) + the struck body's own
+-- half-extent around its sampled root point (Config.SWEEP_BODY_CONTACT_PAD). One
+-- constant sizes both the mesh and the hitbox, so they can never drift apart.
+function SweeperModel.killHalfWidth(thickness, contactPad)
+	return thickness / 2 + contactPad
+end
+
 -- Swept-interval strike test on MEASURED angles: did any beam's arc cross the body
 -- since the last tick? beams[i] = { angle, prevAngle?, direction (+1/-1), class,
 -- innerRadius, outerRadius, killHalfWidth }. direction follows the system-wide

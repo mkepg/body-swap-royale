@@ -130,11 +130,16 @@ Config.SWEEP_BEAMS = {
 	{ baseAngle = 0, direction = 1, baseSpeed = 0.7, armCount = 1, class = "low" },
 	{ baseAngle = 0, direction = -1, baseSpeed = 0.55, armCount = 1, class = "high" },
 }
--- Constant stud half-width of each bar's kill band = visible half-thickness +
--- body/latency pad. Replaces the old angular half-width (v2.2), whose physical
--- width grew with radius (~2 studs near the hub, ~8 studs at the rim). Tuning knobs.
-Config.SWEEP_BEAM_LOW_KILL_HALF = 2.0
-Config.SWEEP_BEAM_HIGH_KILL_HALF = 3.0
+-- Kill band half-width is DERIVED, not hand-tuned (v2.4): visible half-thickness
+-- (the same SWEEP_BEAM_*_THICKNESS that sizes each root spine) + the body contact
+-- pad below -- see SweeperModel.killHalfWidth. The v2.3 KILL_HALF constants carried
+-- a ~1.5-stud symmetric "latency pad" that killed before visible contact; render
+-- latency is handled separately now (SWEEP_STRIKE_LAG_TICKS, v2.4 part 2), and the
+-- pad covers only the struck BODY's own half-extent around its sampled root point.
+-- 0.5 = half a normalized-R15 torso depth: the bar edge meeting the body edge when
+-- facing it; broadside limb contact errs slightly LATE by design ("only when it
+-- visibly touches").
+Config.SWEEP_BODY_CONTACT_PAD = 0.5
 Config.SWEEP_SPEED_RAMP_PER_SEC = 0.02
 Config.SWEEP_SPEED_MAX = 2.5
 -- Measured 2026-07-09: a standing normalized-R15 root sits 3.001 studs above the
