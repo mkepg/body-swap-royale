@@ -28,8 +28,13 @@
 --]]
 
 local Players = game:GetService("Players")
-local ContextActionService = game:GetService("ContextActionService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared:WaitForChild("Config"))
+local TouchJumpLayout = require(Shared:WaitForChild("TouchJumpLayout"))
 
 local LocalPlayer = Players.LocalPlayer
 
@@ -38,6 +43,14 @@ local InputController = {}
 local controls = nil          -- the PlayerModule ControlModule
 local MOVE_EPSILON_SQ = 0.01  -- treat |move| below this as "not moving"
 local jumpHeld = false         -- touch jump button held (see setupJump)
+local jumpButton = nil         -- our default-replica ImageButton (touch / TOUCH_JUMP_FORCE)
+
+-- The default TouchJump button's engine art (verified against the live
+-- PlayerModule source 2026-07-10): one sprite sheet, normal + pressed rects.
+local TOUCH_SHEET = "rbxasset://textures/ui/Input/TouchControlsSheetV2.png"
+local RECT_NORMAL = Vector2.new(1, 146)
+local RECT_PRESSED = Vector2.new(146, 146)
+local RECT_SIZE = Vector2.new(144, 144)
 
 -- Acquire and enable Roblox's control module. Idempotent.
 function InputController.enable()
@@ -81,6 +94,9 @@ function InputController.ensureControls(body, humanoid)
 	end
 	if humanoid and controls.humanoid ~= humanoid then
 		controls:OnCharacterAdded(body)
+		if jumpButton then
+			jumpButton.Visible = true
+		end
 	end
 end
 
@@ -89,27 +105,92 @@ end
 function InputController.releaseControls()
 	if controls and controls.humanoid ~= nil then
 		controls:OnCharacterRemoving()
+		if jumpButton then
+			jumpButton.Visible = false
+		end
+		jumpHeld = false
 	end
 end
 
 -- Jump. Desktop (Space) and gamepad (ButtonA) already jump via the ControlModule's
 -- own controllers, which set `humanoid.Jump` in its Input-priority render step. TOUCH
 -- is the gap: Roblox's default TouchJump button is hard-gated on LocalPlayer.Character
--- (via CharacterUtil), which this game never has, so it never renders. So we add a
--- TOUCH-ONLY jump button (default jump art) via ContextActionService.
+-- (via CharacterUtil), which this game never has, so it never renders. So we build a
+-- REPLICA of the default button (spec 2026-07-10): same engine sprite-sheet art +
+-- pressed state, and the default form-factor layout rules via the pure
+-- TouchJumpLayout (size comfort-scaled by Config.TOUCH_JUMP_SCALE), re-applied on
+-- every viewport change. (The old ContextActionService button was CAS-small and
+-- ignored those rules -- the 2026-07-10 "too small on mobile" report.)
 --
--- The catch: because we feed the ControlModule our body's humanoid (for the
--- thumbstick), its render step writes `humanoid.Jump = false` every frame on touch
--- (no touch controller reports jumping). A one-shot `Jump = true` would be stomped.
--- So we re-assert `Jump = true` while the button is held at Last render priority
--- (2000), which runs AFTER the ControlModule's Input step (100) -- our write wins.
+-- The catch (unchanged from the CAS era): because we feed the ControlModule our
+-- body's humanoid (for the thumbstick), its render step writes `humanoid.Jump =
+-- false` every frame on touch. A one-shot `Jump = true` would be stomped. So we
+-- re-assert `Jump = true` while the button is held at Last render priority (2000),
+-- which runs AFTER the ControlModule's Input step (100) -- our write wins.
+--
+-- Hold tracking follows the initiating touch's InputObject via UserInputService.
+-- InputEnded: releasing OFF the button (finger slid away) still releases the jump,
+-- which button-local InputEnded alone would miss.
 function InputController.setupJump()
-	ContextActionService:BindAction("BSR_Jump", function(_actionName, inputState)
-		jumpHeld = (inputState == Enum.UserInputState.Begin)
-		return Enum.ContextActionResult.Pass
-	end, true) -- createTouchButton = true, NO keycodes: touch-only (KB/gamepad use ControlModule)
-	ContextActionService:SetImage("BSR_Jump", "rbxasset://textures/ui/Input/JumpButtonRegular.png")
-	ContextActionService:SetTitle("BSR_Jump", "")
+	if not (UserInputService.TouchEnabled or Config.TOUCH_JUMP_FORCE) then
+		return -- keyboard/gamepad jump is the ControlModule's; no on-screen button
+	end
+
+	local playerGui = LocalPlayer:WaitForChild("PlayerGui")
+	local gui = Instance.new("ScreenGui")
+	gui.Name = "BSRTouchJump"
+	gui.ResetOnSpawn = false
+	gui.DisplayOrder = 15
+	gui.Parent = playerGui
+
+	local button = Instance.new("ImageButton")
+	button.Name = "JumpButton"
+	button.BackgroundTransparency = 1
+	button.Image = TOUCH_SHEET
+	button.ImageRectOffset = RECT_NORMAL
+	button.ImageRectSize = RECT_SIZE
+	button.Visible = false -- shown by ensureControls once a body is bound
+	button.Parent = gui
+	jumpButton = button
+
+	-- Layout: the pure module's numbers -> UDim2, re-applied on every viewport
+	-- change, re-bound if the Camera instance itself is ever replaced.
+	local function applyLayout()
+		local cam = workspace.CurrentCamera
+		if not cam then return end
+		local vps = cam.ViewportSize
+		local l = TouchJumpLayout.compute(vps.X, vps.Y, Config.TOUCH_JUMP_SCALE)
+		button.Size = UDim2.new(0, l.size, 0, l.size)
+		button.Position = UDim2.new(1, l.xOffset, 1, l.yOffset)
+	end
+	local function bindCamera()
+		local cam = workspace.CurrentCamera
+		if cam then
+			cam:GetPropertyChangedSignal("ViewportSize"):Connect(applyLayout)
+		end
+		applyLayout()
+	end
+	workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(bindCamera)
+	bindCamera()
+
+	-- Hold tracking (see doc comment above). MouseButton1 only matters under
+	-- TOUCH_JUMP_FORCE (desktop layout verification).
+	local activeInput = nil
+	button.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.Touch
+			or input.UserInputType == Enum.UserInputType.MouseButton1 then
+			activeInput = input
+			jumpHeld = true
+			button.ImageRectOffset = RECT_PRESSED
+		end
+	end)
+	UserInputService.InputEnded:Connect(function(input)
+		if input == activeInput then
+			activeInput = nil
+			jumpHeld = false
+			button.ImageRectOffset = RECT_NORMAL
+		end
+	end)
 
 	RunService:BindToRenderStep("BSR_JumpReassert", Enum.RenderPriority.Last.Value, function()
 		if jumpHeld and controls and controls.humanoid then
