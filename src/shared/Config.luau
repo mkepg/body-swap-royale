@@ -218,6 +218,21 @@ Config.SOLO_TEST_MODE = false
 Config.MIN_PLAYERS_TO_START = Config.SOLO_TEST_MODE and 1 or 2
 Config.MIN_PLAYERS_TO_CONTINUE = Config.SOLO_TEST_MODE and 1 or 2
 
+-- ===== Mobile touch jump button (2026-07-10) =====
+-- The DEFAULT TouchJump button never renders in this game (it is hard-gated on
+-- LocalPlayer.Character, which the ownership-transfer model never sets), so
+-- InputController builds a replica: the same engine sprite-sheet art + the
+-- default form-factor layout rules (pure TouchJumpLayout, lune-tested), with
+-- the SIZE scaled by TOUCH_JUMP_SCALE for comfort. 1.0 = exact default
+-- (70 px phones / 120 px tablets -- too small per the 2026-07-10 mobile feel
+-- pass); 1.3 => ~91 px phones / 156 px tablets. Feel-tunable.
+Config.TOUCH_JUMP_SCALE = 1.3
+-- Dev/test switch (like SOLO_TEST_MODE, NOT a gameplay tunable): when true the
+-- touch jump button also renders on non-touch devices, with MouseButton1
+-- standing in for touch, so layout is verifiable in desktop Play Solo (Studio
+-- MCP cannot see PlayerGui via screen capture). Leave false.
+Config.TOUCH_JUMP_FORCE = false
+
 -- Movement, normalized so avatar choice never confers an advantage.
 Config.WALK_SPEED = 16
 Config.JUMP_HEIGHT = 7.2
