@@ -70,8 +70,8 @@ axis** (so results tell us *why* a winner wins):
 |---|---|---|
 | V1 | Expression | comic terror → delighted panic |
 | V2 | Soul-face position | corner overlap → descending face-to-face from above |
-| V3 | Camera | tight face crop → head-and-shoulders |
-| V4 | Background | aurora emphasized → minimal clean gradient |
+| V3 | Camera | head-and-shoulders (~70%) → tight face crop |
+| V4 | Background | subtle aurora + wisps → minimal clean gradient |
 
 Rejected approaches: single-prompt conversational iteration (free tools re-roll
 the whole image per change — "incremental" is illusory); generate-heavy
