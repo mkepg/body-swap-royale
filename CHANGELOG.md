@@ -7,6 +7,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [2026-07-09]
 
 ### Added
+- **Soul Sweeper v2.4 — hitbox↔visual alignment + arena dim pass.** Feel-pass report: players
+  died BEFORE the bar visibly touched them, and the Neon glare hurt readability. Two verified
+  causes for the early kills: (A) the v2.3 kill half-widths carried a ~1.5-stud symmetric
+  "latency pad" (the LOW bar killed across 4 studs while showing 1); (B) clients render the
+  server-owned bars through the replication interpolation buffer (~100 ms), so authoritative-pose
+  kills always land AHEAD of the rendered bar (~2.2 studs at spawn radius at base speed, growing
+  with the ramp). Fixed: kill bands are DERIVED from the visible mesh (pure
+  `SweeperModel.killHalfWidth` = spine half-thickness + `SWEEP_BODY_CONTACT_PAD` 0.5; low
+  2.0→1.0, high 3.0→2.0; the hand-tuned KILL_HALF constants are retired — hitbox and mesh share
+  one thickness knob and cannot drift), and the strike test runs against the sweep window
+  `SWEEP_STRIKE_LAG_TICKS` (1 tick = 100 ms) in the past via a per-beam measured-angle history
+  (pure `SweeperModel.delayedWindow`, loud-failing on non-integer lag; warm-up ticks skip the
+  test, covered by round-start grace; the anti-tunneling tiling is preserved), so kills land on
+  the pose players actually SEE. A flag-gated `SWEEP_LAG_PROBE` measures rendered-vs-authoritative
+  lag live to size the tick count. Dim pass: dressing Neon dropped to accent level (rim accent
+  0→0.55, wake-lit 0.15→0.5, chase 0.1/0.6→0.4/0.75, rotors 0.35→0.6, shaft 0.7→0.8, lenses
+  0.2→0.5); the amber-blade / crimson-underglow kill tells stay full-brightness and gain
+  contrast. Verified: 24/24 lune suites. See
+  [spec](superpowers/specs/2026-07-09-soul-sweeper-v2_4-hitbox-visual-alignment-design.md)
+  and [plan](superpowers/plans/2026-07-09-soul-sweeper-v2_4-hitbox-visual-alignment.md).
 - **Soul Sweeper v2.3 — collision fix, round-start formation, beam redesign.** Playtest report:
   the HIGH bar killed standing players and the LOW bar spared them — inverted behavior. **Root
   cause (verified live):** a standing normalized-R15 root sits at **3.001 studs** above the
