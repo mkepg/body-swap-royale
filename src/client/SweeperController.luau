@@ -42,14 +42,20 @@ local TAU = math.pi * 2
 -- Resting/base transparencies (live state); dormant always overrides to
 -- Config.SWEEP_STANDBY_TRANSPARENCY. Kept as named constants so the build pass
 -- and the live/dormancy sync pass never drift from each other.
+-- v2.4 dim pass (spec §2-4): the dressing is ATMOSPHERE, not signal -- only the
+-- bars' kill tells (amber blade / crimson underglow / end emitters, built server-
+-- side in SweeperHazard) stay full-brightness Neon. Everything here sits at accent
+-- level so the tells, the floor, and other players stay readable under Bloom 0.9.
+-- Lit/static values stay below SWEEP_STANDBY_TRANSPARENCY (0.85) so dormancy still
+-- visibly dims the arena.
 local WAKE_BASE_TRANSPARENCY = 0.9
-local WAKE_LIT_TRANSPARENCY = 0.15
-local CHASE_BASE_TRANSPARENCY = 0.6
-local CHASE_LIT_TRANSPARENCY = 0.1
-local ROTOR_TRANSPARENCY = 0.35
-local SHAFT_TRANSPARENCY = 0.7
-local LENS_TRANSPARENCY = 0.2
-local RIM_ACCENT_TRANSPARENCY = 0
+local WAKE_LIT_TRANSPARENCY = 0.5
+local CHASE_BASE_TRANSPARENCY = 0.75
+local CHASE_LIT_TRANSPARENCY = 0.4
+local ROTOR_TRANSPARENCY = 0.6
+local SHAFT_TRANSPARENCY = 0.8
+local LENS_TRANSPARENCY = 0.5
+local RIM_ACCENT_TRANSPARENCY = 0.55
 local ROTOR_SPIN_SPEED = 0.4 -- rad/s, cosmetic only
 
 -- Wake fade-window width in RADIANS (fixed, not speed-scaled): the lit trail
