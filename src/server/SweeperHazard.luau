@@ -121,15 +121,15 @@ local function beamColor(class)
 	return Config.SWEEP_BEAM_HIGH_COLOR
 end
 
--- Constant stud half-width of a beam class's kill band (spec v2.3 §2-3).
-local function killHalf(class)
-	if class == "low" then return Config.SWEEP_BEAM_LOW_KILL_HALF end
-	return Config.SWEEP_BEAM_HIGH_KILL_HALF
-end
-
 local function beamThickness(class)
 	if class == "low" then return Config.SWEEP_BEAM_LOW_THICKNESS end
 	return Config.SWEEP_BEAM_HIGH_THICKNESS
+end
+
+-- Kill band half-width DERIVED from the same thickness that sizes the root spine
+-- (spec v2.4 §2-1): hitbox and mesh cannot drift.
+local function killHalf(class)
+	return SweeperModel.killHalfWidth(beamThickness(class), Config.SWEEP_BODY_CONTACT_PAD)
 end
 
 local function beamBottom(class)
