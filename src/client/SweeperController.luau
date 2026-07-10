@@ -418,6 +418,8 @@ function SweeperController.start()
 	----------------------------------------------------------------------------
 	-- ONE shared Heartbeat loop -- zero writes when the sweeper isn't live.
 	----------------------------------------------------------------------------
+	-- Lag probe accumulators (Config.SWEEP_LAG_PROBE; spec v2.4 §2-3).
+	local probeSum, probeMax, probeN, probeWindow = 0, 0, 0, 0
 	RunService.Heartbeat:Connect(function(dt)
 		if workspace:GetAttribute("LiveArena") ~= "sweeper" then return end
 		local field = Workspace:FindFirstChild("SweeperField")
@@ -432,6 +434,28 @@ function SweeperController.start()
 		end
 		if lowBeamPart then
 			local lowAngle = math.atan2(lowBeamPart.Position.Z - c.Z, lowBeamPart.Position.X - c.X)
+			-- Dev lag probe: how far the RENDERED bar trails the server's authoritative
+			-- angle (stamped as AuthAngle each monitor tick). Positive = rendered pose
+			-- is behind. Accuracy is +-half a monitor tick (the stamp is 10 Hz).
+			if Config.SWEEP_LAG_PROBE then
+				local auth = lowBeamPart:GetAttribute("AuthAngle")
+				if auth then
+					local lag = ((auth - lowAngle) * lowBeam.direction) % TAU
+					if lag > math.pi then lag -= TAU end
+					probeSum += lag
+					probeN += 1
+					if lag > probeMax then probeMax = lag end
+					probeWindow += dt
+					if probeWindow >= 1 and probeN > 0 then
+						local mean = probeSum / probeN
+						print(string.format(
+							"[BSR][lagprobe] mean %.4f rad / max %.4f rad (%.2f / %.2f studs at r=%d)",
+							mean, probeMax, mean * Config.SWEEP_SPAWN_RADIUS,
+							probeMax * Config.SWEEP_SPAWN_RADIUS, Config.SWEEP_SPAWN_RADIUS))
+						probeSum, probeMax, probeN, probeWindow = 0, 0, 0, 0
+					end
+				end
+			end
 			for _, w in ipairs(wakeStrips) do
 				local behind = (lowBeam.direction * (lowAngle - w.angle)) % TAU
 				local target

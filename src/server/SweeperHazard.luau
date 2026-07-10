@@ -20,7 +20,7 @@
 	  build()            -- once at startup: annulus, hub, beam assemblies
 	  start(now)         -- beginRound: reset clock, publish RoundStartServerT, spin up motors
 	  step(now, samples) -- per monitor tick: refresh motor targets + touch-elimination scan
-	  stop()             -- endRound: brake motors, re-park assemblies at baseAngle, clear prevAngle
+	  stop()             -- endRound: brake motors, re-park assemblies at baseAngle, clear angle history
 	  descriptor()/voidY()/id/spawnCFrame -- ArenaHazard interface
 
 	Depends on: Config / SweeperModel / ArenaDescriptor / WorldLayout.
@@ -39,7 +39,8 @@ SweeperHazard.id = "sweeper"
 local built = false
 local startClock = 0   -- os.clock() at round start; elapsed = now - startClock
 -- { { beam = config, part = Part (the assembly's non-collidable root spine),
---     hinge = HingeConstraint (the motor), y = centerY, prevAngle = number? }, ... }
+--     hinge = HingeConstraint (the motor), y = centerY,
+--     angleHist = { measured angles, oldest first } }, ... }
 local beamRecs = {}
 
 -- World pose of a beam assembly's ROOT at a given angle + height: a radial bar
@@ -293,7 +294,7 @@ local function buildBeamAssembly(folder, hubPart, beam)
 	root.Anchored = false
 	root:SetNetworkOwner(nil)
 
-	return { beam = beam, part = root, hinge = hinge, y = centerY }
+	return { beam = beam, part = root, hinge = hinge, y = centerY, angleHist = {} }
 end
 
 -- Two beam assemblies, one per Config.SWEEP_BEAMS entry, spanning hub-to-rim.
@@ -381,10 +382,10 @@ function SweeperHazard.stop()
 	-- poses, so the park sticks.
 	--
 	-- Dormant cost stays ~zero (a braked motor holding a resting bar does no
-	-- per-frame Luau work). Clearing prevAngle means the NEXT round's first step()
-	-- tick has no prior sample, so SweeperModel.isStruckSwept falls back to the
-	-- instantaneous check instead of reading this re-park jump as a
-	-- (potentially kill-wide) swept arc.
+	-- per-frame Luau work). Clearing angleHist means the NEXT round's first ticks
+	-- have no lagged window yet (SweeperModel.delayedWindow returns nil -> strike
+	-- test skipped, covered by round-start grace), so this re-park jump can never
+	-- be read as a (potentially kill-wide) swept arc.
 	for _, rec in ipairs(beamRecs) do
 		rec.hinge.AngularVelocity = 0
 		rec.hinge.Enabled = false
@@ -392,7 +393,7 @@ function SweeperHazard.stop()
 		rec.part.AssemblyAngularVelocity = Vector3.zero
 		rec.part:PivotTo(beamPose(rec.beam.baseAngle, rec.y))
 		rec.hinge.Enabled = true
-		rec.prevAngle = nil
+		rec.angleHist = {}
 	end
 end
 
@@ -422,14 +423,16 @@ function SweeperHazard.spawnCFrame(index)
 	return CFrame.lookAt(pos, Vector3.new(c.X, pos.Y, c.Z))
 end
 
--- Per monitor tick: refresh each motor's ramped target speed, read back each bar's
--- MEASURED angle once (shared by every sample this tick), build the beams table for
--- SweeperModel.isStruckSwept (swept-interval strike test -- the arc's motion since
--- the LAST tick, not just its instantaneous position, so no rotation speed can
--- tunnel past a player between 10 Hz samples), then STORE that angle as the next
--- tick's prevAngle. A struck non-grace on-platform body is queued for elimination
--- via the SAME grace-gated chokepoint as void death (RoundManager.eliminateFromHazard).
--- Grace-blocked / off-platform bodies are skipped entirely (no strike test run).
+-- Per monitor tick: refresh each motor's ramped target speed, push each bar's
+-- MEASURED angle onto its history, then strike-test the sweep window ending
+-- SWEEP_STRIKE_LAG_TICKS ticks ago (SweeperModel.delayedWindow -> isStruckSwept):
+-- the swept interval covers the arc's full motion between samples (no rotation
+-- speed can tunnel past a player between 10 Hz ticks), and the LAG makes the kill
+-- land on the pose clients actually SEE (replication interpolation trails the
+-- authoritative pose -- spec v2.4 §2-2). A struck non-grace on-platform body is
+-- queued for elimination via the SAME grace-gated chokepoint as void death
+-- (RoundManager.eliminateFromHazard). Grace-blocked / off-platform bodies are
+-- skipped entirely (no strike test run).
 function SweeperHazard.step(now, samples)
 	local eliminations = {}
 	if not Config.HAZARDS_ENABLED then
@@ -440,19 +443,29 @@ function SweeperHazard.step(now, samples)
 	local c = Config.SWEEP_CENTER
 
 	local beamsNow = {}
-	for i, rec in ipairs(beamRecs) do
+	for _, rec in ipairs(beamRecs) do
 		rec.hinge.AngularVelocity = motorTarget(rec.beam, elapsed, speedOpts)
-		local angle = measuredAngle(rec)
-		beamsNow[i] = {
-			angle = angle,
-			prevAngle = rec.prevAngle,
-			direction = rec.beam.direction,
-			class = rec.beam.class,
-			innerRadius = Config.SWEEP_HUB_RADIUS,
-			outerRadius = Config.SWEEP_PLATFORM_RADIUS,
-			killHalfWidth = killHalf(rec.beam.class),
-		}
-		rec.prevAngle = angle
+		local hist = rec.angleHist
+		hist[#hist + 1] = measuredAngle(rec)
+		-- Cap the history at what delayedWindow can ever read (lag + window pair).
+		if #hist > Config.SWEEP_STRIKE_LAG_TICKS + 2 then
+			table.remove(hist, 1)
+		end
+		if Config.SWEEP_LAG_PROBE and rec.beam.class == "low" then
+			rec.part:SetAttribute("AuthAngle", hist[#hist])
+		end
+		local angle, prevAngle = SweeperModel.delayedWindow(hist, Config.SWEEP_STRIKE_LAG_TICKS)
+		if angle then
+			beamsNow[#beamsNow + 1] = {
+				angle = angle,
+				prevAngle = prevAngle,
+				direction = rec.beam.direction,
+				class = rec.beam.class,
+				innerRadius = Config.SWEEP_HUB_RADIUS,
+				outerRadius = Config.SWEEP_PLATFORM_RADIUS,
+				killHalfWidth = killHalf(rec.beam.class),
+			}
+		end
 	end
 
 	for _, s in ipairs(samples) do

@@ -140,6 +140,19 @@ Config.SWEEP_BEAMS = {
 -- facing it; broadside limb contact errs slightly LATE by design ("only when it
 -- visibly touches").
 Config.SWEEP_BODY_CONTACT_PAD = 0.5
+-- v2.4 render-lag compensation (spec §2-2): the strike test runs against the sweep
+-- window this many monitor ticks (0.1 s each) in the PAST. Clients render the
+-- server-owned bars through Roblox's replication interpolation buffer, so the
+-- on-screen bar trails the authoritative pose -- killing on the authoritative
+-- window eliminated players before the bar VISIBLY reached them. 1 tick = 100 ms
+-- ~= the expected interpolation buffer (probe measurement pending v2.4 live
+-- verification -- recorded here once run). 0 disables (freshest window). Integer.
+Config.SWEEP_STRIKE_LAG_TICKS = 1
+-- Dev/measurement switch (like SOLO_TEST_MODE, NOT a gameplay tunable): when true
+-- the server stamps the low bar's authoritative angle as an `AuthAngle` attribute
+-- each monitor tick and the client prints a 1 s rolling rendered-vs-authoritative
+-- lag readout ([BSR][lagprobe]) -- used to size SWEEP_STRIKE_LAG_TICKS. Leave false.
+Config.SWEEP_LAG_PROBE = false
 Config.SWEEP_SPEED_RAMP_PER_SEC = 0.02
 Config.SWEEP_SPEED_MAX = 2.5
 -- Measured 2026-07-09: a standing normalized-R15 root sits 3.001 studs above the
