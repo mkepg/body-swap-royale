@@ -144,10 +144,14 @@ Config.SWEEP_BODY_CONTACT_PAD = 0.5
 -- window this many monitor ticks (0.1 s each) in the PAST. Clients render the
 -- server-owned bars through Roblox's replication interpolation buffer, so the
 -- on-screen bar trails the authoritative pose -- killing on the authoritative
--- window eliminated players before the bar VISIBLY reached them. 1 tick = 100 ms
--- ~= the expected interpolation buffer (probe measurement pending v2.4 live
--- verification -- recorded here once run). 0 disables (freshest window). Integer.
-Config.SWEEP_STRIKE_LAG_TICKS = 1
+-- window eliminated players before the bar VISIBLY reached them. Probe-measured
+-- 2026-07-10 (Studio loopback, SWEEP_LAG_PROBE): render lag ~0.16 s (~1.6 ticks;
+-- steady-state fresh-stamp max 0.118-0.149 rad at ~0.75 rad/s). 2 ticks errs
+-- ~0.04 s LATE by design ("only when it visibly touches"); 1 tick left kills
+-- ~0.06 s early, growing to ~5 studs at the ramp cap. Re-probe on a real network
+-- before trusting this for production (the buffer adapts to jitter).
+-- 0 disables (freshest window). Integer.
+Config.SWEEP_STRIKE_LAG_TICKS = 2
 -- Dev/measurement switch (like SOLO_TEST_MODE, NOT a gameplay tunable): when true
 -- the server stamps the low bar's authoritative angle as an `AuthAngle` attribute
 -- each monitor tick and the client prints a 1 s rolling rendered-vs-authoritative
