@@ -402,3 +402,29 @@ Solo-verifiable (`SOLO_TEST_MODE = true` + `ARENA_OVERRIDE = "sweeper"`):
   watch the LIGHT SHAFT specifically (live 0.8 vs standby 0.85 is a thin margin) and note that
   unlit wake strips (base 0.9) actually brighten slightly on the dormancy flip (pre-existing);
   flag either for a follow-up constant tweak if they read wrong.
+
+### v2.4 live-verification results (2026-07-10, Studio MCP, solo)
+
+- **SW-V24-5 (lag probe) — DONE, drove a tuning change.** Six rounds of `[BSR][lagprobe]`
+  (Studio loopback): steady-state fresh-stamp max **0.118–0.149 rad at ~0.75 rad/s ≈ 0.16 s**
+  of render lag (~1.6 monitor ticks); the mean (~0.08–0.09 rad) back-solves to the same once
+  half-a-stamp staleness is added. `SWEEP_STRIKE_LAG_TICKS` was re-sized **1 → 2** (commit
+  `61ba2cd`): 1 tick left kills ~0.06 s early (≈5 studs at the ramp cap — would recreate the
+  complaint late-round); 2 ticks errs ~0.04 s LATE, the direction the requirement demands.
+  Measurement burned into the Config comment. Probe flipped back to false.
+- **SW-V24-1 equivalent (mechanical) — PASS, physics-exact.** Server-side timing probe on
+  `Workspace.Bodies`: stander on-platform at +0.01 s, **eliminated at 4.33 s** after
+  `RoundStartServerT`. Prediction with the derived kill band + 0.2 s window:
+  θ(t−0.2) = 175° − asin(1/32) → **4.28–4.38 s** (tick quantization) — dead center. v2.3
+  baseline was 4.12 s; the +0.21 s delta exactly equals the removed 1.5-stud pad (0.047 rad)
+  + the 0.2 s window delay (0.146 rad) at r = 32.
+- **SW-V24-4 (warm-up + round 2) — PASS.** ~20 consecutive rounds cycled (`round started` /
+  `round ended`) with no parked-bar kills during grace, no warm-up strikes, no errors/warns;
+  elimination timing consistent every round (re-park + history-clear behave).
+- **SW-V24-2/3 (jump/duck feel) and SW-V24-6 (dim read) — PENDING user feel pass** (MCP
+  cannot see the running client's viewport; the timing math above covers the mechanical half
+  of SW-V24-1/2/3).
+- **Carry-forward for the 2-client session:** the lag compensation covers the bar's outbound
+  replication only; a real-network player's own position replicates client→server with its
+  own latency (invisible in loopback). Watch for "dodged but died" under real latency before
+  calling the alignment production-final.
