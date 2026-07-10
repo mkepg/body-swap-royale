@@ -62,6 +62,21 @@ function SweeperModel.killHalfWidth(thickness, contactPad)
 	return thickness / 2 + contactPad
 end
 
+-- v2.4 render-lag compensation (spec §2-2): pick the sweep window ending `lagTicks`
+-- samples in the past from a measured-angle history (oldest first, newest last).
+-- Returns the (angle, prevAngle) pair to feed isStruckSwept -- history[0] is nil,
+-- so a window at the very start of history degrades to the model's instantaneous
+-- first-tick fallback -- or nil when the history is still too short (round start /
+-- post-re-park): the caller skips the strike test that tick rather than testing an
+-- unlagged window.
+function SweeperModel.delayedWindow(history, lagTicks)
+	local i = #history - lagTicks
+	if i < 1 then
+		return nil, nil
+	end
+	return history[i], history[i - 1]
+end
+
 -- Swept-interval strike test on MEASURED angles: did any beam's arc cross the body
 -- since the last tick? beams[i] = { angle, prevAngle?, direction (+1/-1), class,
 -- innerRadius, outerRadius, killHalfWidth }. direction follows the system-wide

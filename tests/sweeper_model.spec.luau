@@ -53,6 +53,21 @@ do
 	print("sweeper: killHalfWidth OK")
 end
 
+-- delayedWindow (v2.4): render-lag compensation -- picks the sweep window ending
+-- lagTicks samples in the past; nil while the history is too short (caller skips);
+-- a window at the very start of history has a nil prev (instantaneous fallback).
+do
+	local a1, p1 = M.delayedWindow({ 0.1, 0.2, 0.3 }, 1)
+	expect(near(a1, 0.2) and near(p1, 0.1), "lag 1 -> window ending one sample back")
+	local a2, p2 = M.delayedWindow({ 0.1, 0.2, 0.3 }, 0)
+	expect(near(a2, 0.3) and near(p2, 0.2), "lag 0 -> freshest window")
+	local a3, p3 = M.delayedWindow({ 0.1 }, 0)
+	expect(near(a3, 0.1) and p3 == nil, "single sample -> instantaneous (nil prev)")
+	expect(M.delayedWindow({ 0.1 }, 1) == nil, "history shorter than lag -> nil (skip)")
+	expect(M.delayedWindow({}, 0) == nil, "empty history -> nil (skip)")
+	print("sweeper: delayedWindow OK")
+end
+
 -- isStruckSwept: swept-interval strike test on measured angles. A beam kills if its
 -- arc CROSSED the body's angle since last tick (prevAngle -> angle along direction),
 -- padded by a per-body local half-angle derived from the beam's constant STUD
