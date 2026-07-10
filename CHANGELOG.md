@@ -4,6 +4,25 @@ All notable changes to this project are documented here.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2026-07-10]
+
+### Added
+- **Mobile jump button — default-replica, comfort-scaled, responsive.** Feel-pass report: the
+  touch jump button was too small. Root cause: it was a ContextActionService button (CAS-small,
+  ignores the TouchGui form-factor rules); the TRUE default TouchJump can't render here (hard-
+  gated on `LocalPlayer.Character`, which the ownership-transfer model never sets). Fixed:
+  `InputController` now builds a replica of the default button — same engine sprite-sheet art
+  (normal + pressed), same ≤500 px min-axis breakpoint and position formulas (verified against
+  the live PlayerModule source) — sized by pure `TouchJumpLayout` (lune-tested) ×
+  `Config.TOUCH_JUMP_SCALE = 1.3` (≈91 px phones / 156 px tablets; 1.0 = exact default), re-laid
+  out on every viewport change (rotation/resize, camera-replacement safe, no listener stacking).
+  Hold tracking follows the initiating touch's InputObject (slide-off releases); the
+  `RenderPriority.Last` `humanoid.Jump` re-assert is unchanged; visibility follows the humanoid
+  binding like the default thumbstick (hides when spectating, pressed sprite reset on release).
+  `TOUCH_JUMP_FORCE` dev flag renders it on desktop for Studio verification. CAS jump button
+  fully removed. See [spec](superpowers/specs/2026-07-10-mobile-jump-button-design.md) and
+  [plan](superpowers/plans/2026-07-10-mobile-jump-button.md).
+
 ## [2026-07-09]
 
 ### Added
