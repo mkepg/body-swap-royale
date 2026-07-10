@@ -27,7 +27,11 @@ Spec: `docs/specs/2026-07-10-experience-icon-design.md`
 
 1. https://create.roblox.com → **Creations** → select the Body Swap Royale
    experience.
-2. **Configure** (⚙) → **Basic Info** → **Icon** → upload
-   `final/icon-512.png` (512×512 PNG).
-3. Save. The icon goes through moderation review (usually minutes–hours);
-   it can be replaced at any time at zero cost — ship and iterate.
+2. Left nav: **Configure → Places** → click the experience's start place.
+3. In the place's settings, select **Icon** in the left nav → media type
+   **Image** → **Change** → upload `final/icon-512.png` (512×512 PNG) →
+   **Save Changes**.
+4. The icon goes through moderation review before it appears publicly; it can
+   be replaced at any time at zero cost — ship and iterate. (If the dashboard
+   labels differ slightly, the invariant is: the icon lives under the START
+   PLACE's settings, not the experience-level Basic Info.)
