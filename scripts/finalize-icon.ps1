@@ -35,7 +35,7 @@ try {
     if ($outDir -and -not (Test-Path $outDir)) {
         New-Item -ItemType Directory -Force -Path $outDir | Out-Null
     }
-    $outPath = Join-Path (Get-Location) $Out
+    $outPath = if ([System.IO.Path]::IsPathRooted($Out)) { $Out } else { Join-Path (Get-Location) $Out }
     $bmp.Save($outPath, [System.Drawing.Imaging.ImageFormat]::Png)
     Write-Output ("Wrote {0} ({1}x{1}, cropped from {2}x{3})" -f $Out, $Size, $img.Width, $img.Height)
 } finally {
