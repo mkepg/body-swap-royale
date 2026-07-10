@@ -65,6 +65,10 @@ do
 	expect(near(a3, 0.1) and p3 == nil, "single sample -> instantaneous (nil prev)")
 	expect(M.delayedWindow({ 0.1 }, 1) == nil, "history shorter than lag -> nil (skip)")
 	expect(M.delayedWindow({}, 0) == nil, "empty history -> nil (skip)")
+	local okNeg = pcall(M.delayedWindow, { 0.1, 0.2 }, -1)
+	expect(not okNeg, "negative lagTicks -> errors (not silently disabled)")
+	local okFrac = pcall(M.delayedWindow, { 0.1, 0.2 }, 0.5)
+	expect(not okFrac, "fractional lagTicks -> errors (not silently disabled)")
 	print("sweeper: delayedWindow OK")
 end
 

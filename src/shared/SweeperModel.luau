@@ -70,6 +70,8 @@ end
 -- post-re-park): the caller skips the strike test that tick rather than testing an
 -- unlagged window.
 function SweeperModel.delayedWindow(history, lagTicks)
+	assert(lagTicks >= 0 and lagTicks % 1 == 0,
+		"SweeperModel.delayedWindow: lagTicks must be a non-negative integer")
 	local i = #history - lagTicks
 	if i < 1 then
 		return nil, nil
