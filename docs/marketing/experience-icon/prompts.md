@@ -68,9 +68,11 @@ gap between them".)
 
 ### V3 — Camera: head-and-shoulders (~70%) → tight face crop
 
-Replace the framing phrase with:
+Replace the phrase "shown head and shoulders, filling about seventy percent of
+the frame" with:
 "shown in a tight close-up, the face alone filling almost the whole frame,
 the top of the head and chin just inside the edges"
+(keep the rest of the sentence — "made of smooth cream-tan plastic…" — unchanged)
 (Condensed: replace "head and shoulders filling the frame" with "face in
 tight close-up filling the frame".)
 
@@ -89,25 +91,42 @@ pops — no other background elements."
 
 Apply ONLY the fix matching the observed failure; keep everything else as-is.
 
+**Condensed (Bing) forms:** each fix below includes a condensed equivalent. If
+a condensed prompt exceeds ~480 chars, first drop "faint glowing wisp dots"
+then "Cyan rim light left, warm amber light lower right." — trim the scene,
+never the character or the ghost.
+
 **F1 — Face fusion (two faces merge into one two-headed figure).** Decompose
-the possession. Replace the ghost sentence with:
+the possession. Replace the ghost-face sentence with:
 "Beside the character's head, slightly overlapping its upper-left corner, a
 separate translucent glowing cyan ghost — a simple friendly spirit with its
 own distinct face — leans toward the character as if about to dive into it,
 wispy tail trailing off-frame."
+(Condensed: replace "A translucent glowing cyan ghost face with a mischievous
+smile slides into its head, wispy trail, cyan glow at contact." with "A
+separate friendly translucent cyan ghost, with its own distinct smiling face,
+leans in to dive into its head, wispy tail trailing.")
 
 **F2 — Wrong palette (colors drift).** Append:
 "Color palette: deep violet #3B2A6E sky, warm amber #E8703A horizon glow,
 cream #F2C894 character, bright cyan #6FE3FF ghost, golden #FFB84D accents."
+(Condensed: append "Colors: deep violet sky, warm amber glow, cream body,
+bright cyan ghost." and trim per the note.)
 
 **F3 — Photorealism (human skin, realistic render).** Prepend:
 "Cute cartoon render, smooth plastic toy material, like a poster for a
 children's animated movie." and append: "Not realistic, no human skin
 texture, no fine surface detail."
+(Condensed: append "Cute cartoon plastic toy render, not realistic, no human
+skin." and trim per the note.)
 
 **F4 — Text appears anywhere.** Append:
 "Absolutely no text, letters, numbers, words, signage, captions, or logos
 anywhere in the image."
+(Condensed: replace "No text, no logos." with "Absolutely no text, letters,
+numbers, or logos anywhere.")
 
 **F5 — Creepy/horror read.** Append:
 "Friendly, comedic, bright and colorful — suitable for children."
+(Condensed: append "Friendly, comedic, bright, kid-friendly." and trim per
+the note.)
