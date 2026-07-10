@@ -378,3 +378,27 @@ First-ever live solo rounds (SOLO_TEST_MODE=true, ARENA_OVERRIDE="sweeper", Play
      solo spawn measured at **175°** (arc center, farthest point).
 - **Elimination timing is physics-exact:** the stander died at **4.12 s** — the low bar's
   travel time from 1° to 175° at 0.7 rad/s + ramp predicts ~4.2 s.
+
+## v2.4 addendum — hitbox↔visual alignment + dim pass (2026-07-09)
+
+Solo-verifiable (`SOLO_TEST_MODE = true` + `ARENA_OVERRIDE = "sweeper"`):
+
+- **SW-V24-1 (visible-contact kill):** stand still in the low bar's path and watch the amber
+  blade. PASS = elimination fires only as the blade visibly reaches the body, not studs ahead.
+- **SW-V24-2 (jump timing on the VISIBLE bar):** jump keyed to the visible blade's arrival.
+  PASS = clean clear; no "invisible edge" kill during ascent.
+- **SW-V24-3 (duck-under):** stand grounded as the crimson boom passes. PASS = survive. Then
+  jump INTO it. PASS = eliminated only at visible contact.
+- **SW-V24-4 (warm-up + round 2):** let the round end and the next begin. PASS = parked bars
+  kill nobody during grace; formation unchanged; no strike in the first ~0.2 s (history warm-up).
+- **SW-V24-5 (lag probe):** flip `SWEEP_LAG_PROBE = true`, play ~30 s across the ramp, read
+  `[BSR][lagprobe]` in the client output. Record mean/max into the `SWEEP_STRIKE_LAG_TICKS`
+  Config comment; expect ~1 monitor tick. Flip the probe back to false. (Caveat: the probe
+  compares attribute arrival vs rendered pose, so it conflates attribute latency with the
+  interpolation buffer — treat the number as approximate when sizing the tick count.)
+- **SW-V24-6 (dim read):** at round start and mid-ramp: rim/wake/chase/rotors read as accents;
+  the amber blade + crimson underglow are the unambiguous brightest elements; the floor and
+  other players are clearly visible. Dormant sweeper (hex round live) still visibly dims —
+  watch the LIGHT SHAFT specifically (live 0.8 vs standby 0.85 is a thin margin) and note that
+  unlit wake strips (base 0.9) actually brighten slightly on the dormancy flip (pre-existing);
+  flag either for a follow-up constant tweak if they read wrong.

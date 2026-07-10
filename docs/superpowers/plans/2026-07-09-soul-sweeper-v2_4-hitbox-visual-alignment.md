@@ -396,10 +396,12 @@ Two edits in `src/client/SweeperController.luau`:
 		end
 ```
 
-- [ ] **Step 9: Verify no stale prevAngle references**
+- [ ] **Step 9: Verify no stale per-rec prevAngle STATE**
 
-Run: `grep -rn "prevAngle" src/server/ src/client/`
-Expected: **no matches** (`prevAngle` remains only inside the pure model + its tests, where it is the isStruckSwept beam-table field)
+Run: `grep -rn "rec\.prevAngle" src/server/ src/client/`
+Expected: **no matches** (the per-rec state field is fully replaced by `angleHist`; the local
+`prevAngle` + beam-table key inside `step()` legitimately remain — that key is the pure model's
+isStruckSwept contract field)
 
 - [ ] **Step 10: Full lune suite**
 
