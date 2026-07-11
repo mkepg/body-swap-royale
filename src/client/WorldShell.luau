@@ -15,6 +15,7 @@ local Lighting = game:GetService("Lighting")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
+local GlowDim = require(Shared:WaitForChild("GlowDim"))
 local WorldLayout = require(Shared:WaitForChild("WorldLayout"))
 local Remotes = require(Shared:WaitForChild("Remotes"))
 
@@ -42,6 +43,7 @@ local function glowOrb(size, color, parent)
 	p.CanTouch = false
 	p.CastShadow = false
 	p.Material = Enum.Material.Neon
+	p.Transparency = GlowDim.apply(0, Config.ARENA_GLOW_DIM)
 	p.Size = Vector3.new(size, size, size)
 	p.Color = color
 	p.Parent = parent
@@ -122,7 +124,7 @@ local function buildAurora(folder)
 	auroraPart.Size = Config.WORLD_AURORA_SIZE
 	auroraPart.Position = Vector3.new(0, Config.WORLD_AURORA_Y, 0)
 	auroraPart.Color = Config.WORLD_AURORA_BASE_COLOR
-	auroraPart.Transparency = Config.WORLD_AURORA_BASE_TRANSPARENCY
+	auroraPart.Transparency = GlowDim.apply(Config.WORLD_AURORA_BASE_TRANSPARENCY, Config.ARENA_GLOW_DIM)
 	auroraPart.Parent = folder
 end
 
@@ -132,10 +134,10 @@ local function flareAurora()
 	local token = {}
 	flareToken = token
 	auroraPart.Color = Config.SOUL_PALETTE[math.random(1, #Config.SOUL_PALETTE)]
-	auroraPart.Transparency = Config.WORLD_AURORA_FLARE_TRANSPARENCY
+	auroraPart.Transparency = GlowDim.apply(Config.WORLD_AURORA_FLARE_TRANSPARENCY, Config.ARENA_GLOW_DIM)
 	local tw = TweenService:Create(auroraPart,
 		TweenInfo.new(Config.WORLD_AURORA_FLARE_SECONDS, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-		{ Transparency = Config.WORLD_AURORA_BASE_TRANSPARENCY })
+		{ Transparency = GlowDim.apply(Config.WORLD_AURORA_BASE_TRANSPARENCY, Config.ARENA_GLOW_DIM) })
 	tw:Play()
 	task.delay(Config.WORLD_AURORA_FLARE_SECONDS, function()
 		if flareToken == token then flareToken = nil end
