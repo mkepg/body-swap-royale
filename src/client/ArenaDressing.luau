@@ -15,6 +15,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
+local GlowDim = require(Shared:WaitForChild("GlowDim"))
 local WorldLayout = require(Shared:WaitForChild("WorldLayout"))
 local ArenaDescriptor = require(Shared:WaitForChild("ArenaDescriptor"))
 
@@ -67,6 +68,7 @@ local function buildFloorTrim(folder, desc)
 				Vector3.new(Config.WORLD_TRIM_DEPTH, Config.WORLD_TRIM_HEIGHT, barLen),
 				here, lv.color, Enum.Material.Neon, folder)
 			bar.Name = "FloorTrim"
+			bar.Transparency = GlowDim.apply(0, Config.ARENA_GLOW_DIM)
 			-- point the bar's long (Z) axis along the tangent toward the next point
 			bar.CFrame = CFrame.lookAt(here, Vector3.new(nxt.x, y, nxt.z))
 		end
