@@ -15,8 +15,62 @@ Two small, independent visual changes requested together:
 
 Constraint reminder: never stage `src/shared/Config.luau`'s dev flips
 (`SOLO_TEST_MODE`, `ARENA_OVERRIDE`) — commit only the intended additions to it.
-Zero client→server remotes; both changes are 100% client cosmetic + shared
-pure logic. Arena-agnostic (no per-arena special cases).
+Zero client→server remotes. Arena-agnostic (no per-arena special cases).
+
+---
+
+## REVISION 2026-07-12b — per-effect knobs (SUPERSEDES the single `ARENA_GLOW_DIM`)
+
+Follow-up request: replace the one global `Config.ARENA_GLOW_DIM` with an
+**independent dim knob per visual effect**, for fine-grained manual tuning. The
+`GlowDim` module and the halo toggle (Part 1) are unchanged. Part 2 below is
+superseded by this section.
+
+**Every knob defaults to `0.0` (no dim) — reproducing the ORIGINAL pre-branch
+look exactly** (`GlowDim.apply(base, 0) = base`). The feature ships as a no-op;
+the user dials each effect up to dim it. This also avoids the dormancy-inversion
+at defaults (raw shaft 0.8 < raw standby 0.85).
+
+Two effects are **gameplay tells** built server-side; per the approved choice
+they get knobs too but default to `0.0` (full brightness — no readability
+regression unless deliberately tuned). This adds server-file edits
+(`SweeperHazard`, `HazardSystem`), a first for this feature.
+
+| Config knob | Controls | File | Mechanism |
+|---|---|---|---|
+| `GLOW_DIM_WISPS` | sky soul-wisps | WorldShell | Neon transparency |
+| `GLOW_DIM_AURORA` | aurora ribbon + swap flare | WorldShell | Neon transparency |
+| `GLOW_DIM_CROWD` | distant crowd orbs | WorldShell | Neon transparency |
+| `GLOW_DIM_LOBBY_RINGS` | lobby energy rings | LobbyStage | Neon transparency |
+| `GLOW_DIM_SPECTATOR_ORBS` | lobby spectator orbs | LobbyStage | Neon transparency |
+| `GLOW_DIM_HEX_TRIM` | hex floor edge-trim | ArenaDressing | Neon transparency |
+| `GLOW_DIM_SWEEP_WAKE` | sweeper wake channels | SweeperController | Neon transparency |
+| `GLOW_DIM_SWEEP_CHASE` | sweeper rim chase studs | SweeperController | Neon transparency |
+| `GLOW_DIM_SWEEP_ROTOR` | sweeper rotor bars | SweeperController | Neon transparency |
+| `GLOW_DIM_SWEEP_SHAFT` | sweeper light shaft | SweeperController | Neon transparency |
+| `GLOW_DIM_SWEEP_LENS` | sweeper spotlight lenses | SweeperController | Neon transparency |
+| `GLOW_DIM_SWEEP_RIM` | sweeper rim accent bars | SweeperController | Neon transparency |
+| `GLOW_DIM_SWEEP_DORMANT` | idle-sweeper standby dim | SweeperController | Neon transparency |
+| `GLOW_DIM_SWEEP_KILL_TELLS` | **tell:** blade/underglow/emitter/lamps | SweeperHazard (server) | Neon transparency |
+| `GLOW_DIM_HEX_WARNING` | **tell:** hex tile warning color | HazardSystem (server) | color darken → black |
+
+**Mechanism details:**
+- Transparency knobs: `part.Transparency = GlowDim.apply(<base>, Config.<knob>)`
+  at each site. Bases are the current raw values (wisp/crowd/trim/kill-tells = 0;
+  aurora = `WORLD_AURORA_*`; lobby = `LOBBY_BEY_GLOW_TRANSPARENCY`; sweeper = the 8
+  named accent literals; dormant = `SWEEP_STANDBY_TRANSPARENCY`).
+- `GLOW_DIM_HEX_WARNING` is the one non-transparency knob: the warning is
+  `Config.TILE_COLOR_WARNING` on an opaque floor tile, so dimming darkens the
+  COLOR via `Config.TILE_COLOR_WARNING:Lerp(Color3.new(), Config.GLOW_DIM_HEX_WARNING)`
+  (0 = full red, 1 = black). Precomputed once at module load in `HazardSystem`.
+- `GLOW_DIM_SWEEP_DORMANT`: `DORMANT_TRANSPARENCY = GlowDim.apply(
+  Config.SWEEP_STANDBY_TRANSPARENCY, Config.GLOW_DIM_SWEEP_DORMANT)` replaces the
+  old global-dim coupling; keeping a dormant arena dimmest is now the user's tuning
+  responsibility (raise this if a heavily-dimmed live element out-fades it).
+- `WorldShell.glowOrb` gains a `dimFactor` param so wisps and crowd (which share
+  the helper) can take different knobs.
+
+The old single `Config.ARENA_GLOW_DIM` is REMOVED.
 
 ---
 
