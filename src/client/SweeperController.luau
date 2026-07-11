@@ -51,9 +51,9 @@ local TAU = math.pi * 2
 -- visibly dims the arena.
 -- Accent bases, each softened once by the global cosmetic dim so every downstream
 -- reference (build, wake/chase animation targets, dormancy resets) inherits it.
--- The dormant override (Config.SWEEP_STANDBY_TRANSPARENCY) is intentionally left
--- undimmed; at a high ARENA_GLOW_DIM a faint element (shaft) may approach it, which
--- is cosmetically irrelevant (both near-invisible).
+-- The dormant override is dimmed in lockstep (DORMANT_TRANSPARENCY below) so a
+-- dormant arena stays the DIMMEST state even after the live accents are softened
+-- (otherwise a dimmed static accent could out-fade the undimmed standby).
 local DIM = Config.ARENA_GLOW_DIM
 local WAKE_BASE_TRANSPARENCY = GlowDim.apply(0.9, DIM)
 local WAKE_LIT_TRANSPARENCY = GlowDim.apply(0.5, DIM)
@@ -63,6 +63,7 @@ local ROTOR_TRANSPARENCY = GlowDim.apply(0.6, DIM)
 local SHAFT_TRANSPARENCY = GlowDim.apply(0.8, DIM)
 local LENS_TRANSPARENCY = GlowDim.apply(0.5, DIM)
 local RIM_ACCENT_TRANSPARENCY = GlowDim.apply(0.55, DIM)
+local DORMANT_TRANSPARENCY = GlowDim.apply(Config.SWEEP_STANDBY_TRANSPARENCY, DIM)
 local ROTOR_SPIN_SPEED = 0.4 -- rad/s, cosmetic only
 
 -- Wake fade-window width in RADIANS (fixed, not speed-scaled): the lit trail
@@ -408,9 +409,9 @@ function SweeperController.start()
 
 	local function setLive(live)
 		for _, e in ipairs(staticNeon) do
-			e.part.Transparency = live and e.liveTransparency or Config.SWEEP_STANDBY_TRANSPARENCY
+			e.part.Transparency = live and e.liveTransparency or DORMANT_TRANSPARENCY
 		end
-		local resetTo = (not live) and Config.SWEEP_STANDBY_TRANSPARENCY or nil
+		local resetTo = (not live) and DORMANT_TRANSPARENCY or nil
 		for _, w in ipairs(wakeStrips) do
 			w.part.Transparency = resetTo or WAKE_BASE_TRANSPARENCY
 			w.lastTransparency = nil -- force a resync on the next live tick
