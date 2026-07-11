@@ -33,6 +33,7 @@ local AssetService = game:GetService("AssetService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
+local GlowDim = require(Shared:WaitForChild("GlowDim"))
 local WorldLayout = require(Shared:WaitForChild("WorldLayout"))
 
 local SweeperController = {}
@@ -48,14 +49,20 @@ local TAU = math.pi * 2
 -- level so the tells, the floor, and other players stay readable under Bloom 0.9.
 -- Lit/static values stay below SWEEP_STANDBY_TRANSPARENCY (0.85) so dormancy still
 -- visibly dims the arena.
-local WAKE_BASE_TRANSPARENCY = 0.9
-local WAKE_LIT_TRANSPARENCY = 0.5
-local CHASE_BASE_TRANSPARENCY = 0.75
-local CHASE_LIT_TRANSPARENCY = 0.4
-local ROTOR_TRANSPARENCY = 0.6
-local SHAFT_TRANSPARENCY = 0.8
-local LENS_TRANSPARENCY = 0.5
-local RIM_ACCENT_TRANSPARENCY = 0.55
+-- Accent bases, each softened once by the global cosmetic dim so every downstream
+-- reference (build, wake/chase animation targets, dormancy resets) inherits it.
+-- The dormant override (Config.SWEEP_STANDBY_TRANSPARENCY) is intentionally left
+-- undimmed; at a high ARENA_GLOW_DIM a faint element (shaft) may approach it, which
+-- is cosmetically irrelevant (both near-invisible).
+local DIM = Config.ARENA_GLOW_DIM
+local WAKE_BASE_TRANSPARENCY = GlowDim.apply(0.9, DIM)
+local WAKE_LIT_TRANSPARENCY = GlowDim.apply(0.5, DIM)
+local CHASE_BASE_TRANSPARENCY = GlowDim.apply(0.75, DIM)
+local CHASE_LIT_TRANSPARENCY = GlowDim.apply(0.4, DIM)
+local ROTOR_TRANSPARENCY = GlowDim.apply(0.6, DIM)
+local SHAFT_TRANSPARENCY = GlowDim.apply(0.8, DIM)
+local LENS_TRANSPARENCY = GlowDim.apply(0.5, DIM)
+local RIM_ACCENT_TRANSPARENCY = GlowDim.apply(0.55, DIM)
 local ROTOR_SPIN_SPEED = 0.4 -- rad/s, cosmetic only
 
 -- Wake fade-window width in RADIANS (fixed, not speed-scaled): the lit trail
