@@ -353,6 +353,19 @@ Config.WORLD_SKYBOX = {
 	Back = "rbxassetid://323494035",
 }
 
+-- ===== Visual polish flags (2026-07-12) =====
+-- Soul identity halo: the over-head colored dot (SoulController). true = shown in
+-- live play so players recognize who controls which body across swaps; flip to false
+-- for clean marketing screenshots (no floating UI pips over heads). Read once at boot.
+Config.SOUL_HALO_ENABLED = true
+
+-- Global cosmetic-glow dim (see src/shared/GlowDim.luau): softens ALL decorative Neon
+-- dressing (hex floor trim, lobby energy rings + spectator orbs, sweeper wake/chase/
+-- rotor/shaft/lens, sky wisps/aurora/crowd) toward a soft LED level. Gameplay tells
+-- (sweeper kill tells, hex tile warnings -- built server-side) are NOT affected.
+-- 0 = today's brightness, 1 = fully faded. Tune by eye in Studio.
+Config.ARENA_GLOW_DIM = 0.4
+
 -- Soul-wisps: drifting glowing orbs colored from SOUL_PALETTE, high in the sky.
 Config.WORLD_WISP_COUNT = 22            -- mobile-budgeted default
 Config.WORLD_WISP_CENTER_Y = 140        -- height above arena center the field sits at
