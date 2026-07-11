@@ -20,6 +20,7 @@ local AssetService = game:GetService("AssetService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
+local GlowDim = require(Shared:WaitForChild("GlowDim"))
 local WorldLayout = require(Shared:WaitForChild("WorldLayout"))
 local Remotes = require(Shared:WaitForChild("Remotes"))
 
@@ -138,9 +139,9 @@ local function buildEnergyRings(folder)
 		Config.LOBBY_BEY_RING_COLOR_A, Enum.Material.Neon, folder)
 	local b = smoothCyl("EnergyRing", (r + Config.LOBBY_BEY_RING_OVERHANG_B) * 2, t,
 		midY - Config.LOBBY_BEY_RING_DROP_B, Config.LOBBY_BEY_RING_COLOR_B, Enum.Material.Neon, folder)
-	-- soften the rim glow
-	a.Transparency = Config.LOBBY_BEY_GLOW_TRANSPARENCY
-	b.Transparency = Config.LOBBY_BEY_GLOW_TRANSPARENCY
+	-- soften the rim glow (global cosmetic dim on top of the base softening)
+	a.Transparency = GlowDim.apply(Config.LOBBY_BEY_GLOW_TRANSPARENCY, Config.ARENA_GLOW_DIM)
+	b.Transparency = GlowDim.apply(Config.LOBBY_BEY_GLOW_TRANSPARENCY, Config.ARENA_GLOW_DIM)
 end
 
 -- Stepped taper body below the disc (down to a small base; no tip spike).
@@ -173,7 +174,7 @@ local function buildSpectatorSouls(folder)
 			local orb = rigPart(Vector3.new(sz, sz, sz), Vector3.new(s.x, s.y, s.z),
 				color, Enum.Material.Neon, folder)
 			orb.Shape = Enum.PartType.Ball
-			orb.Transparency = Config.LOBBY_BEY_GLOW_TRANSPARENCY -- soften the soul glow
+			orb.Transparency = GlowDim.apply(Config.LOBBY_BEY_GLOW_TRANSPARENCY, Config.ARENA_GLOW_DIM) -- soften the soul glow
 			orb.Name = "CrowdOrb"
 			if Config.LOBBY_STAGE_ORB_MESH ~= "" then
 				local mesh = Instance.new("SpecialMesh")
