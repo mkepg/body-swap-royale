@@ -399,23 +399,25 @@ try {
         $gold  = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(255, 255, 184, 77))
         $shadow = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(200, 10, 4, 26))
 
-        # measure whole line, then draw word-by-word so -Highlight can recolor one word
+        # measure whole line, then draw word-by-word so -Highlight can recolor one word.
+        # NOTE: loop var is $word (not $w) — PowerShell names are case-insensitive, so $w
+        # would alias the image-width $W and clobber it.
         $words = $Text -split '\s+'
         $spaceW = $g.MeasureString(" ", $font).Width
         $totalW = 0.0
-        foreach ($w in $words) { $totalW += $g.MeasureString($w, $font).Width + $spaceW }
+        foreach ($word in $words) { $totalW += $g.MeasureString($word, $font).Width + $spaceW }
         $totalW -= $spaceW
         $startX = ($W - $totalW) / 2
         $lineH = $g.MeasureString($Text, $font).Height
         $baselineY = $H - ($bandH / 2) - ($lineH / 2)
 
         $x = $startX
-        foreach ($w in $words) {
-            $ww = $g.MeasureString($w, $font).Width
-            $brush = if ($Highlight -and ($w.Trim(',','.','!') -ieq $Highlight)) { $gold } else { $white }
-            $g.DrawString($w, $font, $shadow, ($x + 3), ($baselineY + 3))
-            $g.DrawString($w, $font, $brush, $x, $baselineY)
-            $x += $ww + $spaceW
+        foreach ($word in $words) {
+            $wordW = $g.MeasureString($word, $font).Width
+            $brush = if ($Highlight -and ($word.Trim(',','.','!') -ieq $Highlight)) { $gold } else { $white }
+            $g.DrawString($word, $font, $shadow, ($x + 3), ($baselineY + 3))
+            $g.DrawString($word, $font, $brush, $x, $baselineY)
+            $x += $wordW + $spaceW
         }
 
         $white.Dispose(); $gold.Dispose(); $shadow.Dispose(); $font.Dispose()
