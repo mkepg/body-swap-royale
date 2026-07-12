@@ -68,7 +68,7 @@ local function buildFloorTrim(folder, desc)
 				Vector3.new(Config.WORLD_TRIM_DEPTH, Config.WORLD_TRIM_HEIGHT, barLen),
 				here, lv.color, Enum.Material.Neon, folder)
 			bar.Name = "FloorTrim"
-			bar.Transparency = GlowDim.apply(0, Config.ARENA_GLOW_DIM)
+			bar.Transparency = GlowDim.apply(0, Config.GLOW_DIM_HEX_TRIM)
 			-- point the bar's long (Z) axis along the tangent toward the next point
 			bar.CFrame = CFrame.lookAt(here, Vector3.new(nxt.x, y, nxt.z))
 		end
