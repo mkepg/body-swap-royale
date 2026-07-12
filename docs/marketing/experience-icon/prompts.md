@@ -9,6 +9,7 @@ upload `reference/ref-avatar.png` (grey R15 avatar) with EVERY prompt — it gui
 the block proportions/silhouette for BOTH avatars. Generate square 1:1. Save EVERY
 output — good and bad — to `candidates/` as `gemini-{variant}-{roll}.png`
 (e.g. `gemini-swap-1.png`, `gemini-v2-1.png`). Bad outputs are data.
+The Master prompt's variant token is `swap` (save Master rolls as `gemini-swap-1.png`, `-2`, …); the four variants use `v1`–`v4`; refinement rounds use `r1`/`r2`.
 
 Each prompt below is complete and self-contained — upload the reference, copy the
 whole block, paste. Variants change the Master on exactly one axis (named in the
