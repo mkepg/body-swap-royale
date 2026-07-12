@@ -44,20 +44,31 @@ try {
             try { $test = New-Object System.Drawing.FontFamily($fn); $familyName = $fn; $test.Dispose(); break } catch {}
         }
         if (-not $familyName) { $familyName = [System.Drawing.FontFamily]::GenericSansSerif.Name }
-        $font = New-Object System.Drawing.Font($familyName, $FontSize, [System.Drawing.FontStyle]::Bold, [System.Drawing.GraphicsUnit]::Pixel)
 
         $white = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::White)
         $gold  = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(255, 255, 184, 77))
         $shadow = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(200, 10, 4, 26))
 
-        # measure whole line, then draw word-by-word so -Highlight can recolor one word.
-        # NOTE: loop var is $word (not $w) — PowerShell names are case-insensitive, so $w
-        # would alias the image-width $W and clobber it.
+        # Pick a font size that fits the caption within the horizontal safe zone (~90% width),
+        # then measure. NOTE: loop var is $word (not $w) — PowerShell var names are
+        # case-insensitive, so $w would alias the image-width $W and clobber it.
+        $maxTextW = $W * 0.90
         $words = $Text -split '\s+'
+        $size = $FontSize
+        $font = New-Object System.Drawing.Font($familyName, $size, [System.Drawing.FontStyle]::Bold, [System.Drawing.GraphicsUnit]::Pixel)
         $spaceW = $g.MeasureString(" ", $font).Width
         $totalW = 0.0
         foreach ($word in $words) { $totalW += $g.MeasureString($word, $font).Width + $spaceW }
         $totalW -= $spaceW
+        if ($totalW -gt $maxTextW) {
+            $size = [Math]::Max(24, [int]($size * ($maxTextW / $totalW)))
+            $font.Dispose()
+            $font = New-Object System.Drawing.Font($familyName, $size, [System.Drawing.FontStyle]::Bold, [System.Drawing.GraphicsUnit]::Pixel)
+            $spaceW = $g.MeasureString(" ", $font).Width
+            $totalW = 0.0
+            foreach ($word in $words) { $totalW += $g.MeasureString($word, $font).Width + $spaceW }
+            $totalW -= $spaceW
+        }
         $startX = ($W - $totalW) / 2
         $lineH = $g.MeasureString($Text, $font).Height
         $baselineY = $H - ($bandH / 2) - ($lineH / 2)

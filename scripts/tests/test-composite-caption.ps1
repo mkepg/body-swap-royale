@@ -25,6 +25,17 @@ try {
             }
         }
         if (-not $found) { throw "FAIL: no caption text pixels found in band" }
+
+        # caption must stay within the horizontal safe zone: no text pixels in outer 4% columns
+        $bandTop = [int](1080 * 0.80); $margin = [int](1920 * 0.04)
+        $bleed = $false
+        for ($y = $bandTop; $y -lt 1080 -and -not $bleed; $y += 4) {
+            foreach ($x in @(0..($margin) + (1919-$margin)..1919)) {
+                $p = $o.GetPixel($x, $y)
+                if (($p.R -gt 200 -and $p.G -gt 200 -and $p.B -gt 200) -or ($p.R -gt 220 -and $p.G -gt 150 -and $p.B -lt 120)) { $bleed = $true; break }
+            }
+        }
+        if ($bleed) { throw "FAIL: caption text bleeds into the horizontal safe margin" }
     } finally { $o.Dispose() }
 
     # in-place edit: -Out defaults to -Source; must not throw (GDI+ file-lock regression guard)
