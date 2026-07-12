@@ -262,4 +262,3 @@ Save EVERY roll (bad ones are data). For master4-ref rolls use
    best "Roblox-faced blocky" result (master3-class) as good-enough for a v1 icon
    (it's replaceable later), or escalate to a commissioned/edited asset. Do NOT
    silently ship an off-brand character.
-```
