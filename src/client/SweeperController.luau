@@ -49,21 +49,19 @@ local TAU = math.pi * 2
 -- level so the tells, the floor, and other players stay readable under Bloom 0.9.
 -- Lit/static values stay below SWEEP_STANDBY_TRANSPARENCY (0.85) so dormancy still
 -- visibly dims the arena.
--- Accent bases, each softened once by the global cosmetic dim so every downstream
--- reference (build, wake/chase animation targets, dormancy resets) inherits it.
--- The dormant override is dimmed in lockstep (DORMANT_TRANSPARENCY below) so a
--- dormant arena stays the DIMMEST state even after the live accents are softened
--- (otherwise a dimmed static accent could out-fade the undimmed standby).
-local DIM = Config.ARENA_GLOW_DIM
-local WAKE_BASE_TRANSPARENCY = GlowDim.apply(0.9, DIM)
-local WAKE_LIT_TRANSPARENCY = GlowDim.apply(0.5, DIM)
-local CHASE_BASE_TRANSPARENCY = GlowDim.apply(0.75, DIM)
-local CHASE_LIT_TRANSPARENCY = GlowDim.apply(0.4, DIM)
-local ROTOR_TRANSPARENCY = GlowDim.apply(0.6, DIM)
-local SHAFT_TRANSPARENCY = GlowDim.apply(0.8, DIM)
-local LENS_TRANSPARENCY = GlowDim.apply(0.5, DIM)
-local RIM_ACCENT_TRANSPARENCY = GlowDim.apply(0.55, DIM)
-local DORMANT_TRANSPARENCY = GlowDim.apply(Config.SWEEP_STANDBY_TRANSPARENCY, DIM)
+-- Accent bases, each softened by ITS OWN per-effect dim knob (0 = original, no dim).
+-- Every downstream reference (build, wake/chase animation targets, dormancy resets)
+-- reads these named constants, so each knob cascades. The dormant standby has its own
+-- knob so a dormant arena can be kept the dimmest state under manual tuning.
+local WAKE_BASE_TRANSPARENCY = GlowDim.apply(0.9, Config.GLOW_DIM_SWEEP_WAKE)
+local WAKE_LIT_TRANSPARENCY = GlowDim.apply(0.5, Config.GLOW_DIM_SWEEP_WAKE)
+local CHASE_BASE_TRANSPARENCY = GlowDim.apply(0.75, Config.GLOW_DIM_SWEEP_CHASE)
+local CHASE_LIT_TRANSPARENCY = GlowDim.apply(0.4, Config.GLOW_DIM_SWEEP_CHASE)
+local ROTOR_TRANSPARENCY = GlowDim.apply(0.6, Config.GLOW_DIM_SWEEP_ROTOR)
+local SHAFT_TRANSPARENCY = GlowDim.apply(0.8, Config.GLOW_DIM_SWEEP_SHAFT)
+local LENS_TRANSPARENCY = GlowDim.apply(0.5, Config.GLOW_DIM_SWEEP_LENS)
+local RIM_ACCENT_TRANSPARENCY = GlowDim.apply(0.55, Config.GLOW_DIM_SWEEP_RIM)
+local DORMANT_TRANSPARENCY = GlowDim.apply(Config.SWEEP_STANDBY_TRANSPARENCY, Config.GLOW_DIM_SWEEP_DORMANT)
 local ROTOR_SPIN_SPEED = 0.4 -- rad/s, cosmetic only
 
 -- Wake fade-window width in RADIANS (fixed, not speed-scaled): the lit trail
