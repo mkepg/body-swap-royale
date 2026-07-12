@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Body Swap Royale — Icon Concept Board</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Titan+One&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --violet:#2a1a5e; --violet-deep:#170d38; --amber:#E8703A; --amber-lt:#FFB84D;
+  --cyan:#6FE3FF; --cyan-bright:#B8F4FF; --skin:#F5EAD8; --skin-cool:#E4E9F4;
+  --ink:#2b2233; --paper:#FFF6EA;
+  --card:#20143f; --card-2:#2b1a56; --line:rgba(255,255,255,.10);
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  font-family:'DM Sans',sans-serif; color:#F3ECFF; background:var(--violet-deep);
+  background:
+    radial-gradient(120% 90% at 50% -10%, #4a2f8a 0%, #2a1a5e 42%, #170d38 100%);
+  min-height:100vh; padding:0 0 90px; overflow-x:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+/* grain */
+body::after{
+  content:""; position:fixed; inset:0; pointer-events:none; z-index:9; opacity:.05; mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+.wrap{max-width:1080px; margin:0 auto; padding:0 26px}
+
+/* header */
+header{padding:64px 0 18px; text-align:center; position:relative}
+.kicker{
+  font-family:'Space Mono',monospace; letter-spacing:.34em; text-transform:uppercase;
+  font-size:12px; color:var(--cyan); opacity:.85; margin:0 0 18px;
+}
+h1{
+  font-family:'Titan One',cursive; font-weight:400; line-height:.92;
+  font-size:clamp(38px,7vw,78px); margin:0; letter-spacing:.5px;
+  color:var(--paper);
+  text-shadow:0 3px 0 #b64a1e, 0 6px 0 rgba(0,0,0,.25), 0 22px 40px rgba(0,0,0,.5);
+}
+h1 .swap{color:var(--cyan); text-shadow:0 3px 0 #1c6f86, 0 6px 22px rgba(111,227,255,.6)}
+.lede{max-width:680px; margin:22px auto 0; font-size:17px; line-height:1.6; color:#D9CEF3}
+.lede b{color:#fff}
+.problem{
+  display:inline-flex; gap:10px; align-items:center; margin-top:22px; padding:10px 18px;
+  border:1px solid var(--line); border-radius:999px; background:rgba(255,255,255,.04);
+  font-size:13.5px; color:#EAD9C6;
+}
+.problem .dot{width:9px;height:9px;border-radius:50%;background:var(--amber-lt);box-shadow:0 0 12px var(--amber-lt)}
+
+/* concept cards */
+.board{display:flex; flex-direction:column; gap:30px; margin-top:52px}
+.concept{
+  display:grid; grid-template-columns:minmax(300px,400px) 1fr; gap:34px; align-items:center;
+  background:linear-gradient(160deg,var(--card-2),var(--card));
+  border:1px solid var(--line); border-radius:26px; padding:30px;
+  box-shadow:0 30px 60px -30px rgba(0,0,0,.7), inset 0 1px 0 rgba(255,255,255,.06);
+  opacity:0; transform:translateY(26px); animation:rise .7s cubic-bezier(.2,.7,.2,1) forwards;
+  position:relative; overflow:hidden;
+}
+.concept:nth-child(1){animation-delay:.05s}
+.concept:nth-child(2){animation-delay:.18s}
+.concept:nth-child(3){animation-delay:.31s}
+@keyframes rise{to{opacity:1;transform:none}}
+.concept.sel{border-color:var(--cyan); box-shadow:0 0 0 2px var(--cyan),0 30px 60px -24px rgba(111,227,255,.5)}
+
+.art{position:relative}
+.art .big{
+  width:100%; aspect-ratio:1; border-radius:22px; display:block;
+  box-shadow:0 18px 40px -14px rgba(0,0,0,.7), inset 0 0 0 1px rgba(255,255,255,.08);
+}
+.chip{
+  position:absolute; right:-12px; bottom:-12px; width:78px; height:78px; border-radius:15px;
+  border:2px solid rgba(255,255,255,.85); box-shadow:0 10px 24px rgba(0,0,0,.6); background:#170d38;
+}
+.chip-lbl{
+  position:absolute; right:-12px; bottom:-34px; font-family:'Space Mono',monospace;
+  font-size:10px; letter-spacing:.15em; color:#B9A9D8; width:78px; text-align:center;
+}
+
+.meta .num{font-family:'Space Mono',monospace; color:var(--cyan); font-size:13px; letter-spacing:.2em}
+.meta h2{
+  font-family:'Titan One',cursive; font-weight:400; font-size:30px; margin:6px 0 2px; color:var(--paper);
+  letter-spacing:.4px;
+}
+.tag{font-family:'Space Mono',monospace; font-size:11px; color:var(--amber-lt); text-transform:uppercase; letter-spacing:.16em}
+.desc{font-size:15.5px; line-height:1.6; color:#DDD3F2; margin:14px 0 16px}
+.pc{display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px}
+.pc div{border:1px solid var(--line); border-radius:12px; padding:11px 13px; background:rgba(0,0,0,.18)}
+.pc h4{margin:0 0 6px; font-size:11px; letter-spacing:.12em; text-transform:uppercase; font-family:'Space Mono',monospace}
+.pc .pros h4{color:#8AE6B0} .pc .cons h4{color:#FF9E9E}
+.pc ul{margin:0; padding-left:16px; font-size:13px; line-height:1.5; color:#CFC5E6}
+.verdict{display:flex; gap:14px; align-items:center; flex-wrap:wrap}
+.badge{font-family:'Space Mono',monospace; font-size:11.5px; padding:7px 12px; border-radius:999px; letter-spacing:.08em}
+.b64{background:rgba(111,227,255,.12); color:var(--cyan); border:1px solid rgba(111,227,255,.35)}
+.brec{background:var(--amber-lt); color:#3a1e08; font-weight:700}
+.pick{
+  margin-left:auto; font-family:'Space Mono',monospace; font-size:12px; cursor:pointer; user-select:none;
+  border:1px dashed rgba(255,255,255,.35); padding:8px 14px; border-radius:999px; color:#Eee; background:transparent;
+  transition:.18s;
+}
+.pick:hover{background:rgba(111,227,255,.14); border-color:var(--cyan); color:#fff}
+
+footer{margin-top:46px; text-align:center; color:#C7BBE6; font-size:15px; line-height:1.6}
+footer .rec{font-family:'Titan One',cursive; color:var(--paper); font-size:20px; display:block; margin-bottom:8px}
+.selnote{margin-top:16px; font-family:'Space Mono',monospace; font-size:13px; color:var(--cyan); min-height:20px}
+@media(max-width:760px){.concept{grid-template-columns:1fr} .chip{right:8px;bottom:8px}}
+</style>
+</head>
+<body>
+
+<!-- ===== SVG symbol library (drawn once, reused at big + 64px) ===== -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <!-- shared filters -->
+  <defs>
+    <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="7" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- ============ C1 · SPLIT SOUL ============ -->
+  <symbol id="c1" viewBox="0 0 400 400">
+    <defs>
+      <radialGradient id="bg1" cx="50%" cy="30%" r="90%">
+        <stop offset="0" stop-color="#5a3aa0"/><stop offset="55%" stop-color="#341f6e"/><stop offset="100%" stop-color="#e8703a"/>
+      </radialGradient>
+      <linearGradient id="skinW" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFF7EC"/><stop offset="1" stop-color="#EBD4B4"/></linearGradient>
+      <linearGradient id="skinC" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#EFF3FF"/><stop offset="1" stop-color="#C6D2EC"/></linearGradient>
+      <clipPath id="head1"><rect x="72" y="76" width="256" height="250" rx="48"/></clipPath>
+    </defs>
+    <rect width="400" height="400" fill="url(#bg1)"/>
+    <ellipse cx="200" cy="360" rx="150" ry="26" fill="#000" opacity="0.28"/>
+    <!-- head split -->
+    <g clip-path="url(#head1)">
+      <rect x="72" y="76" width="128" height="250" fill="url(#skinW)"/>
+      <rect x="200" y="76" width="128" height="250" fill="url(#skinC)"/>
+      <ellipse cx="200" cy="120" rx="150" ry="60" fill="#fff" opacity="0.14"/>
+    </g>
+    <!-- warm spiky hair (left) -->
+    <path d="M92,96 L108,40 L128,86 L150,34 L172,84 L196,44 L200,92 L96,110 Z" fill="#F4741E"/>
+    <path d="M92,96 L108,40 L128,86 L150,34 L172,84 L196,44 L200,92" fill="none" stroke="#ff9a45" stroke-width="3" opacity=".6"/>
+    <!-- cool spiky hair (right) -->
+    <path d="M200,92 L206,44 L230,86 L252,38 L276,88 L300,46 L312,104 L200,92 Z" fill="#2ec6c0"/>
+    <path d="M206,44 L230,86 L252,38 L276,88 L300,46" fill="none" stroke="#7fefe9" stroke-width="3" opacity=".6"/>
+    <!-- eyes -->
+    <ellipse cx="150" cy="196" rx="24" ry="30" fill="#fff"/><circle cx="150" cy="204" r="10" fill="#2b2233"/>
+    <ellipse cx="250" cy="196" rx="24" ry="30" fill="#fff"/><circle cx="250" cy="204" r="10" fill="#2b2233"/>
+    <path d="M126,158 q24,-14 46,-2" stroke="#2b2233" stroke-width="6" fill="none" stroke-linecap="round"/>
+    <path d="M228,156 q24,-12 46,2" stroke="#2b2233" stroke-width="6" fill="none" stroke-linecap="round"/>
+    <!-- surprised mouth over seam -->
+    <ellipse cx="200" cy="270" rx="20" ry="26" fill="#7a2e3f"/><ellipse cx="200" cy="262" rx="14" ry="10" fill="#c9506a"/>
+    <!-- cyan swap seam -->
+    <g filter="url(#glow)">
+      <rect x="194" y="86" width="12" height="220" rx="6" fill="#6FE3FF"/>
+      <circle cx="200" cy="72" r="16" fill="#B8F4FF"/>
+    </g>
+    <circle cx="200" cy="72" r="10" fill="#eafcff"/>
+    <path d="M195,70 q5,-4 10,0" stroke="#2b6a78" stroke-width="2.5" fill="none"/>
+    <circle cx="176" cy="140" r="4" fill="#B8F4FF"/><circle cx="224" cy="250" r="4" fill="#B8F4FF"/><circle cx="212" cy="120" r="3" fill="#B8F4FF"/>
+  </symbol>
+
+  <!-- ============ C2 · SOUL TRADE ============ -->
+  <symbol id="c2" viewBox="0 0 400 400">
+    <defs>
+      <radialGradient id="bg2" cx="50%" cy="28%" r="95%">
+        <stop offset="0" stop-color="#563a9c"/><stop offset="55%" stop-color="#311d6a"/><stop offset="100%" stop-color="#e8703a"/>
+      </radialGradient>
+      <radialGradient id="flash2" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#fff"/><stop offset="35%" stop-color="#B8F4FF"/><stop offset="100%" stop-color="#6FE3FF" stop-opacity="0"/></radialGradient>
+      <linearGradient id="soulTail" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#6FE3FF" stop-opacity="0"/><stop offset="1" stop-color="#B8F4FF"/></linearGradient>
+    </defs>
+    <rect width="400" height="400" fill="url(#bg2)"/>
+    <ellipse cx="200" cy="368" rx="160" ry="24" fill="#000" opacity="0.28"/>
+    <!-- left head warm -->
+    <g>
+      <rect x="44" y="176" width="150" height="168" rx="34" fill="url(#skinW)"/>
+      <path d="M58,186 L72,140 L92,180 L112,138 L134,182 L156,140 L178,186 L58,196 Z" fill="#F4741E"/>
+      <ellipse cx="96" cy="250" rx="16" ry="20" fill="#fff"/><circle cx="98" cy="256" r="7" fill="#2b2233"/>
+      <ellipse cx="150" cy="250" rx="16" ry="20" fill="#fff"/><circle cx="152" cy="256" r="7" fill="#2b2233"/>
+      <ellipse cx="122" cy="300" rx="12" ry="15" fill="#7a2e3f"/>
+    </g>
+    <!-- right head cool -->
+    <g>
+      <rect x="206" y="176" width="150" height="168" rx="34" fill="url(#skinC)"/>
+      <path d="M222,186 L246,140 L268,182 L290,138 L312,180 L332,142 L344,196 L222,196 Z" fill="#2ec6c0"/>
+      <ellipse cx="250" cy="250" rx="16" ry="20" fill="#fff"/><circle cx="248" cy="256" r="7" fill="#2b2233"/>
+      <ellipse cx="304" cy="250" rx="16" ry="20" fill="#fff"/><circle cx="302" cy="256" r="7" fill="#2b2233"/>
+      <ellipse cx="278" cy="300" rx="12" ry="15" fill="#7a2e3f"/>
+    </g>
+    <!-- crossing soul streaks -->
+    <g filter="url(#glow)">
+      <path d="M120,168 C150,60 250,60 286,150" fill="none" stroke="url(#soulTail)" stroke-width="9" stroke-linecap="round"/>
+      <path d="M280,168 C250,72 150,72 116,150" fill="none" stroke="url(#soulTail)" stroke-width="9" stroke-linecap="round" opacity=".85"/>
+    </g>
+    <!-- flash at crossover -->
+    <circle cx="200" cy="108" r="60" fill="url(#flash2)"/>
+    <!-- soul faces on the streaks -->
+    <g>
+      <circle cx="286" cy="150" r="17" fill="#dffaff"/><path d="M280,148 q6,6 12,0" stroke="#2b6a78" stroke-width="2.6" fill="none"/><circle cx="282" cy="144" r="2.3" fill="#2b6a78"/><circle cx="290" cy="144" r="2.3" fill="#2b6a78"/>
+      <circle cx="116" cy="150" r="17" fill="#dffaff"/><path d="M110,146 q6,6 12,0" stroke="#2b6a78" stroke-width="2.6" fill="none"/><circle cx="112" cy="142" r="2.3" fill="#2b6a78"/><circle cx="120" cy="142" r="2.3" fill="#2b6a78"/>
+    </g>
+  </symbol>
+
+  <!-- ============ C3 · SOUL-JUMP HERO ============ -->
+  <symbol id="c3" viewBox="0 0 400 400">
+    <defs>
+      <radialGradient id="bg3" cx="46%" cy="30%" r="95%">
+        <stop offset="0" stop-color="#5a3aa0"/><stop offset="55%" stop-color="#331f6c"/><stop offset="100%" stop-color="#e8703a"/>
+      </radialGradient>
+      <radialGradient id="burst3" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#fff"/><stop offset="40%" stop-color="#B8F4FF"/><stop offset="100%" stop-color="#6FE3FF" stop-opacity="0"/></radialGradient>
+      <linearGradient id="hood3" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3557E6"/><stop offset="1" stop-color="#213fb0"/></linearGradient>
+    </defs>
+    <rect width="400" height="400" fill="url(#bg3)"/>
+    <ellipse cx="220" cy="372" rx="160" ry="22" fill="#000" opacity="0.28"/>
+    <!-- former body, faded, lower-left -->
+    <g opacity="0.7">
+      <rect x="26" y="250" width="96" height="120" rx="20" fill="url(#hood3)"/>
+      <rect x="40" y="236" width="70" height="66" rx="16" fill="url(#skinW)"/>
+      <circle cx="60" cy="266" r="5" fill="#2b2233"/><circle cx="88" cy="266" r="5" fill="#2b2233"/>
+      <path d="M40,238 L52,214 L66,236 L80,212 L96,238 Z" fill="#c8641c"/>
+    </g>
+    <!-- hero: hoodie -->
+    <rect x="150" y="300" width="200" height="90" rx="26" fill="url(#hood3)"/>
+    <path d="M186,300 q64,54 128,0" fill="none" stroke="#FFB84D" stroke-width="14"/>
+    <!-- hero head -->
+    <rect x="150" y="70" width="196" height="220" rx="42" fill="url(#skinW)"/>
+    <ellipse cx="248" cy="108" rx="110" ry="40" fill="#fff" opacity="0.12"/>
+    <!-- spiky orange hair -->
+    <path d="M150,96 L168,34 L196,86 L222,28 L250,84 L280,30 L308,86 L330,40 L346,110 L150,110 Z" fill="#F4741E"/>
+    <path d="M168,34 L196,86 L222,28 L250,84 L280,30 L308,86 L330,40" fill="none" stroke="#ff9a45" stroke-width="3" opacity=".6"/>
+    <!-- shocked face -->
+    <ellipse cx="212" cy="176" rx="26" ry="33" fill="#fff"/><circle cx="210" cy="184" r="11" fill="#2b2233"/>
+    <ellipse cx="292" cy="176" rx="26" ry="33" fill="#fff"/><circle cx="290" cy="184" r="11" fill="#2b2233"/>
+    <path d="M188,138 q24,-14 48,-2" stroke="#2b2233" stroke-width="6" fill="none" stroke-linecap="round"/>
+    <path d="M268,138 q24,-12 48,2" stroke="#2b2233" stroke-width="6" fill="none" stroke-linecap="round"/>
+    <ellipse cx="252" cy="248" rx="18" ry="24" fill="#7a2e3f"/><ellipse cx="252" cy="240" rx="12" ry="9" fill="#c9506a"/>
+    <!-- soul arc from former body into hero temple -->
+    <g filter="url(#glow)">
+      <path d="M96,244 C120,150 132,150 166,168" fill="none" stroke="url(#soulTail)" stroke-width="9" stroke-linecap="round"/>
+    </g>
+    <circle cx="166" cy="168" r="30" fill="url(#burst3)"/>
+    <circle cx="120" cy="196" r="15" fill="#dffaff"/><path d="M114,193 q6,6 12,0" stroke="#2b6a78" stroke-width="2.4" fill="none"/><circle cx="116" cy="189" r="2.2" fill="#2b6a78"/><circle cx="124" cy="189" r="2.2" fill="#2b6a78"/>
+  </symbol>
+</svg>
+
+<div class="wrap">
+<header>
+  <p class="kicker">Experience Icon · Concept Board</p>
+  <h1>The Icon Must Say<br>"We <span class="swap">Swap</span> Bodies"</h1>
+  <p class="lede">The core loop is <b>random control swaps every 30 seconds</b> — you get flung into another player's body. master8 reads as a single spooky <b>possession</b>, not a swap party game. Three directions to fix that, each shown large <b>and at true 64px</b> (the size that actually ships).</p>
+  <div class="problem"><span class="dot"></span> Constraint that killed the old "two-body" idea: more subjects = smaller faces at 64px. Every concept below is judged against that.</div>
+</header>
+
+<div class="board">
+
+  <!-- C1 -->
+  <div class="concept" id="A">
+    <div class="art">
+      <svg class="big" viewBox="0 0 400 400"><use href="#c1"/></svg>
+      <svg class="chip" viewBox="0 0 400 400"><use href="#c1"/></svg>
+      <div class="chip-lbl">64px</div>
+    </div>
+    <div class="meta">
+      <span class="num">CONCEPT A</span>
+      <h2>Split Soul</h2>
+      <span class="tag">One face · two identities</span>
+      <p class="desc">A single big blocky head split down the middle — warm avatar on one side, cool avatar on the other — joined by a glowing cyan <b>swap seam</b> with a soul at the top. One giant face says "two players share one body," which is exactly the swap, in a single dominant subject.</p>
+      <div class="pc">
+        <div class="pros"><h4>Pros</h4><ul><li>Huge single face → best 64px read</li><li>"Two-in-one" = instantly a swap</li><li>Iconic, ownable silhouette</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Most stylized / least literal</li><li>Split can look "glitchy" if muddy</li><li>Furthest from master8 we built</li></ul></div>
+      </div>
+      <div class="verdict">
+        <span class="badge b64">64px: strongest</span>
+        <span class="badge brec">Recommended</span>
+        <button class="pick" onclick="pick('A','Split Soul')">Pick this ▸</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- C2 -->
+  <div class="concept" id="B">
+    <div class="art">
+      <svg class="big" viewBox="0 0 400 400"><use href="#c2"/></svg>
+      <svg class="chip" viewBox="0 0 400 400"><use href="#c2"/></svg>
+      <div class="chip-lbl">64px</div>
+    </div>
+    <div class="meta">
+      <span class="num">CONCEPT B</span>
+      <h2>Soul Trade</h2>
+      <span class="tag">Two heads · souls crossing</span>
+      <p class="desc">Two blocky characters, and their cyan souls arc and <b>cross in an X</b> with a bright flash where they trade — each player's soul flying into the other's body. The most literal, honest depiction of the mechanic.</p>
+      <div class="pc">
+        <div class="pros"><h4>Pros</h4><ul><li>Unmistakably "two players swap"</li><li>Dynamic, energetic motion</li><li>Shows the multiplayer angle</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Two faces = smaller at 64px</li><li>The X can get busy — needs restraint</li><li>Twice the render to keep on-model</li></ul></div>
+      </div>
+      <div class="verdict">
+        <span class="badge b64">64px: workable if bold</span>
+        <button class="pick" onclick="pick('B','Soul Trade')">Pick this ▸</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- C3 -->
+  <div class="concept" id="C">
+    <div class="art">
+      <svg class="big" viewBox="0 0 400 400"><use href="#c3"/></svg>
+      <svg class="chip" viewBox="0 0 400 400"><use href="#c3"/></svg>
+      <div class="chip-lbl">64px</div>
+    </div>
+    <div class="meta">
+      <span class="num">CONCEPT C</span>
+      <h2>Soul-Jump Hero</h2>
+      <span class="tag">Keep master8 · add the origin</span>
+      <p class="desc">Keep our proven master8 hero face, but the soul now clearly arcs <b>in from a second, smaller body it just left</b> in the corner — "your control just jumped into this body." Preserves everything we built; adds the swap story with one extra element.</p>
+      <div class="pc">
+        <div class="pros"><h4>Pros</h4><ul><li>Reuses the winning master8 render</li><li>Strong hero face keeps 64px punch</li><li>Lowest-risk iteration</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Swap is implied, not literal</li><li>Corner body is tiny at 64px</li><li>Still leans "possession-ish"</li></ul></div>
+      </div>
+      <div class="verdict">
+        <span class="badge b64">64px: safe</span>
+        <button class="pick" onclick="pick('C','Soul-Jump Hero')">Pick this ▸</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  <span class="rec">My lean: A (Split Soul) for the clearest swap-at-64px, with B (Soul Trade) as the bolder, most literal option.</span>
+  Click a concept above, or just tell me in the terminal. We can also blend — e.g. a Split-Soul face with crossing-soul energy.
+  <div class="selnote" id="selnote"></div>
+</footer>
+</div>
+
+<script>
+function pick(id,name){
+  document.querySelectorAll('.concept').forEach(c=>c.classList.remove('sel'));
+  document.getElementById(id).classList.add('sel');
+  document.getElementById('selnote').textContent = '✓ Selected: Concept '+id+' — '+name+'.  Tell Claude "let\'s go with '+name+'".';
+}
+</script>
+</body>
+</html>
