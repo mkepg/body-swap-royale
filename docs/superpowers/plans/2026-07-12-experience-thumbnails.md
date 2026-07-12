@@ -513,3 +513,15 @@ Expected: only intended thumbnail/script files are tracked; `src/shared/Config.l
 - **Spec coverage:** §5.1 folder → Task 1/2; §4+§5 prompt kit → Task 3; §5.4b finalize → Task 4; §4 caption composite → Task 5; §7 deliverables all covered; §8 risks (font fallback → Task 5 fallback chain; 16:9 crop → Task 4 cover-crop; hazard-not-combat → Task 3 T3 wording + F7). 
 - **Config.luau guard** repeated in header + Task 6.
 - **Naming consistency:** `gemini-t{frame}-{variant}-{roll}.png`, `thumb-{n}-1920.png`, `finalize-thumbnail.ps1`, `composite-caption.ps1`, `-Highlight` param — used identically across README, prompts, scripts, and tests.
+
+## Post-implementation notes (fixes found during review / end-to-end verify)
+
+The committed scripts are the source of truth; they evolved past the code blocks above during the two-stage review and a real-flow render. Changes applied:
+
+1. **`$w`/`$W` collision (caption):** PowerShell variable names are case-insensitive, so the `foreach ($w in $words)` loop aliased image-width `$W`. Renamed the loop var to `$word` / `$wordW`.
+2. **GDI+ file-lock on in-place `-Out` (caption, Critical):** `Image.FromFile` locks the source, so the documented `-Out == -Source` usage threw on `Save`. Now dispose `$img` immediately after `DrawImage` (and guard the trailing `finally` with `if ($img)`).
+3. **Caption width overflow (caption, found by rendering the real flow):** a fixed 96px font ran "SWAPPED into their body" off both edges. Added auto-fit — shrink the font proportionally until the line fits `$W * 0.90`.
+4. **Highlight robustness (caption):** strip leading/trailing punctuation before matching `-Highlight`, and `Write-Warning` if it matches no word.
+5. **Test coverage:** caption test now scans a band ROW RANGE (not one fragile row), asserts no text bleeds into the outer 4% safe margin, and exercises the in-place `-Out` path; finalize test now also exercises the crop-width branch with a 2560×1080 source.
+
+Final commits: `dea0885` (lock + highlight + test gaps), `dda6a15` (auto-fit + margin guard).
