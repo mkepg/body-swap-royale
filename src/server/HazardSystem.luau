@@ -56,6 +56,11 @@ local function floorColor(floor)
 	return palette[math.min(floor + 1, #palette)]
 end
 
+-- Warning color, darkened toward black by GLOW_DIM_HEX_WARNING (0 = full red = original,
+-- 1 = black). Precomputed once: the warning is an opaque floor color (not a glow), so
+-- "dimming" it darkens the color rather than fading transparency.
+local WARNING_COLOR = Config.TILE_COLOR_WARNING:Lerp(Color3.new(), Config.GLOW_DIM_HEX_WARNING)
+
 -- Map a phase to all parts of a tile (caller applies only on change). Solid shows
 -- the floor's own color; warning shows the universal red; gone hides + drops collision.
 local function applyPhase(tile, phase)
@@ -63,7 +68,7 @@ local function applyPhase(tile, phase)
 	if phase == "solid" then
 		canCollide, transparency, color = true, 0, floorColor(tile.floor)
 	elseif phase == "warning" then
-		canCollide, transparency, color = true, 0, Config.TILE_COLOR_WARNING
+		canCollide, transparency, color = true, 0, WARNING_COLOR
 	else -- "gone"
 		canCollide, transparency, color = false, 1, floorColor(tile.floor)
 	end
