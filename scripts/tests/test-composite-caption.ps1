@@ -26,5 +26,13 @@ try {
         }
         if (-not $found) { throw "FAIL: no caption text pixels found in band" }
     } finally { $o.Dispose() }
+
+    # in-place edit: -Out defaults to -Source; must not throw (GDI+ file-lock regression guard)
+    $inplace = Join-Path $tmp "inplace.png"
+    Copy-Item $src $inplace
+    & powershell -NoProfile -ExecutionPolicy Bypass -File scripts/composite-caption.ps1 -Source $inplace -Text "SWAPPED into their body" -Highlight "SWAPPED"
+    $ip = [System.Drawing.Image]::FromFile($inplace)
+    try { if ($ip.Width -ne 1920 -or $ip.Height -ne 1080) { throw "FAIL: in-place output is $($ip.Width)x$($ip.Height)" } } finally { $ip.Dispose() }
+
     Write-Output "PASS: composite-caption draws caption and keeps 1920x1080"
 } finally { Remove-Item -Recurse -Force $tmp }

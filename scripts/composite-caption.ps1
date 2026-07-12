@@ -26,6 +26,7 @@ try {
     $g = [System.Drawing.Graphics]::FromImage($bmp)
     try {
         $g.DrawImage($img, 0, 0, $W, $H)
+        $img.Dispose(); $img = $null   # release the source file lock so in-place -Out can Save
         $g.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::HighQuality
         $g.TextRenderingHint = [System.Drawing.Text.TextRenderingHint]::AntiAlias
 
@@ -62,12 +63,19 @@ try {
         $baselineY = $H - ($bandH / 2) - ($lineH / 2)
 
         $x = $startX
+        $matchedHighlight = $false
         foreach ($word in $words) {
             $wordW = $g.MeasureString($word, $font).Width
-            $brush = if ($Highlight -and ($word.Trim(',','.','!') -ieq $Highlight)) { $gold } else { $white }
+            $bare = $word -replace '^[^\w]+|[^\w]+$', ''   # strip leading/trailing punctuation before matching
+            $isHighlight = $Highlight -and ($bare -ieq $Highlight)
+            if ($isHighlight) { $matchedHighlight = $true }
+            $brush = if ($isHighlight) { $gold } else { $white }
             $g.DrawString($word, $font, $shadow, ($x + 3), ($baselineY + 3))
             $g.DrawString($word, $font, $brush, $x, $baselineY)
             $x += $wordW + $spaceW
+        }
+        if ($Highlight -and -not $matchedHighlight) {
+            Write-Warning ("Highlight word '{0}' did not match any word in the caption; nothing drawn in gold." -f $Highlight)
         }
 
         $white.Dispose(); $gold.Dispose(); $shadow.Dispose(); $font.Dispose()
@@ -80,5 +88,5 @@ try {
     Write-Output ("Wrote {0} (caption: '{1}', font: {2})" -f $Out, $Text, $familyName)
 } finally {
     if ($bmp) { $bmp.Dispose() }
-    $img.Dispose()
+    if ($img) { $img.Dispose() }
 }
