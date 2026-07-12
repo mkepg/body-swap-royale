@@ -1,366 +1,98 @@
-# Experience Icon — Prompt Kit
+# Experience Icon — Prompt Kit ("Swap Arrows")
 
-Tool-agnostic prose prompts (no `--parameters`). Use a **Full (Gemini)**
-version in Gemini; use a **Condensed (Bing)** version in Bing Image Creator.
-Generate at the tool's native square size (1:1). Save EVERY output — good and
-bad — to `candidates/` as `{tool}-{variant}-{roll}.png` (e.g. `bing-v2-1.png`,
-`gemini-master-3.png`). Bad outputs are data.
+**Concept:** two blocky Roblox avatars + a glowing cyan soul-energy **⇄** swap
+symbol between their heads — "these two players are swapping bodies." See
+`docs/specs/2026-07-12-experience-icon-swap-concept-design.md`.
 
-**Every prompt below is complete and self-contained** — copy the whole code
-block and paste it. No editing, no placeholder replacement. Variants differ
-from the master on exactly one axis (named in each heading).
+**Tool:** Gemini only (Bing was dropped — inferior results). **Reference-guided:**
+upload `reference/ref-avatar.png` (grey R15 avatar) with EVERY prompt — it guides
+the block proportions/silhouette for BOTH avatars. Generate square 1:1. Save EVERY
+output — good and bad — to `candidates/` as `gemini-{variant}-{roll}.png`
+(e.g. `gemini-swap-1.png`, `gemini-v2-1.png`). Bad outputs are data.
 
-Spec: `docs/specs/2026-07-10-experience-icon-design.md`
-(§8 acceptance checklist is what candidates are scored against.)
+Each prompt below is complete and self-contained — upload the reference, copy the
+whole block, paste. Variants change the Master on exactly one axis (named in the
+heading).
+
+Spec / acceptance checklist: the 8 checks in
+`docs/specs/2026-07-12-experience-icon-swap-concept-design.md` §3.
 
 ---
 
 ## 1 · Master
 
-### Master — Full (Gemini)
-
 ```text
-A square app icon for a family-friendly multiplayer party game, rendered in a
-chunky glossy 3D toy style like modern party-game key art. One blocky, boxy
-cartoon character shown head and shoulders, filling about seventy percent of
-the frame, made of smooth cream-tan plastic with soft rounded edges and a
-glossy toy sheen. The character has huge white oval eyes with small dark
-pupils darting toward the upper left in comic, funny shock, and a small open
-mouth — playfully startled, never distressed. Overlapping the upper-left of
-its head, a translucent glowing cyan ghost face — serene and slightly
-mischievous, with simple eyes and a small smile — is sliding INTO the
-character's head, its wispy light-trail curving away off-frame, with a soft
-cyan glow blooming where the two touch. The lighting tells the story: cool
-cyan rim light on the left side of the head coming from the ghost, warm amber
-fill light from the lower right. Background: a dusk sky fading from deep
-violet at the top to a warm amber glow at the bottom, sprinkled with a few
-faint glowing soul-wisp bokeh dots and one subtle teal aurora ribbon, softly
-vignetted so the character pops. High saturation, bold simple shapes, centered
-composition with breathing room on all sides, no text, no letters, no logos,
-no watermark.
-```
-
-### Master — Condensed (Bing)
-
-<!-- condensed -->
-```text
-Chunky glossy 3D toy-style square app icon: one blocky cream cartoon character, head and shoulders filling the frame, huge white eyes in comic shock looking up-left, small open mouth. A translucent glowing cyan ghost face with a mischievous smile slides into its head, wispy trail, cyan glow at contact. Cyan rim light left, warm amber light lower right. Violet-to-amber dusk sky, faint glowing wisp dots. No text, no logos.
+Use the blocky character in the attached reference image ONLY as a structural guide for the body proportions and silhouette of BOTH characters — the rectangular block head, the straight rectangular block arms that do NOT taper, the flat slab torso, and the fact that they have NO hands and NO fingers. Do not copy its colors, outfit, or pose. Create a square app icon for a family-friendly multiplayer party game, in a chunky glossy 3D toy style like modern party-game key art. Show TWO cool, stylish Roblox-style avatars, head and shoulders, side by side and angled slightly toward each other, together filling the lower two-thirds of the frame. LEFT character (a boy): near-white glossy plastic cube head with chunky spiky bright-ORANGE hair, wearing a royal-blue hoodie with orange accents; its face is a simple cartoon face printed FLAT on the front of the cube head like a sticker decal — huge white oval eyes with dark outlines and small dark pupils, and a small open mouth in playful comic surprise. RIGHT character (a girl): near-white glossy plastic cube head with long chunky PINK hair in a ponytail, wearing a teal hoodie; the same flat printed cartoon decal face — huge white oval eyes with dark outlines and small dark pupils, and a small open mouth in playful comic surprise. Between and just above their two heads, a bold glowing CYAN soul-energy double-arrow SWAP symbol: two thick glossy cyan arrows curving horizontally — the top arrow points right, the bottom arrow points left — like a swap/exchange icon made of glowing spirit energy, with a soft cyan bloom and a few faint cyan soul-wisps and sparks around it. This glowing cyan swap symbol is the bright focal center of the icon; both characters glance up toward it in surprise. Lighting: cool cyan glow from the central swap symbol lighting the inner sides of both heads, warm amber fill light from below. Background: a dusk sky fading from deep violet at the top to a warm amber glow at the bottom, a few faint glowing soul-wisp dots, one subtle teal aurora ribbon, softly vignetted so the characters pop. High saturation, bold simple shapes, centered, filling the whole square canvas. No text, no letters, no numbers, no logos, no watermark, no border.
 ```
 
 ---
 
-## 2 · Variants — each changes EXACTLY one axis vs. the master
+## 2 · Variants — each changes EXACTLY one axis vs. the Master
 
-### V1 — Expression: comic terror → delighted panic
+Each variant is the Master prompt with one change; the full text is written out so
+you can paste without editing.
 
-#### V1 — Full (Gemini)
+### V1 — Glyph dominance (bigger, more central swap symbol)
 
 ```text
-A square app icon for a family-friendly multiplayer party game, rendered in a
-chunky glossy 3D toy style like modern party-game key art. One blocky, boxy
-cartoon character shown head and shoulders, filling about seventy percent of
-the frame, made of smooth cream-tan plastic with soft rounded edges and a
-glossy toy sheen. The character has huge white oval eyes with small dark
-pupils darting toward the upper left, and an enormous open-mouthed gleeful
-grin — delighted panic, like the drop of a rollercoaster. Overlapping the
-upper-left of its head, a translucent glowing cyan ghost face — serene and
-slightly mischievous, with simple eyes and a small smile — is sliding INTO the
-character's head, its wispy light-trail curving away off-frame, with a soft
-cyan glow blooming where the two touch. The lighting tells the story: cool
-cyan rim light on the left side of the head coming from the ghost, warm amber
-fill light from the lower right. Background: a dusk sky fading from deep
-violet at the top to a warm amber glow at the bottom, sprinkled with a few
-faint glowing soul-wisp bokeh dots and one subtle teal aurora ribbon, softly
-vignetted so the character pops. High saturation, bold simple shapes, centered
-composition with breathing room on all sides, no text, no letters, no logos,
-no watermark.
+Use the blocky character in the attached reference image ONLY as a structural guide for the body proportions and silhouette of BOTH characters — the rectangular block head, the straight rectangular block arms that do NOT taper, the flat slab torso, and the fact that they have NO hands and NO fingers. Do not copy its colors, outfit, or pose. Create a square app icon for a family-friendly multiplayer party game, in a chunky glossy 3D toy style like modern party-game key art. Show TWO cool, stylish Roblox-style avatars, head and shoulders, side by side and angled slightly toward each other, sitting lower in the frame and a little smaller so the swap symbol dominates. LEFT character (a boy): near-white glossy plastic cube head with chunky spiky bright-ORANGE hair, wearing a royal-blue hoodie with orange accents; its face is a simple cartoon face printed FLAT on the front of the cube head like a sticker decal — huge white oval eyes with dark outlines and small dark pupils, and a small open mouth in playful comic surprise. RIGHT character (a girl): near-white glossy plastic cube head with long chunky PINK hair in a ponytail, wearing a teal hoodie; the same flat printed cartoon decal face — huge white oval eyes with dark outlines and small dark pupils, and a small open mouth in playful comic surprise. Dominating the upper-center of the icon, a large bold glowing CYAN soul-energy double-arrow SWAP symbol: two thick glossy cyan arrows curving horizontally — the top arrow points right, the bottom arrow points left — like a swap/exchange icon made of glowing spirit energy, with a strong cyan bloom and cyan soul-wisps and sparks around it. This big glowing cyan swap symbol is the clear focal center; both characters glance up toward it in surprise. Lighting: cool cyan glow from the central swap symbol lighting the inner sides of both heads, warm amber fill light from below. Background: a dusk sky fading from deep violet at the top to a warm amber glow at the bottom, a few faint glowing soul-wisp dots, one subtle teal aurora ribbon, softly vignetted so the characters pop. High saturation, bold simple shapes, centered, filling the whole square canvas. No text, no letters, no numbers, no logos, no watermark, no border.
 ```
 
-#### V1 — Condensed (Bing)
+### V2 — Camera (tight two-head close-up)
 
-<!-- condensed -->
 ```text
-Chunky glossy 3D toy-style square app icon: one blocky cream cartoon character, head and shoulders filling the frame, huge white eyes looking up-left, enormous gleeful open-mouthed grin, delighted panic. A translucent glowing cyan ghost face with a mischievous smile slides into its head, wispy trail, cyan glow at contact. Cyan rim light left, warm amber light lower right. Violet-to-amber dusk sky, faint glowing wisp dots. No text, no logos.
+Use the blocky character in the attached reference image ONLY as a structural guide for the body proportions and silhouette of BOTH characters — the rectangular block head, the straight rectangular block arms that do NOT taper, the flat slab torso, and the fact that they have NO hands and NO fingers. Do not copy its colors, outfit, or pose. Create a square app icon for a family-friendly multiplayer party game, in a chunky glossy 3D toy style like modern party-game key art. Tight close-up of TWO cool, stylish Roblox-style avatar HEADS, side by side and angled toward each other, the two cube heads filling most of the frame with just a sliver of shoulders. LEFT head (a boy): near-white glossy plastic cube head with chunky spiky bright-ORANGE hair, a royal-blue hoodie collar; its face is a simple cartoon face printed FLAT on the front of the cube head like a sticker decal — huge white oval eyes with dark outlines and small dark pupils, and a small open mouth in playful comic surprise. RIGHT head (a girl): near-white glossy plastic cube head with long chunky PINK hair in a ponytail, a teal hoodie collar; the same flat printed cartoon decal face — huge white oval eyes with dark outlines and small dark pupils, and a small open mouth in playful comic surprise. Between and just above the two heads, a bold glowing CYAN soul-energy double-arrow SWAP symbol: two thick glossy cyan arrows curving horizontally — the top arrow points right, the bottom arrow points left — like a swap/exchange icon made of glowing spirit energy, with a soft cyan bloom and a few faint cyan soul-wisps and sparks. This glowing cyan swap symbol is the bright focal center; both characters glance up toward it in surprise. Lighting: cool cyan glow from the central swap symbol on the inner sides of both heads, warm amber fill light from below. Background: a dusk sky fading from deep violet at the top to a warm amber glow at the bottom, a few faint glowing soul-wisp dots, one subtle teal aurora ribbon, softly vignetted. High saturation, bold simple shapes, centered, filling the whole square canvas. No text, no letters, no numbers, no logos, no watermark, no border.
 ```
 
-### V2 — Soul-face position: corner overlap → descending face-to-face
-
-#### V2 — Full (Gemini)
+### V3 — Expression (comic surprise → delighted grins)
 
 ```text
-A square app icon for a family-friendly multiplayer party game, rendered in a
-chunky glossy 3D toy style like modern party-game key art. One blocky, boxy
-cartoon character shown head and shoulders, filling about seventy percent of
-the frame, made of smooth cream-tan plastic with soft rounded edges and a
-glossy toy sheen. The character has huge white oval eyes with small dark
-pupils darting toward the upper left in comic, funny shock, and a small open
-mouth — playfully startled, never distressed. Directly above the character, a
-translucent glowing cyan ghost face — serene and slightly mischievous, with
-simple eyes and a small smile — descends face-to-face toward the character's
-upturned face, tilted downward, its wispy light-trail rising off the top of
-the frame, with a soft cyan glow blooming in the narrowing gap between them.
-The lighting tells the story: cool cyan rim light on the left side of the head
-coming from the ghost, warm amber fill light from the lower right. Background:
-a dusk sky fading from deep violet at the top to a warm amber glow at the
-bottom, sprinkled with a few faint glowing soul-wisp bokeh dots and one subtle
-teal aurora ribbon, softly vignetted so the character pops. High saturation,
-bold simple shapes, centered composition with breathing room on all sides, no
-text, no letters, no logos, no watermark.
+Use the blocky character in the attached reference image ONLY as a structural guide for the body proportions and silhouette of BOTH characters — the rectangular block head, the straight rectangular block arms that do NOT taper, the flat slab torso, and the fact that they have NO hands and NO fingers. Do not copy its colors, outfit, or pose. Create a square app icon for a family-friendly multiplayer party game, in a chunky glossy 3D toy style like modern party-game key art. Show TWO cool, stylish Roblox-style avatars, head and shoulders, side by side and angled slightly toward each other, together filling the lower two-thirds of the frame. LEFT character (a boy): near-white glossy plastic cube head with chunky spiky bright-ORANGE hair, wearing a royal-blue hoodie with orange accents; its face is a simple cartoon face printed FLAT on the front of the cube head like a sticker decal — huge white oval eyes with dark outlines and small dark pupils, and a big open-mouthed delighted grin, gleeful and excited. RIGHT character (a girl): near-white glossy plastic cube head with long chunky PINK hair in a ponytail, wearing a teal hoodie; the same flat printed cartoon decal face — huge white oval eyes with dark outlines and small dark pupils, and a big open-mouthed delighted grin, gleeful and excited. Between and just above their two heads, a bold glowing CYAN soul-energy double-arrow SWAP symbol: two thick glossy cyan arrows curving horizontally — the top arrow points right, the bottom arrow points left — like a swap/exchange icon made of glowing spirit energy, with a soft cyan bloom and a few faint cyan soul-wisps and sparks around it. This glowing cyan swap symbol is the bright focal center; both characters look up toward it with delight. Lighting: cool cyan glow from the central swap symbol lighting the inner sides of both heads, warm amber fill light from below. Background: a dusk sky fading from deep violet at the top to a warm amber glow at the bottom, a few faint glowing soul-wisp dots, one subtle teal aurora ribbon, softly vignetted so the characters pop. High saturation, bold simple shapes, centered, filling the whole square canvas. No text, no letters, no numbers, no logos, no watermark, no border.
 ```
 
-#### V2 — Condensed (Bing)
-
-<!-- condensed -->
-```text
-Chunky glossy 3D toy-style square app icon: one blocky cream cartoon character, head and shoulders filling the frame, huge white eyes in comic shock looking up-left, small open mouth. A translucent glowing cyan ghost face with a mischievous smile descends from above, face-to-face, wispy trail rising, cyan glow in the gap between them. Cyan rim light left, warm amber light lower right. Violet-to-amber dusk sky, faint glowing wisp dots. No text, no logos.
-```
-
-### V3 — Camera: head-and-shoulders (~70%) → tight face crop
-
-#### V3 — Full (Gemini)
+### V4 — Background (full aurora+wisps → clean minimal gradient)
 
 ```text
-A square app icon for a family-friendly multiplayer party game, rendered in a
-chunky glossy 3D toy style like modern party-game key art. One blocky, boxy
-cartoon character shown in a tight close-up, the face alone filling almost the
-whole frame, the top of the head and chin just inside the edges, made of
-smooth cream-tan plastic with soft rounded edges and a glossy toy sheen. The
-character has huge white oval eyes with small dark pupils darting toward the
-upper left in comic, funny shock, and a small open mouth — playfully startled,
-never distressed. Overlapping the upper-left of its head, a translucent
-glowing cyan ghost face — serene and slightly mischievous, with simple eyes
-and a small smile — is sliding INTO the character's head, its wispy
-light-trail curving away off-frame, with a soft cyan glow blooming where the
-two touch. The lighting tells the story: cool cyan rim light on the left side
-of the head coming from the ghost, warm amber fill light from the lower right.
-Background: a dusk sky fading from deep violet at the top to a warm amber glow
-at the bottom, sprinkled with a few faint glowing soul-wisp bokeh dots and one
-subtle teal aurora ribbon, softly vignetted so the character pops. High
-saturation, bold simple shapes, centered composition with breathing room on
-all sides, no text, no letters, no logos, no watermark.
-```
-
-#### V3 — Condensed (Bing)
-
-<!-- condensed -->
-```text
-Chunky glossy 3D toy-style square app icon: one blocky cream cartoon character, face in tight close-up filling the frame, huge white eyes in comic shock looking up-left, small open mouth. A translucent glowing cyan ghost face with a mischievous smile slides into its head, wispy trail, cyan glow at contact. Cyan rim light left, warm amber light lower right. Violet-to-amber dusk sky, faint glowing wisp dots. No text, no logos.
-```
-
-### V4 — Background: subtle aurora + wisps → minimal clean gradient
-
-#### V4 — Full (Gemini)
-
-```text
-A square app icon for a family-friendly multiplayer party game, rendered in a
-chunky glossy 3D toy style like modern party-game key art. One blocky, boxy
-cartoon character shown head and shoulders, filling about seventy percent of
-the frame, made of smooth cream-tan plastic with soft rounded edges and a
-glossy toy sheen. The character has huge white oval eyes with small dark
-pupils darting toward the upper left in comic, funny shock, and a small open
-mouth — playfully startled, never distressed. Overlapping the upper-left of
-its head, a translucent glowing cyan ghost face — serene and slightly
-mischievous, with simple eyes and a small smile — is sliding INTO the
-character's head, its wispy light-trail curving away off-frame, with a soft
-cyan glow blooming where the two touch. The lighting tells the story: cool
-cyan rim light on the left side of the head coming from the ghost, warm amber
-fill light from the lower right. Background: a clean, smooth dusk-gradient sky
-fading from deep violet at the top to a warm amber glow at the bottom, softly
-vignetted so the character pops — no other background elements. High
-saturation, bold simple shapes, centered composition with breathing room on
-all sides, no text, no letters, no logos, no watermark.
-```
-
-#### V4 — Condensed (Bing)
-
-<!-- condensed -->
-```text
-Chunky glossy 3D toy-style square app icon: one blocky cream cartoon character, head and shoulders filling the frame, huge white eyes in comic shock looking up-left, small open mouth. A translucent glowing cyan ghost face with a mischievous smile slides into its head, wispy trail, cyan glow at contact. Cyan rim light left, warm amber light lower right. Clean violet-to-amber gradient sky. No text, no logos.
+Use the blocky character in the attached reference image ONLY as a structural guide for the body proportions and silhouette of BOTH characters — the rectangular block head, the straight rectangular block arms that do NOT taper, the flat slab torso, and the fact that they have NO hands and NO fingers. Do not copy its colors, outfit, or pose. Create a square app icon for a family-friendly multiplayer party game, in a chunky glossy 3D toy style like modern party-game key art. Show TWO cool, stylish Roblox-style avatars, head and shoulders, side by side and angled slightly toward each other, together filling the lower two-thirds of the frame. LEFT character (a boy): near-white glossy plastic cube head with chunky spiky bright-ORANGE hair, wearing a royal-blue hoodie with orange accents; its face is a simple cartoon face printed FLAT on the front of the cube head like a sticker decal — huge white oval eyes with dark outlines and small dark pupils, and a small open mouth in playful comic surprise. RIGHT character (a girl): near-white glossy plastic cube head with long chunky PINK hair in a ponytail, wearing a teal hoodie; the same flat printed cartoon decal face — huge white oval eyes with dark outlines and small dark pupils, and a small open mouth in playful comic surprise. Between and just above their two heads, a bold glowing CYAN soul-energy double-arrow SWAP symbol: two thick glossy cyan arrows curving horizontally — the top arrow points right, the bottom arrow points left — like a swap/exchange icon made of glowing spirit energy, with a soft cyan bloom. This glowing cyan swap symbol is the bright focal center; both characters glance up toward it in surprise. Lighting: cool cyan glow from the central swap symbol lighting the inner sides of both heads, warm amber fill light from below. Background: a clean, smooth dusk-gradient sky fading from deep violet at the top to a warm amber glow at the bottom, softly vignetted so the characters pop — no other background elements, no wisps, no aurora. High saturation, bold simple shapes, centered, filling the whole square canvas. No text, no letters, no numbers, no logos, no watermark, no border.
 ```
 
 ---
 
-## 3 · Known-failure prompts — assembled on the MASTER
+## 3 · Failure-fix prompts — apply ONLY the one matching the observed failure
 
-Use ONLY the prompt matching the observed failure. Each is the complete
-master prompt with that fix already applied (condensed versions are
-pre-trimmed to stay within Bing's ~480-char budget). If a failure occurred on
-a V1–V4 run and you want that fix combined with the variant instead of the
-master, ask Claude to assemble the combination.
+Each is a sentence to ADD to the end of the Master prompt (before re-rolling).
 
-### F1 — Face fusion (two faces merged into one two-headed figure)
-
-#### F1 — Full (Gemini)
-
+### F1 — The two avatars merge, or only one character appears
 ```text
-A square app icon for a family-friendly multiplayer party game, rendered in a
-chunky glossy 3D toy style like modern party-game key art. One blocky, boxy
-cartoon character shown head and shoulders, filling about seventy percent of
-the frame, made of smooth cream-tan plastic with soft rounded edges and a
-glossy toy sheen. The character has huge white oval eyes with small dark
-pupils darting toward the upper left in comic, funny shock, and a small open
-mouth — playfully startled, never distressed. Beside the character's head,
-slightly overlapping its upper-left corner, a separate translucent glowing
-cyan ghost — a simple friendly spirit with its own distinct face — leans
-toward the character as if about to dive into it, wispy tail trailing
-off-frame. The lighting tells the story: cool cyan rim light on the left side
-of the head coming from the ghost, warm amber fill light from the lower right.
-Background: a dusk sky fading from deep violet at the top to a warm amber glow
-at the bottom, sprinkled with a few faint glowing soul-wisp bokeh dots and one
-subtle teal aurora ribbon, softly vignetted so the character pops. High
-saturation, bold simple shapes, centered composition with breathing room on
-all sides, no text, no letters, no logos, no watermark.
+There must be TWO clearly separate, distinct avatars with a visible gap between them — two heads, two bodies, two different characters (one with orange spiky hair, one with long pink hair). Do not merge or blend them into a single character.
 ```
 
-#### F1 — Condensed (Bing)
-
-<!-- condensed -->
+### F2 — Off-model (doesn't look like Roblox avatars)
 ```text
-Chunky glossy 3D toy-style square app icon: one blocky cream cartoon character, head and shoulders filling the frame, huge white eyes in comic shock looking up-left, small open mouth. A separate friendly translucent cyan ghost, with its own distinct smiling face, leans in to dive into its head, wispy tail trailing. Cyan rim light left, warm amber light lower right. Violet-to-amber dusk sky, faint glowing wisp dots. No text, no logos.
+Both characters are unmistakably classic blocky Roblox avatars: cube heads, flat 2D printed decal faces flush on the head (no protruding 3D eyeballs), rectangular slab torsos, straight non-tapering block arms, and NO hands and NO fingers.
 ```
 
-### F2 — Wrong palette (colors drift)
-
-#### F2 — Full (Gemini)
-
+### F3 — The swap symbol reads as a flat 2D UI icon, or is missing
 ```text
-A square app icon for a family-friendly multiplayer party game, rendered in a
-chunky glossy 3D toy style like modern party-game key art. One blocky, boxy
-cartoon character shown head and shoulders, filling about seventy percent of
-the frame, made of smooth cream-tan plastic with soft rounded edges and a
-glossy toy sheen. The character has huge white oval eyes with small dark
-pupils darting toward the upper left in comic, funny shock, and a small open
-mouth — playfully startled, never distressed. Overlapping the upper-left of
-its head, a translucent glowing cyan ghost face — serene and slightly
-mischievous, with simple eyes and a small smile — is sliding INTO the
-character's head, its wispy light-trail curving away off-frame, with a soft
-cyan glow blooming where the two touch. The lighting tells the story: cool
-cyan rim light on the left side of the head coming from the ghost, warm amber
-fill light from the lower right. Background: a dusk sky fading from deep
-violet at the top to a warm amber glow at the bottom, sprinkled with a few
-faint glowing soul-wisp bokeh dots and one subtle teal aurora ribbon, softly
-vignetted so the character pops. High saturation, bold simple shapes, centered
-composition with breathing room on all sides, no text, no letters, no logos,
-no watermark. Color palette: deep violet #3B2A6E sky, warm amber #E8703A
-horizon glow, cream #F2C894 character, bright cyan #6FE3FF ghost, golden
-#FFB84D accents.
+The swap symbol is a glowing THREE-DIMENSIONAL soul-energy double-arrow that belongs inside the scene — glossy, with bloom and drifting cyan wisps — not a flat 2D user-interface icon. Keep it bold and clearly TWO arrows curving in opposite directions to read as "swap".
 ```
 
-#### F2 — Condensed (Bing)
-
-<!-- condensed -->
+### F4 — Colors drift off palette
 ```text
-Chunky glossy 3D toy-style square app icon: one blocky cream cartoon character, head and shoulders filling the frame, huge white eyes in comic shock looking up-left, small open mouth. A translucent glowing cyan ghost face with a mischievous smile slides into its head, wispy trail, cyan glow at contact. Cyan rim light left, warm amber light lower right. Violet-to-amber dusk sky. No text, no logos. Colors: deep violet sky, warm amber glow, cream body, bright cyan ghost.
+Palette: deep violet #3B2A6E sky, warm amber #E8703A horizon glow, near-white character skin, bright cyan #6FE3FF swap symbol and wisps, gold #FFB84D accents; orange hair on the left character, pink hair on the right character.
 ```
 
-### F3 — Photorealism (human skin, realistic render)
-
-#### F3 — Full (Gemini)
-
+### F5 — Text / letters / logo appear
 ```text
-Cute cartoon render, smooth plastic toy material, like a poster for a
-children's animated movie. A square app icon for a family-friendly
-multiplayer party game, rendered in a chunky glossy 3D toy style like modern
-party-game key art. One blocky, boxy cartoon character shown head and
-shoulders, filling about seventy percent of the frame, made of smooth
-cream-tan plastic with soft rounded edges and a glossy toy sheen. The
-character has huge white oval eyes with small dark pupils darting toward the
-upper left in comic, funny shock, and a small open mouth — playfully startled,
-never distressed. Overlapping the upper-left of its head, a translucent
-glowing cyan ghost face — serene and slightly mischievous, with simple eyes
-and a small smile — is sliding INTO the character's head, its wispy
-light-trail curving away off-frame, with a soft cyan glow blooming where the
-two touch. The lighting tells the story: cool cyan rim light on the left side
-of the head coming from the ghost, warm amber fill light from the lower right.
-Background: a dusk sky fading from deep violet at the top to a warm amber glow
-at the bottom, sprinkled with a few faint glowing soul-wisp bokeh dots and one
-subtle teal aurora ribbon, softly vignetted so the character pops. High
-saturation, bold simple shapes, centered composition with breathing room on
-all sides, no text, no letters, no logos, no watermark. Not realistic, no
-human skin texture, no fine surface detail.
+Absolutely no text, letters, numbers, words, signage, captions, or logos anywhere in the image.
 ```
 
-#### F3 — Condensed (Bing)
-
-<!-- condensed -->
+### F6 — Creepy / horror read
 ```text
-Chunky glossy 3D toy-style square app icon: one blocky cream cartoon character, head and shoulders filling the frame, huge white eyes in comic shock looking up-left, small open mouth. A translucent glowing cyan ghost face with a mischievous smile slides into its head, wispy trail, cyan glow at contact. Cyan rim light left, warm amber light lower right. Violet-to-amber dusk sky. No text, no logos. Cute cartoon plastic toy render, not realistic, no human skin.
+Friendly, comedic, bright, and colorful — suitable for young children; playful surprise, never scary or eerie.
 ```
 
-### F4 — Text appears anywhere
-
-#### F4 — Full (Gemini)
-
+### F7 — Not square / has a border
 ```text
-A square app icon for a family-friendly multiplayer party game, rendered in a
-chunky glossy 3D toy style like modern party-game key art. One blocky, boxy
-cartoon character shown head and shoulders, filling about seventy percent of
-the frame, made of smooth cream-tan plastic with soft rounded edges and a
-glossy toy sheen. The character has huge white oval eyes with small dark
-pupils darting toward the upper left in comic, funny shock, and a small open
-mouth — playfully startled, never distressed. Overlapping the upper-left of
-its head, a translucent glowing cyan ghost face — serene and slightly
-mischievous, with simple eyes and a small smile — is sliding INTO the
-character's head, its wispy light-trail curving away off-frame, with a soft
-cyan glow blooming where the two touch. The lighting tells the story: cool
-cyan rim light on the left side of the head coming from the ghost, warm amber
-fill light from the lower right. Background: a dusk sky fading from deep
-violet at the top to a warm amber glow at the bottom, sprinkled with a few
-faint glowing soul-wisp bokeh dots and one subtle teal aurora ribbon, softly
-vignetted so the character pops. High saturation, bold simple shapes, centered
-composition with breathing room on all sides, no text, no letters, no logos,
-no watermark. Absolutely no text, letters, numbers, words, signage, captions,
-or logos anywhere in the image.
-```
-
-#### F4 — Condensed (Bing)
-
-<!-- condensed -->
-```text
-Chunky glossy 3D toy-style square app icon: one blocky cream cartoon character, head and shoulders filling the frame, huge white eyes in comic shock looking up-left, small open mouth. A translucent glowing cyan ghost face with a mischievous smile slides into its head, wispy trail, cyan glow at contact. Cyan rim light left, warm amber light lower right. Violet-to-amber dusk sky, faint glowing wisp dots. Absolutely no text, letters, numbers, or logos anywhere.
-```
-
-### F5 — Creepy/horror read
-
-#### F5 — Full (Gemini)
-
-```text
-A square app icon for a family-friendly multiplayer party game, rendered in a
-chunky glossy 3D toy style like modern party-game key art. One blocky, boxy
-cartoon character shown head and shoulders, filling about seventy percent of
-the frame, made of smooth cream-tan plastic with soft rounded edges and a
-glossy toy sheen. The character has huge white oval eyes with small dark
-pupils darting toward the upper left in comic, funny shock, and a small open
-mouth — playfully startled, never distressed. Overlapping the upper-left of
-its head, a translucent glowing cyan ghost face — serene and slightly
-mischievous, with simple eyes and a small smile — is sliding INTO the
-character's head, its wispy light-trail curving away off-frame, with a soft
-cyan glow blooming where the two touch. The lighting tells the story: cool
-cyan rim light on the left side of the head coming from the ghost, warm amber
-fill light from the lower right. Background: a dusk sky fading from deep
-violet at the top to a warm amber glow at the bottom, sprinkled with a few
-faint glowing soul-wisp bokeh dots and one subtle teal aurora ribbon, softly
-vignetted so the character pops. High saturation, bold simple shapes, centered
-composition with breathing room on all sides, no text, no letters, no logos,
-no watermark. Friendly, comedic, bright and colorful — suitable for children.
-```
-
-#### F5 — Condensed (Bing)
-
-<!-- condensed -->
-```text
-Chunky glossy 3D toy-style square app icon: one blocky cream cartoon character, head and shoulders filling the frame, huge white eyes in comic shock looking up-left, small open mouth. A translucent glowing cyan ghost face with a mischievous smile slides into its head, wispy trail, cyan glow at contact. Cyan rim light left, warm amber light lower right. Violet-to-amber dusk sky, faint glowing wisp dots. No text, no logos. Friendly, comedic, bright, kid-friendly.
-```
-
----
-
-## Maintenance
-
-Every Condensed (Bing) prompt is a SINGLE line on the line after the opening
-code fence that follows its condensed marker comment (the HTML comment alone
-on its own line above the block), and must stay ≤480 chars. Check — prints
-one number per condensed prompt, ALL must be ≤480:
-
-```bash
-awk '/^<!-- condensed -->$/{getline; getline; print length($0)}' docs/marketing/experience-icon/prompts.md
+Perfectly square 1:1 composition, full-bleed to all four edges, no frame, no border, no letterboxing.
 ```
