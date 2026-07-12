@@ -12,6 +12,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared:WaitForChild("Config"))
 local Remotes = require(Shared:WaitForChild("Remotes"))
 local SoulMap = Remotes.get("SoulMap")
 local SetControlledBody = Remotes.get("SetControlledBody")
@@ -188,6 +189,9 @@ local function reconcile(list)
 end
 
 function SoulController.start()
+	if not Config.SOUL_HALO_ENABLED then
+		return -- halos suppressed (e.g. clean marketing screenshots)
+	end
 	SoulMap.OnClientEvent:Connect(reconcile)
 
 	SetControlledBody.OnClientEvent:Connect(function(body, _isSwap)

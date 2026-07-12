@@ -33,6 +33,7 @@ local AssetService = game:GetService("AssetService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
+local GlowDim = require(Shared:WaitForChild("GlowDim"))
 local WorldLayout = require(Shared:WaitForChild("WorldLayout"))
 
 local SweeperController = {}
@@ -48,14 +49,19 @@ local TAU = math.pi * 2
 -- level so the tells, the floor, and other players stay readable under Bloom 0.9.
 -- Lit/static values stay below SWEEP_STANDBY_TRANSPARENCY (0.85) so dormancy still
 -- visibly dims the arena.
-local WAKE_BASE_TRANSPARENCY = 0.9
-local WAKE_LIT_TRANSPARENCY = 0.5
-local CHASE_BASE_TRANSPARENCY = 0.75
-local CHASE_LIT_TRANSPARENCY = 0.4
-local ROTOR_TRANSPARENCY = 0.6
-local SHAFT_TRANSPARENCY = 0.8
-local LENS_TRANSPARENCY = 0.5
-local RIM_ACCENT_TRANSPARENCY = 0.55
+-- Accent bases, each softened by ITS OWN per-effect dim knob (0 = original, no dim).
+-- Every downstream reference (build, wake/chase animation targets, dormancy resets)
+-- reads these named constants, so each knob cascades. The dormant standby has its own
+-- knob so a dormant arena can be kept the dimmest state under manual tuning.
+local WAKE_BASE_TRANSPARENCY = GlowDim.apply(0.9, Config.GLOW_DIM_SWEEP_WAKE)
+local WAKE_LIT_TRANSPARENCY = GlowDim.apply(0.5, Config.GLOW_DIM_SWEEP_WAKE)
+local CHASE_BASE_TRANSPARENCY = GlowDim.apply(0.75, Config.GLOW_DIM_SWEEP_CHASE)
+local CHASE_LIT_TRANSPARENCY = GlowDim.apply(0.4, Config.GLOW_DIM_SWEEP_CHASE)
+local ROTOR_TRANSPARENCY = GlowDim.apply(0.6, Config.GLOW_DIM_SWEEP_ROTOR)
+local SHAFT_TRANSPARENCY = GlowDim.apply(0.8, Config.GLOW_DIM_SWEEP_SHAFT)
+local LENS_TRANSPARENCY = GlowDim.apply(0.5, Config.GLOW_DIM_SWEEP_LENS)
+local RIM_ACCENT_TRANSPARENCY = GlowDim.apply(0.55, Config.GLOW_DIM_SWEEP_RIM)
+local DORMANT_TRANSPARENCY = GlowDim.apply(Config.SWEEP_STANDBY_TRANSPARENCY, Config.GLOW_DIM_SWEEP_DORMANT)
 local ROTOR_SPIN_SPEED = 0.4 -- rad/s, cosmetic only
 
 -- Wake fade-window width in RADIANS (fixed, not speed-scaled): the lit trail
@@ -401,9 +407,9 @@ function SweeperController.start()
 
 	local function setLive(live)
 		for _, e in ipairs(staticNeon) do
-			e.part.Transparency = live and e.liveTransparency or Config.SWEEP_STANDBY_TRANSPARENCY
+			e.part.Transparency = live and e.liveTransparency or DORMANT_TRANSPARENCY
 		end
-		local resetTo = (not live) and Config.SWEEP_STANDBY_TRANSPARENCY or nil
+		local resetTo = (not live) and DORMANT_TRANSPARENCY or nil
 		for _, w in ipairs(wakeStrips) do
 			w.part.Transparency = resetTo or WAKE_BASE_TRANSPARENCY
 			w.lastTransparency = nil -- force a resync on the next live tick

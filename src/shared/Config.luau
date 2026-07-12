@@ -353,6 +353,38 @@ Config.WORLD_SKYBOX = {
 	Back = "rbxassetid://323494035",
 }
 
+-- ===== Visual polish flags (2026-07-12) =====
+-- Soul identity halo: the over-head colored dot (SoulController). true = shown in
+-- live play so players recognize who controls which body across swaps; flip to false
+-- for clean marketing screenshots (no floating UI pips over heads). Read once at boot.
+Config.SOUL_HALO_ENABLED = true
+
+-- Per-effect cosmetic-glow dim (see src/shared/GlowDim.luau). Each knob softens ONE
+-- visual effect independently: 0 = original brightness (no dim), 1 = fully faded.
+-- ALL default 0.0, so out of the box the world looks exactly as it did before the dim
+-- feature; raise a knob to dim that one effect. Applied as GlowDim.apply(base, knob)
+-- on the effect's Neon transparency (except GLOW_DIM_HEX_WARNING -- see below).
+Config.GLOW_DIM_WISPS = 0.0            -- sky soul-wisps (WorldShell)
+Config.GLOW_DIM_AURORA = 0.0          -- aurora ribbon + swap flare (WorldShell)
+Config.GLOW_DIM_CROWD = 0.0           -- distant crowd orbs (WorldShell)
+Config.GLOW_DIM_LOBBY_RINGS = 0.0     -- lobby energy rings (LobbyStage)
+Config.GLOW_DIM_SPECTATOR_ORBS = 0.0  -- lobby spectator-soul orbs (LobbyStage)
+Config.GLOW_DIM_HEX_TRIM = 0.0        -- hex play-area edge-trim border (ArenaDressing, via descriptor.trimDim)
+Config.GLOW_DIM_SWEEP_TRIM = 0.5      -- sweeper play-area edge-trim border (ArenaDressing, via descriptor.trimDim)
+Config.GLOW_DIM_SWEEP_WAKE = 0.0      -- sweeper wake channels (SweeperController)
+Config.GLOW_DIM_SWEEP_CHASE = 0.0     -- sweeper rim chase studs (SweeperController)
+Config.GLOW_DIM_SWEEP_ROTOR = 0.0     -- sweeper rotor bars (SweeperController)
+Config.GLOW_DIM_SWEEP_SHAFT = 0.0     -- sweeper light shaft (SweeperController)
+Config.GLOW_DIM_SWEEP_LENS = 0.0      -- sweeper spotlight lenses (SweeperController)
+Config.GLOW_DIM_SWEEP_RIM = 0.5       -- sweeper rim accent bars (SweeperController)
+Config.GLOW_DIM_SWEEP_DORMANT = 0.0   -- idle-sweeper standby dim (keep dormant dimmest)
+-- Gameplay TELLS (server-side): default 0.0 = full brightness (no readability change).
+-- Raise only if you deliberately want the danger signal dimmer.
+Config.GLOW_DIM_SWEEP_KILL_TELLS = 0.5 -- amber blade / crimson underglow / emitter / lamps (SweeperHazard)
+-- Hex tile warning is an opaque floor COLOR, so this knob DARKENS it toward black
+-- (0 = full warning red, 1 = black) rather than fading transparency (HazardSystem).
+Config.GLOW_DIM_HEX_WARNING = 0.0
+
 -- Soul-wisps: drifting glowing orbs colored from SOUL_PALETTE, high in the sky.
 Config.WORLD_WISP_COUNT = 22            -- mobile-budgeted default
 Config.WORLD_WISP_CENTER_Y = 140        -- height above arena center the field sits at
