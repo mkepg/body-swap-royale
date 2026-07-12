@@ -12,3 +12,6 @@ sourcemap.json
 
 # Per-user Claude Code overrides (project settings.json is committed)
 .claude/settings.local.json
+
+# Windows Explorer per-folder settings
+desktop.ini
