@@ -2,7 +2,7 @@
 
 Production kit for the Roblox Experience Icon.
 Concept spec: `docs/superpowers/specs/2026-07-12-experience-icon-swap-concept-design.md`
-(supersedes the 2026-07-10 possession concept). Process/palette/checklist history: the 2026-07-10 spec.
+(supersedes the 2026-07-10 possession concept). Process/palette/checklist history: `docs/superpowers/specs/2026-07-10-experience-icon-design.md`.
 
 ## Layout
 
@@ -21,8 +21,11 @@ Concept spec: `docs/superpowers/specs/2026-07-12-experience-icon-swap-concept-de
    the winner or winning traits.
 3. **Refine (max 2 rounds):** merged-traits prompt (`r1`, then `r2` at most),
    re-rolled in the tool that won Phase 2.
-4. **Finalize:** `scripts/finalize-icon.ps1 -Source <winner.png>` writes
-   `final/icon-512.png` (center-crop + high-quality downscale). Commit it.
+4. **Finalize:** first remove the Gemini ✦ watermark from the winner's
+   bottom-right corner (bilinear-gradient inpaint on the full-res PNG — see the
+   concept spec §4; `finalize-icon.ps1` does NOT do this itself), then run
+   `scripts/finalize-icon.ps1 -Source <cleaned.png>` to write `final/icon-512.png`
+   (center-crop + high-quality downscale). Commit it.
 
 ## Uploading to Roblox (Creator Dashboard)
 
