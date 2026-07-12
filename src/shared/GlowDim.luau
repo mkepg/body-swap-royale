@@ -1,9 +1,9 @@
 --[[
-	GlowDim (shared, pure) -- one arena-agnostic knob for softening decorative Neon.
+	GlowDim (shared, pure) -- softens a Neon effect's glow by a per-effect dim factor.
 	Roblox-free and lune-tested. Raises a base part Transparency toward 1 (Neon emits
-	softer the more transparent it is), so a single Config.ARENA_GLOW_DIM factor dims
-	all cosmetic dressing uniformly. Gameplay tells are built server-side and are never
-	routed through here, so they keep full brightness.
+	softer the more transparent it is); each visual effect passes its own
+	Config.GLOW_DIM_* factor so the whole world dims independently, effect by effect.
+	Default factors are 0 (no dim = original brightness).
 
 	Location: ReplicatedStorage/Shared/GlowDim (ModuleScript)
 --]]
