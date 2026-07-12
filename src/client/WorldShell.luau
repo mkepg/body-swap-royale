@@ -34,7 +34,7 @@ local function newFolder()
 	return f
 end
 
-local function glowOrb(size, color, parent)
+local function glowOrb(size, color, parent, dimFactor)
 	local p = Instance.new("Part")
 	p.Shape = Enum.PartType.Ball
 	p.Anchored = true
@@ -43,7 +43,7 @@ local function glowOrb(size, color, parent)
 	p.CanTouch = false
 	p.CastShadow = false
 	p.Material = Enum.Material.Neon
-	p.Transparency = GlowDim.apply(0, Config.ARENA_GLOW_DIM)
+	p.Transparency = GlowDim.apply(0, dimFactor)
 	p.Size = Vector3.new(size, size, size)
 	p.Color = color
 	p.Parent = parent
@@ -92,7 +92,7 @@ local function buildWisps(folder)
 		Config.WORLD_WISP_COUNT, #palette, Config.WORLD_WISP_SEED)
 	local wisps = {}
 	for _, w in ipairs(field) do
-		local orb = glowOrb(Config.WORLD_WISP_SIZE, palette[w.colorIndex], folder)
+		local orb = glowOrb(Config.WORLD_WISP_SIZE, palette[w.colorIndex], folder, Config.GLOW_DIM_WISPS)
 		orb.Position = Vector3.new(w.x, w.y, w.z)
 		wisps[#wisps + 1] = { part = orb, baseX = w.x, baseY = w.y, baseZ = w.z, phase = (w.x + w.z) }
 	end
@@ -124,7 +124,7 @@ local function buildAurora(folder)
 	auroraPart.Size = Config.WORLD_AURORA_SIZE
 	auroraPart.Position = Vector3.new(0, Config.WORLD_AURORA_Y, 0)
 	auroraPart.Color = Config.WORLD_AURORA_BASE_COLOR
-	auroraPart.Transparency = GlowDim.apply(Config.WORLD_AURORA_BASE_TRANSPARENCY, Config.ARENA_GLOW_DIM)
+	auroraPart.Transparency = GlowDim.apply(Config.WORLD_AURORA_BASE_TRANSPARENCY, Config.GLOW_DIM_AURORA)
 	auroraPart.Parent = folder
 end
 
@@ -134,10 +134,10 @@ local function flareAurora()
 	local token = {}
 	flareToken = token
 	auroraPart.Color = Config.SOUL_PALETTE[math.random(1, #Config.SOUL_PALETTE)]
-	auroraPart.Transparency = GlowDim.apply(Config.WORLD_AURORA_FLARE_TRANSPARENCY, Config.ARENA_GLOW_DIM)
+	auroraPart.Transparency = GlowDim.apply(Config.WORLD_AURORA_FLARE_TRANSPARENCY, Config.GLOW_DIM_AURORA)
 	local tw = TweenService:Create(auroraPart,
 		TweenInfo.new(Config.WORLD_AURORA_FLARE_SECONDS, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-		{ Transparency = GlowDim.apply(Config.WORLD_AURORA_BASE_TRANSPARENCY, Config.ARENA_GLOW_DIM) })
+		{ Transparency = GlowDim.apply(Config.WORLD_AURORA_BASE_TRANSPARENCY, Config.GLOW_DIM_AURORA) })
 	tw:Play()
 	task.delay(Config.WORLD_AURORA_FLARE_SECONDS, function()
 		if flareToken == token then flareToken = nil end
@@ -150,7 +150,7 @@ local function buildCrowd(folder)
 	local pts = WorldLayout.ring(0, 0, Config.WORLD_CROWD_RADIUS, Config.WORLD_CROWD_COUNT)
 	for i, pt in ipairs(pts) do
 		local color = palette[WorldLayout.paletteIndex(i, #palette)]
-		local orb = glowOrb(Config.WORLD_CROWD_ORB_SIZE, color, folder)
+		local orb = glowOrb(Config.WORLD_CROWD_ORB_SIZE, color, folder, Config.GLOW_DIM_CROWD)
 		orb.Position = Vector3.new(pt.x, Config.WORLD_CROWD_Y, pt.z)
 		crowd[#crowd + 1] = {
 			part = orb,
