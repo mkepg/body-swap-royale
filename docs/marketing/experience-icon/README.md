@@ -1,21 +1,22 @@
 # Experience Icon — Working Folder
 
 Production kit for the Roblox Experience Icon.
-Spec: `docs/superpowers/specs/2026-07-10-experience-icon-design.md`
+Concept spec: `docs/superpowers/specs/2026-07-12-experience-icon-swap-concept-design.md`
+(supersedes the 2026-07-10 possession concept). Process/palette/checklist history: the 2026-07-10 spec.
 
 ## Layout
 
-- `prompts.md` — master prompt (full + condensed) + variants V1–V4 + failure fixes
-- `candidates/` — EVERY generated image, named `{tool}-{variant}-{roll}.png`
-  (`tool` ∈ `bing` | `gemini`; `variant` ∈ `master` | `v1`..`v4` | `r1` | `r2`
-  for refinement rounds; `roll` = 1, 2, 3…)
+- `prompts.md` — Gemini-only "Swap Arrows" kit: Master + variants V1–V4 + failure fixes F1–F7
+- `candidates/` — EVERY generated image, named `gemini-{variant}-{roll}.png`
+  (`variant` ∈ `swap` (master) | `v1`..`v4` | `r1` | `r2` for refinement rounds;
+  `roll` = 1, 2, 3…). Earlier `bing-*` / `master*` files are historical.
 - `final/icon-512.png` — the shipped asset; the repo copy is the source of truth
 
-## Workflow (spec §7)
+## Workflow
 
-1. **Generate (user):** run master + V1–V4 in both Bing Image Creator and
-   Gemini (≥10 images). Save everything to `candidates/`.
-2. **Review (Claude):** every candidate scored against the spec §8 checklist;
+1. **Generate (user):** upload `reference/ref-avatar.png` to Gemini and run
+   Master + V1–V4 (≥10 images). Save everything to `candidates/`.
+2. **Review (Claude):** every candidate scored against the concept-spec §3 checklist;
    3-size gallery (512/128/64 px) pushed to the visual companion; user picks
    the winner or winning traits.
 3. **Refine (max 2 rounds):** merged-traits prompt (`r1`, then `r2` at most),
