@@ -327,11 +327,14 @@ try {
     $o = [System.Drawing.Bitmap]::FromFile($out)
     try {
         if ($o.Width -ne 1920 -or $o.Height -ne 1080) { throw "FAIL: got $($o.Width)x$($o.Height)" }
-        # sample a row inside the caption band (~92% down): expect at least one near-white or gold pixel from text
-        $y = [int](1080 * 0.92); $found = $false
-        for ($x = 0; $x -lt 1920; $x += 3) {
-            $p = $o.GetPixel($x, $y)
-            if (($p.R -gt 200 -and $p.G -gt 200 -and $p.B -gt 200) -or ($p.R -gt 220 -and $p.G -gt 150 -and $p.B -lt 120)) { $found = $true; break }
+        # scan the caption-band region (~83%-93% down) for near-white or gold text pixels.
+        # Scanning a row range (not a single row) avoids landing in a gap between glyphs.
+        $found = $false
+        for ($y = [int](1080 * 0.83); $y -lt [int](1080 * 0.93) -and -not $found; $y += 4) {
+            for ($x = 0; $x -lt 1920; $x += 3) {
+                $p = $o.GetPixel($x, $y)
+                if (($p.R -gt 200 -and $p.G -gt 200 -and $p.B -gt 200) -or ($p.R -gt 220 -and $p.G -gt 150 -and $p.B -lt 120)) { $found = $true; break }
+            }
         }
         if (-not $found) { throw "FAIL: no caption text pixels found in band" }
     } finally { $o.Dispose() }
