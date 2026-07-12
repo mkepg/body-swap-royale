@@ -72,6 +72,19 @@ regression unless deliberately tuned). This adds server-file edits
 
 The old single `Config.ARENA_GLOW_DIM` is REMOVED.
 
+### Addendum 2026-07-12c — per-arena edge-trim border
+
+The circular play-area "border" is the `ArenaDressing` edge-trim ring
+(`buildFloorTrim`), built for EVERY arena through one shared, arena-agnostic path
+(it loops `ArenaDescriptor.all()`). Initially both arenas' borders shared
+`GLOW_DIM_HEX_TRIM`, so the sweeper border had no dedicated knob. Fix: each arena
+carries its own border dim on its descriptor as `trimDim`
+(hex → `GLOW_DIM_HEX_TRIM`, sweeper → new `GLOW_DIM_SWEEP_TRIM`), and
+`buildFloorTrim` applies `GlowDim.apply(0, desc.trimDim)`. `ArenaDescriptor.validate`
+now asserts `trimDim` is a number, so a future arena must supply one (fail-loud).
+This keeps `ArenaDressing` arena-agnostic (no per-arena branching) while giving each
+arena an independent border knob. Total knobs: 16.
+
 ---
 
 ## Part 1 — Soul-halo toggle

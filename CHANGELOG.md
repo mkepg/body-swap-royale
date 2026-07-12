@@ -7,12 +7,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [2026-07-12]
 
 ### Added
-- **Per-effect cosmetic-glow dim + Soul-halo toggle.** 15 independent `Config.GLOW_DIM_*`
+- **Per-effect cosmetic-glow dim + Soul-halo toggle.** 16 independent `Config.GLOW_DIM_*`
   knobs each soften ONE visual effect via the pure `src/shared/GlowDim.luau`
   (`tests/glow_dim.spec.luau`): sky wisps/aurora/crowd, lobby rings + spectator orbs,
-  hex floor trim, sweeper wake/chase/rotor/shaft/lens/rim/dormant, plus the two
-  server-side gameplay tells (sweeper kill tells; hex tile warning, which darkens the
-  warning color rather than fading it). ALL default `0.0` (no dim = original brightness),
+  the per-arena circular play-area edge-trim borders (hex + sweeper, each carried on
+  its `ArenaDescriptor` as `trimDim` so `ArenaDressing` stays arena-agnostic), sweeper
+  wake/chase/rotor/shaft/lens/rim/dormant, plus the two server-side gameplay tells
+  (sweeper kill tells; hex tile warning, which darkens the warning color rather than
+  fading it). ALL default `0.0` (no dim = original brightness),
   so the world ships unchanged and each effect is tuned up independently; the two tell
   knobs default `0.0` (full bright) so readability/fairness are unaffected unless
   deliberately tuned. `Config.SOUL_HALO_ENABLED` (default true) gates the over-head Soul
