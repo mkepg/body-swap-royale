@@ -40,6 +40,7 @@ function ArenaDescriptor.hex()
 		depth = Config.HEX_FLOOR_GAP * (Config.HEX_FLOOR_COUNT - 1),
 		accent = Config.HEX_FLOOR_COLORS[1],
 		levels = levels,
+		trimDim = Config.GLOW_DIM_HEX_TRIM, -- per-arena dim for this arena's edge-trim border
 	}
 end
 
@@ -52,6 +53,7 @@ function ArenaDescriptor.sweeper()
 		depth = Config.SWEEP_SURFACE_Y - Config.SWEEP_VOID_Y,
 		accent = Config.SWEEP_ACCENT,
 		levels = { { y = Config.SWEEP_SURFACE_Y, color = Config.SWEEP_ACCENT } },
+		trimDim = Config.GLOW_DIM_SWEEP_TRIM, -- per-arena dim for this arena's edge-trim border
 	}
 end
 
@@ -69,6 +71,7 @@ function ArenaDescriptor.validate(desc)
 	assert(typeof(desc.accent) == "Color3", "ArenaDescriptor.accent must be a Color3")
 	assert(type(desc.levels) == "table" and #desc.levels > 0,
 		"ArenaDescriptor.levels must be a non-empty array")
+	assert(type(desc.trimDim) == "number", "ArenaDescriptor.trimDim must be a number")
 	for i, lv in ipairs(desc.levels) do
 		assert(type(lv.y) == "number", "ArenaDescriptor.levels[" .. i .. "].y must be a number")
 		assert(typeof(lv.color) == "Color3", "ArenaDescriptor.levels[" .. i .. "].color must be a Color3")

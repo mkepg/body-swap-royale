@@ -32,6 +32,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local SweeperModel = require(ReplicatedStorage.Shared.SweeperModel)
 local ArenaDescriptor = require(ReplicatedStorage.Shared.ArenaDescriptor)
 local WorldLayout = require(ReplicatedStorage.Shared.WorldLayout)
+local GlowDim = require(ReplicatedStorage.Shared.GlowDim)
 
 local SweeperHazard = {}
 SweeperHazard.id = "sweeper"
@@ -199,6 +200,7 @@ local function buildBeamAssembly(folder, hubPart, beam)
 		blade.CFrame = root.CFrame * CFrame.new(0, -(thick / 2 + 0.175), 0)
 		blade.Color = color
 		blade.Material = Enum.Material.Neon
+		blade.Transparency = GlowDim.apply(0, Config.GLOW_DIM_SWEEP_KILL_TELLS)
 		weldOn(blade)
 
 		-- End-emitter orb (replaces the old cap).
@@ -209,6 +211,7 @@ local function buildBeamAssembly(folder, hubPart, beam)
 		emitter.CFrame = root.CFrame * CFrame.new(span / 2, 0, 0)
 		emitter.Color = color
 		emitter.Material = Enum.Material.Neon
+		emitter.Transparency = GlowDim.apply(0, Config.GLOW_DIM_SWEEP_KILL_TELLS)
 		weldOn(emitter)
 	else
 		-- Crimson Neon underglow strip on the BOTTOM face (the energy edge: stay
@@ -219,6 +222,7 @@ local function buildBeamAssembly(folder, hubPart, beam)
 		underglow.CFrame = root.CFrame * CFrame.new(0, -(thick / 2 + 0.15), 0)
 		underglow.Color = color
 		underglow.Material = Enum.Material.Neon
+		underglow.Transparency = GlowDim.apply(0, Config.GLOW_DIM_SWEEP_KILL_TELLS)
 		weldOn(underglow)
 
 		-- Two crimson end lamps at the outer tip, side-by-side.
@@ -230,6 +234,7 @@ local function buildBeamAssembly(folder, hubPart, beam)
 			lamp.CFrame = root.CFrame * CFrame.new(span / 2, 0, zOffset)
 			lamp.Color = color
 			lamp.Material = Enum.Material.Neon
+			lamp.Transparency = GlowDim.apply(0, Config.GLOW_DIM_SWEEP_KILL_TELLS)
 			weldOn(lamp)
 		end
 	end
