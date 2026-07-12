@@ -1,5 +1,11 @@
 # Experience Icon — Session Resume + master4-ref Plan (self-contained)
 
+> **HISTORICAL (superseded 2026-07-12).** The single-character "Possession Close-Up"
+> below shipped as `candidates/gemini-master8-ref-1.png` but tested as not
+> communicating the game. The active concept is now **"Swap Arrows"** — see
+> `docs/superpowers/specs/2026-07-12-experience-icon-swap-concept-design.md` and
+> `prompts.md`. This file is kept for its process notes and reference-image recipe.
+
 **Purpose:** Rebuild and continue the Experience Icon workflow from scratch in a
 fresh session, with the full history of what failed and why, and a concrete plan
 for the next (not-yet-created) iteration, **master4-ref**. This document is

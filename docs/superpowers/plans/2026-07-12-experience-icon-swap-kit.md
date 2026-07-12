@@ -1,3 +1,41 @@
+# Experience Icon "Swap Arrows" Kit Refresh — Implementation Plan
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** Refresh the Experience Icon prompt kit so it produces the approved "Swap Arrows" concept (two Roblox avatars + a glowing cyan soul-energy ⇄ swap symbol), Gemini-only and reference-guided, replacing the stale single-character / Bing-era kit.
+
+**Architecture:** Documentation-only change to `docs/marketing/experience-icon/` and one supersede pointer. No Luau, no runtime code. "Tests" are grep-based consistency checks (no stale Bing/cream text remains; the new concept vocabulary is present). The actual image generation stays human-in-the-loop in Gemini and is NOT part of this plan.
+
+**Tech Stack:** Markdown docs. Verification via `Grep`. Git for commits (stage ONLY the listed files — never `git add -A`; `src/shared/Config.luau` carries uncommitted dev-flips that must never be committed).
+
+**Spec:** `docs/superpowers/specs/2026-07-12-experience-icon-swap-concept-design.md`
+
+---
+
+## Pre-flight (do once before Task 1)
+
+- [ ] **Branch off main** (repo default branch is `main`; do not commit doc work directly to it):
+
+```bash
+git checkout -b feat/experience-icon-swap-kit
+```
+
+## File Structure
+
+- **Rewrite:** `docs/marketing/experience-icon/prompts.md` — becomes the Gemini-only Swap Arrows kit (Master + V1–V4 + F1–F7). All Bing "Condensed" blocks and the Bing char-count maintenance section are removed.
+- **Modify:** `docs/marketing/experience-icon/README.md` — concept, layout, workflow updated to Swap Arrows / Gemini-only / reference-guided; spec pointer updated.
+- **Modify:** `docs/marketing/experience-icon/RESUME-master4-ref.md` — add a top banner marking it historical, superseded by the Swap Arrows concept.
+
+---
+
+## Task 1: Rewrite `prompts.md` as the Swap Arrows kit
+
+**Files:**
+- Rewrite: `docs/marketing/experience-icon/prompts.md`
+
+- [ ] **Step 1: Replace the ENTIRE file contents with the following**
+
+````markdown
 # Experience Icon — Prompt Kit ("Swap Arrows")
 
 **Concept:** two blocky Roblox avatars + a glowing cyan soul-energy **⇄** swap
@@ -9,7 +47,6 @@ upload `reference/ref-avatar.png` (grey R15 avatar) with EVERY prompt — it gui
 the block proportions/silhouette for BOTH avatars. Generate square 1:1. Save EVERY
 output — good and bad — to `candidates/` as `gemini-{variant}-{roll}.png`
 (e.g. `gemini-swap-1.png`, `gemini-v2-1.png`). Bad outputs are data.
-The Master prompt's variant token is `swap` (save Master rolls as `gemini-swap-1.png`, `-2`, …); the four variants use `v1`–`v4`; refinement rounds use `r1`/`r2`.
 
 Each prompt below is complete and self-contained — upload the reference, copy the
 whole block, paste. Variants change the Master on exactly one axis (named in the
@@ -97,3 +134,139 @@ Friendly, comedic, bright, and colorful — suitable for young children; playful
 ```text
 Perfectly square 1:1 composition, full-bleed to all four edges, no frame, no border, no letterboxing.
 ```
+````
+
+- [ ] **Step 2: Verify no stale content remains and new vocabulary is present**
+
+Run (via the Grep tool or ripgrep):
+- `Grep pattern="[Bb]ing|[Cc]ondensed|cream-tan|480" path="docs/marketing/experience-icon/prompts.md"` → Expected: **no matches** (all Bing/cream/char-budget content gone).
+- `Grep pattern="Swap symbol|PINK hair|reference image" path="docs/marketing/experience-icon/prompts.md"` → Expected: **multiple matches** (new concept present).
+- `Grep pattern="### V1|### V2|### V3|### V4|### F1|### F7" path="docs/marketing/experience-icon/prompts.md"` → Expected: all present.
+
+- [ ] **Step 3: Commit (stage ONLY this file)**
+
+```bash
+git add docs/marketing/experience-icon/prompts.md
+git commit -m "docs(icon): rewrite prompt kit for Swap Arrows concept (Gemini-only)"
+```
+
+---
+
+## Task 2: Update `README.md` for the new concept
+
+**Files:**
+- Modify: `docs/marketing/experience-icon/README.md`
+
+- [ ] **Step 1: Replace the top spec pointer**
+
+Change line 4 from:
+```
+Spec: `docs/superpowers/specs/2026-07-10-experience-icon-design.md`
+```
+to:
+```
+Concept spec: `docs/superpowers/specs/2026-07-12-experience-icon-swap-concept-design.md`
+(supersedes the 2026-07-10 possession concept). Process/palette/checklist history: the 2026-07-10 spec.
+```
+
+- [ ] **Step 2: Replace the `## Layout` bullet for `prompts.md`**
+
+Change:
+```
+- `prompts.md` — master prompt (full + condensed) + variants V1–V4 + failure fixes
+```
+to:
+```
+- `prompts.md` — Gemini-only "Swap Arrows" kit: Master + variants V1–V4 + failure fixes F1–F7
+```
+
+- [ ] **Step 3: Replace the `candidates/` bullet**
+
+Change:
+```
+- `candidates/` — EVERY generated image, named `{tool}-{variant}-{roll}.png`
+  (`tool` ∈ `bing` | `gemini`; `variant` ∈ `master` | `v1`..`v4` | `r1` | `r2`
+  for refinement rounds; `roll` = 1, 2, 3…)
+```
+to:
+```
+- `candidates/` — EVERY generated image, named `gemini-{variant}-{roll}.png`
+  (`variant` ∈ `swap` (master) | `v1`..`v4` | `r1` | `r2` for refinement rounds;
+  `roll` = 1, 2, 3…). Earlier `bing-*` / `master*` files are historical.
+```
+
+- [ ] **Step 4: Replace Workflow step 1 (Bing-era) with a Gemini-only version**
+
+Change:
+```
+1. **Generate (user):** run master + V1–V4 in both Bing Image Creator and
+   Gemini (≥10 images). Save everything to `candidates/`.
+```
+to:
+```
+1. **Generate (user):** upload `reference/ref-avatar.png` to Gemini and run
+   Master + V1–V4 (≥10 images). Save everything to `candidates/`.
+```
+
+- [ ] **Step 5: Update the spec reference in the Workflow heading**
+
+Change `## Workflow (spec §7)` to `## Workflow` and change the Review-step reference
+`against the spec §8 checklist` to `against the concept-spec §3 checklist`.
+
+- [ ] **Step 6: Verify**
+
+- `Grep pattern="[Bb]ing|condensed" path="docs/marketing/experience-icon/README.md"` → Expected: **no matches**.
+- `Grep pattern="Swap Arrows|ref-avatar" path="docs/marketing/experience-icon/README.md"` → Expected: matches.
+
+- [ ] **Step 7: Commit (stage ONLY this file)**
+
+```bash
+git add docs/marketing/experience-icon/README.md
+git commit -m "docs(icon): update README for Swap Arrows / Gemini-only workflow"
+```
+
+---
+
+## Task 3: Mark the master4-ref resume doc as superseded
+
+**Files:**
+- Modify: `docs/marketing/experience-icon/RESUME-master4-ref.md`
+
+- [ ] **Step 1: Insert a banner as the new second line (immediately after the H1 title line)**
+
+Add this block right after the first `#` heading line:
+```
+> **HISTORICAL (superseded 2026-07-12).** The single-character "Possession Close-Up"
+> below shipped as `candidates/gemini-master8-ref-1.png` but tested as not
+> communicating the game. The active concept is now **"Swap Arrows"** — see
+> `docs/superpowers/specs/2026-07-12-experience-icon-swap-concept-design.md` and
+> `prompts.md`. This file is kept for its process notes and reference-image recipe.
+```
+
+- [ ] **Step 2: Verify**
+
+- `Grep pattern="HISTORICAL \(superseded" path="docs/marketing/experience-icon/RESUME-master4-ref.md"` → Expected: 1 match near the top.
+
+- [ ] **Step 3: Commit (stage ONLY this file)**
+
+```bash
+git add docs/marketing/experience-icon/RESUME-master4-ref.md
+git commit -m "docs(icon): mark master4-ref resume as superseded by Swap Arrows"
+```
+
+---
+
+## Done / Handoff (human-in-the-loop, NOT an agent task)
+
+After the three tasks, the kit is ready. The user then, outside this plan:
+1. Uploads `reference/ref-avatar.png` to Gemini and rolls the Master + V1–V4 → `candidates/gemini-swap-*.png`.
+2. Claude scores them vs the spec §3 checklist and verifies the 64px read (PowerShell + System.Drawing downscale — there is no working ImageMagick; `convert` is Windows `convert.exe`).
+3. Pick a winner → ≤2 refine rounds → `finalize-icon.ps1` + bottom-right ✦ watermark inpaint → `final/icon-512.png` → upload via Creator Dashboard.
+
+---
+
+## Self-Review
+
+- **Spec coverage:** Task 1 implements the concept (§2 Master, §2.1 two characters incl. female Player 2, §2.2 glyph, §2.3 palette) and the acceptance vocabulary; F1–F7 map to spec §5 risks (merge, off-model, glyph-as-UI) plus standard fixes. Task 2/3 implement §4 (Gemini-only, reference-guided, kit refresh, provisional-asset note via README/resume). No spec section left unimplemented.
+- **Placeholder scan:** every prompt is written in full; no TBD/TODO; verification uses concrete grep patterns with expected results.
+- **Consistency:** character vocabulary is identical across Master and all four variants (orange-hair boy + blue hoodie; pink-ponytail girl + teal hoodie; cyan ⇄ soul symbol); naming convention `gemini-{variant}-{roll}` is consistent between prompts.md and README. Commit steps stage only named files (never `git add -A`), protecting the `Config.luau` dev-flips.
