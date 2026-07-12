@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Body Swap Royale — Literal Swap Variations</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Titan+One&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --amber:#E8703A; --amber-lt:#FFB84D; --cyan:#6FE3FF; --cyan-bright:#B8F4FF;
+  --paper:#FFF6EA; --card:#20143f; --card-2:#2b1a56; --line:rgba(255,255,255,.10);
+}
+*{box-sizing:border-box} html,body{margin:0}
+body{
+  font-family:'DM Sans',sans-serif; color:#F3ECFF;
+  background:radial-gradient(120% 90% at 50% -10%, #4a2f8a 0%, #2a1a5e 42%, #170d38 100%);
+  min-height:100vh; padding:0 0 90px; overflow-x:hidden; -webkit-font-smoothing:antialiased;
+}
+body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:9;opacity:.05;mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");}
+.wrap{max-width:1160px;margin:0 auto;padding:0 26px}
+header{padding:60px 0 10px;text-align:center}
+.kicker{font-family:'Space Mono',monospace;letter-spacing:.34em;text-transform:uppercase;font-size:12px;color:var(--cyan);opacity:.85;margin:0 0 16px}
+h1{font-family:'Titan One',cursive;font-weight:400;line-height:.94;font-size:clamp(34px,6vw,64px);margin:0;color:var(--paper);
+  text-shadow:0 3px 0 #b64a1e,0 6px 0 rgba(0,0,0,.25),0 20px 38px rgba(0,0,0,.5)}
+h1 .c{color:var(--cyan);text-shadow:0 3px 0 #1c6f86,0 6px 22px rgba(111,227,255,.6)}
+.lede{max-width:720px;margin:20px auto 0;font-size:16.5px;line-height:1.6;color:#D9CEF3}
+.lede b{color:#fff}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:26px;margin-top:46px}
+.concept{background:linear-gradient(160deg,var(--card-2),var(--card));border:1px solid var(--line);border-radius:24px;padding:24px;
+  box-shadow:0 30px 60px -30px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.06);
+  opacity:0;transform:translateY(24px);animation:rise .7s cubic-bezier(.2,.7,.2,1) forwards;position:relative}
+.concept:nth-child(1){animation-delay:.05s}.concept:nth-child(2){animation-delay:.16s}
+.concept:nth-child(3){animation-delay:.27s}.concept:nth-child(4){animation-delay:.38s}
+@keyframes rise{to{opacity:1;transform:none}}
+.concept.sel{border-color:var(--cyan);box-shadow:0 0 0 2px var(--cyan),0 30px 60px -24px rgba(111,227,255,.5)}
+.art{position:relative;margin-bottom:18px}
+.big{width:100%;aspect-ratio:1;border-radius:18px;display:block;box-shadow:0 16px 34px -14px rgba(0,0,0,.7),inset 0 0 0 1px rgba(255,255,255,.08)}
+.chip{position:absolute;right:-10px;bottom:-10px;width:64px;height:64px;border-radius:13px;border:2px solid rgba(255,255,255,.85);box-shadow:0 8px 20px rgba(0,0,0,.6)}
+.chip-lbl{position:absolute;right:-10px;bottom:-30px;font-family:'Space Mono',monospace;font-size:9.5px;letter-spacing:.14em;color:#B9A9D8;width:64px;text-align:center}
+.num{font-family:'Space Mono',monospace;color:var(--cyan);font-size:12px;letter-spacing:.2em}
+h2{font-family:'Titan One',cursive;font-weight:400;font-size:25px;margin:5px 0 2px;color:var(--paper)}
+.tag{font-family:'Space Mono',monospace;font-size:10.5px;color:var(--amber-lt);text-transform:uppercase;letter-spacing:.15em}
+.desc{font-size:14.5px;line-height:1.55;color:#DDD3F2;margin:12px 0 14px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.badge{font-family:'Space Mono',monospace;font-size:11px;padding:6px 11px;border-radius:999px;letter-spacing:.06em}
+.b64{background:rgba(111,227,255,.12);color:var(--cyan);border:1px solid rgba(111,227,255,.35)}
+.brec{background:var(--amber-lt);color:#3a1e08;font-weight:700}
+.pick{margin-left:auto;font-family:'Space Mono',monospace;font-size:11.5px;cursor:pointer;border:1px dashed rgba(255,255,255,.35);padding:7px 13px;border-radius:999px;color:#eee;background:transparent;transition:.18s}
+.pick:hover{background:rgba(111,227,255,.14);border-color:var(--cyan);color:#fff}
+footer{margin-top:40px;text-align:center;color:#C7BBE6;font-size:15px;line-height:1.6}
+footer .rec{font-family:'Titan One',cursive;color:var(--paper);font-size:19px;display:block;margin-bottom:8px}
+.selnote{margin-top:14px;font-family:'Space Mono',monospace;font-size:13px;color:var(--cyan);min-height:20px}
+@media(max-width:820px){.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+<defs>
+  <filter id="glow" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  <linearGradient id="skinW" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFF7EC"/><stop offset="1" stop-color="#EBD4B4"/></linearGradient>
+  <linearGradient id="skinC" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#EFF3FF"/><stop offset="1" stop-color="#C6D2EC"/></linearGradient>
+  <linearGradient id="hoodB" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3557E6"/><stop offset="1" stop-color="#213fb0"/></linearGradient>
+  <linearGradient id="hoodT" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#17b6ad"/><stop offset="1" stop-color="#0d7d78"/></linearGradient>
+  <linearGradient id="tail" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#6FE3FF" stop-opacity="0"/><stop offset="1" stop-color="#B8F4FF"/></linearGradient>
+  <radialGradient id="flash" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#fff"/><stop offset="35%" stop-color="#B8F4FF"/><stop offset="100%" stop-color="#6FE3FF" stop-opacity="0"/></radialGradient>
+</defs>
+
+<!-- ===== 1 · SWAP ARROWS ===== -->
+<symbol id="v1" viewBox="0 0 400 400">
+  <defs><radialGradient id="bgv1" cx="50%" cy="30%" r="95%"><stop offset="0" stop-color="#573a9e"/><stop offset="55%" stop-color="#321e6c"/><stop offset="100%" stop-color="#e8703a"/></radialGradient></defs>
+  <rect width="400" height="400" fill="url(#bgv1)"/>
+  <ellipse cx="200" cy="372" rx="170" ry="22" fill="#000" opacity=".26"/>
+  <!-- left char -->
+  <rect x="24" y="288" width="150" height="104" rx="26" fill="url(#hoodB)"/>
+  <rect x="52" y="196" width="96" height="104" rx="24" fill="url(#skinW)"/>
+  <path d="M52,206 L66,166 L88,200 L108,160 L130,200 L148,168 L148,214 L52,214Z" fill="#F4741E"/>
+  <circle cx="80" cy="248" r="6" fill="#2b2233"/><circle cx="120" cy="248" r="6" fill="#2b2233"/>
+  <ellipse cx="100" cy="278" rx="9" ry="6" fill="#7a2e3f"/>
+  <!-- right char -->
+  <rect x="226" y="288" width="150" height="104" rx="26" fill="url(#hoodT)"/>
+  <rect x="252" y="196" width="96" height="104" rx="24" fill="url(#skinC)"/>
+  <path d="M252,214 L268,166 L290,200 L312,160 L334,200 L348,170 L348,214Z" fill="#20b7b0"/>
+  <circle cx="280" cy="248" r="6" fill="#2b2233"/><circle cx="320" cy="248" r="6" fill="#2b2233"/>
+  <ellipse cx="300" cy="278" rx="9" ry="6" fill="#7a2e3f"/>
+  <!-- swap arrows glyph -->
+  <g filter="url(#glow)">
+    <path d="M150,120 Q200,92 250,120" fill="none" stroke="#6FE3FF" stroke-width="13" stroke-linecap="round"/>
+    <polygon points="250,104 272,120 250,136" fill="#6FE3FF"/>
+    <path d="M250,168 Q200,196 150,168" fill="none" stroke="#B8F4FF" stroke-width="13" stroke-linecap="round"/>
+    <polygon points="150,152 128,168 150,184" fill="#B8F4FF"/>
+  </g>
+</symbol>
+
+<!-- ===== 2 · SOUL EJECT ===== -->
+<symbol id="v2" viewBox="0 0 400 400">
+  <defs><radialGradient id="bgv2" cx="50%" cy="28%" r="95%"><stop offset="0" stop-color="#553a9c"/><stop offset="55%" stop-color="#301d6a"/><stop offset="100%" stop-color="#e8703a"/></radialGradient></defs>
+  <rect width="400" height="400" fill="url(#bgv2)"/>
+  <ellipse cx="200" cy="374" rx="170" ry="20" fill="#000" opacity=".26"/>
+  <!-- bodies (vacated, wide eyes) -->
+  <rect x="30" y="300" width="140" height="92" rx="24" fill="url(#hoodB)"/>
+  <rect x="56" y="214" width="90" height="98" rx="22" fill="url(#skinW)"/>
+  <ellipse cx="82" cy="262" rx="12" ry="15" fill="#fff"/><circle cx="82" cy="266" r="5" fill="#2b2233"/>
+  <ellipse cx="120" cy="262" rx="12" ry="15" fill="#fff"/><circle cx="120" cy="266" r="5" fill="#2b2233"/>
+  <ellipse cx="101" cy="292" rx="8" ry="10" fill="#7a2e3f"/>
+  <rect x="230" y="300" width="140" height="92" rx="24" fill="url(#hoodT)"/>
+  <rect x="254" y="214" width="90" height="98" rx="22" fill="url(#skinC)"/>
+  <ellipse cx="280" cy="262" rx="12" ry="15" fill="#fff"/><circle cx="280" cy="266" r="5" fill="#2b2233"/>
+  <ellipse cx="318" cy="262" rx="12" ry="15" fill="#fff"/><circle cx="318" cy="266" r="5" fill="#2b2233"/>
+  <ellipse cx="299" cy="292" rx="8" ry="10" fill="#7a2e3f"/>
+  <!-- souls ejecting & crossing -->
+  <g filter="url(#glow)">
+    <path d="M101,208 C120,120 210,120 250,150" fill="none" stroke="url(#tail)" stroke-width="8" stroke-linecap="round"/>
+    <path d="M299,208 C280,124 190,124 150,150" fill="none" stroke="url(#tail)" stroke-width="8" stroke-linecap="round" opacity=".85"/>
+  </g>
+  <circle cx="200" cy="112" r="46" fill="url(#flash)"/>
+  <!-- soul heads arriving over opposite bodies -->
+  <g><circle cx="250" cy="150" r="18" fill="#dffaff"/><path d="M243,148 q7,7 14,0" stroke="#2b6a78" stroke-width="2.6" fill="none"/><circle cx="245" cy="144" r="2.4" fill="#2b6a78"/><circle cx="255" cy="144" r="2.4" fill="#2b6a78"/></g>
+  <g><circle cx="150" cy="150" r="18" fill="#dffaff"/><path d="M143,148 q7,7 14,0" stroke="#2b6a78" stroke-width="2.6" fill="none"/><circle cx="145" cy="144" r="2.4" fill="#2b6a78"/><circle cx="155" cy="144" r="2.4" fill="#2b6a78"/></g>
+</symbol>
+
+<!-- ===== 3 · VS SPLIT ===== -->
+<symbol id="v3" viewBox="0 0 400 400">
+  <defs>
+    <linearGradient id="bgv3a" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6a3ea6"/><stop offset="1" stop-color="#2a1a5e"/></linearGradient>
+    <linearGradient id="bgv3b" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7a3a24"/><stop offset="1" stop-color="#e8703a"/></linearGradient>
+    <clipPath id="triA"><polygon points="0,0 400,0 0,400"/></clipPath>
+    <clipPath id="triB"><polygon points="400,0 400,400 0,400"/></clipPath>
+  </defs>
+  <g clip-path="url(#triA)"><rect width="400" height="400" fill="url(#bgv3a)"/></g>
+  <g clip-path="url(#triB)"><rect width="400" height="400" fill="url(#bgv3b)"/></g>
+  <!-- upper-left char -->
+  <rect x="46" y="64" width="88" height="96" rx="22" fill="url(#skinW)"/>
+  <path d="M46,80 L60,44 L80,74 L100,40 L120,74 L134,48 L134,88 L46,88Z" fill="#F4741E"/>
+  <circle cx="72" cy="112" r="6" fill="#2b2233"/><circle cx="110" cy="112" r="6" fill="#2b2233"/>
+  <ellipse cx="91" cy="140" rx="8" ry="6" fill="#7a2e3f"/>
+  <rect x="26" y="150" width="128" height="70" rx="22" fill="url(#hoodB)"/>
+  <!-- lower-right char -->
+  <rect x="266" y="240" width="88" height="96" rx="22" fill="url(#skinC)"/>
+  <path d="M266,256 L282,220 L302,250 L322,216 L342,250 L354,224 L354,264 L266,264Z" fill="#20b7b0"/>
+  <circle cx="292" cy="288" r="6" fill="#2b2233"/><circle cx="330" cy="288" r="6" fill="#2b2233"/>
+  <ellipse cx="311" cy="316" rx="8" ry="6" fill="#7a2e3f"/>
+  <rect x="246" y="326" width="128" height="70" rx="22" fill="url(#hoodT)"/>
+  <!-- diagonal swap bolt -->
+  <g filter="url(#glow)">
+    <path d="M330,70 L210,180 L250,196 L120,330" fill="none" stroke="#6FE3FF" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <circle cx="200" cy="200" r="40" fill="url(#flash)"/>
+</symbol>
+
+<!-- ===== 4 · FACE TRADE ===== -->
+<symbol id="v4" viewBox="0 0 400 400">
+  <defs><radialGradient id="bgv4" cx="50%" cy="30%" r="95%"><stop offset="0" stop-color="#573a9e"/><stop offset="55%" stop-color="#321e6c"/><stop offset="100%" stop-color="#e8703a"/></radialGradient></defs>
+  <rect width="400" height="400" fill="url(#bgv4)"/>
+  <ellipse cx="200" cy="374" rx="170" ry="20" fill="#000" opacity=".26"/>
+  <!-- two heads, faces blank/dim -->
+  <rect x="30" y="150" width="150" height="180" rx="34" fill="url(#skinW)"/>
+  <path d="M30,166 L48,120 L72,158 L96,116 L120,158 L146,120 L164,166 L164,176 L30,176Z" fill="#F4741E"/>
+  <ellipse cx="105" cy="240" rx="46" ry="40" fill="#000" opacity=".07"/>
+  <rect x="220" y="150" width="150" height="180" rx="34" fill="url(#skinC)"/>
+  <path d="M220,166 L238,120 L262,158 L286,116 L310,158 L336,120 L354,166 L354,176 L220,176Z" fill="#20b7b0"/>
+  <ellipse cx="295" cy="240" rx="46" ry="40" fill="#000" opacity=".07"/>
+  <!-- cyan beams -->
+  <g filter="url(#glow)">
+    <path d="M150,214 C190,180 210,180 250,214" fill="none" stroke="#6FE3FF" stroke-width="7" stroke-linecap="round"/>
+    <path d="M250,266 C210,300 190,300 150,266" fill="none" stroke="#B8F4FF" stroke-width="7" stroke-linecap="round"/>
+  </g>
+  <!-- face decals in transit (cyan-tinted) -->
+  <g transform="translate(214,196)"><ellipse cx="0" cy="0" rx="34" ry="30" fill="#dffaff" opacity=".92"/><circle cx="-11" cy="-3" r="6" fill="#2b6a78"/><circle cx="11" cy="-3" r="6" fill="#2b6a78"/><ellipse cx="0" cy="14" rx="7" ry="9" fill="#2b6a78"/></g>
+  <g transform="translate(186,284)"><ellipse cx="0" cy="0" rx="34" ry="30" fill="#dffaff" opacity=".92"/><path d="M-12,-4 q12,10 24,0" stroke="#2b6a78" stroke-width="3" fill="none"/><circle cx="-11" cy="-8" r="3" fill="#2b6a78"/><circle cx="11" cy="-8" r="3" fill="#2b6a78"/></g>
+</symbol>
+</svg>
+
+<div class="wrap">
+<header>
+  <p class="kicker">Concept B · Literal Swap — Variations</p>
+  <h1>Four Ways Two Players<br><span class="c">Swap Bodies</span></h1>
+  <p class="lede">You picked the literal, two-character direction — here are four distinct executions of it. Same palette &amp; chunky 3D style as our render; each shown large <b>and at true 64px</b>. Pick one (or mix), and I'll build it into the master prompt.</p>
+</header>
+
+<div class="grid">
+  <div class="concept" id="ARROWS">
+    <div class="art"><svg class="big" viewBox="0 0 400 400"><use href="#v1"/></svg><svg class="chip" viewBox="0 0 400 400"><use href="#v1"/></svg><div class="chip-lbl">64px</div></div>
+    <span class="num">VARIATION 1</span><h2>Swap Arrows</h2><span class="tag">Two chars · glowing ⇄ glyph</span>
+    <p class="desc">Two blocky players below, a bold glowing cyan <b>double-swap-arrow</b> between their heads. The ⇄ is a universal "exchange" symbol, so the swap reads instantly — even tiny. Cleanest mechanic-read of the four.</p>
+    <div class="row"><span class="badge b64">64px: strongest</span><span class="badge brec">Recommended</span><button class="pick" onclick="pick('ARROWS','Swap Arrows')">Pick ▸</button></div>
+  </div>
+
+  <div class="concept" id="EJECT">
+    <div class="art"><svg class="big" viewBox="0 0 400 400"><use href="#v2"/></svg><svg class="chip" viewBox="0 0 400 400"><use href="#v2"/></svg><div class="chip-lbl">64px</div></div>
+    <span class="num">VARIATION 2</span><h2>Soul Eject</h2><span class="tag">Souls leap out &amp; cross</span>
+    <p class="desc">Both players' cyan souls visibly <b>eject from their heads</b> and arc into the other's body, crossing at a bright flash. More visceral than abstract streaks — you feel the "yanked out of your body" moment. The two little soul faces carry the personality.</p>
+    <div class="row"><span class="badge b64">64px: good</span><button class="pick" onclick="pick('EJECT','Soul Eject')">Pick ▸</button></div>
+  </div>
+
+  <div class="concept" id="VS">
+    <div class="art"><svg class="big" viewBox="0 0 400 400"><use href="#v3"/></svg><svg class="chip" viewBox="0 0 400 400"><use href="#v3"/></svg><div class="chip-lbl">64px</div></div>
+    <span class="num">VARIATION 3</span><h2>VS Split</h2><span class="tag">Versus diagonal · royale energy</span>
+    <p class="desc">A diagonal "versus" split — one player top-left, one bottom-right — with a cyan <b>swap-bolt</b> ripping down the divide where their souls trade. Leans into the <i>royale</i> / last-one-standing competition, not just the swap.</p>
+    <div class="row"><span class="badge b64">64px: workable</span><button class="pick" onclick="pick('VS','VS Split')">Pick ▸</button></div>
+  </div>
+
+  <div class="concept" id="FACE">
+    <div class="art"><svg class="big" viewBox="0 0 400 400"><use href="#v4"/></svg><svg class="chip" viewBox="0 0 400 400"><use href="#v4"/></svg><div class="chip-lbl">64px</div></div>
+    <span class="num">VARIATION 4</span><h2>Face Trade</h2><span class="tag">Printed faces swap across</span>
+    <p class="desc">The two blocky heads have their <b>printed cartoon faces sliding across</b> on cyan beams — literally trading identities. Very Roblox (the decal face is the brand signature) and playful, though the floating faces are the busiest read up close.</p>
+    <div class="row"><span class="badge b64">64px: busiest</span><button class="pick" onclick="pick('FACE','Face Trade')">Pick ▸</button></div>
+  </div>
+</div>
+
+<footer>
+  <span class="rec">My lean: Variation 1 (Swap Arrows) — the ⇄ makes the swap unmistakable and it survives 64px best.</span>
+  Soul Eject is the most emotive; VS Split adds the royale/competition angle. Click one or tell me — we can also fuse (e.g. Swap Arrows + ejecting souls).
+  <div class="selnote" id="selnote"></div>
+</footer>
+</div>
+
+<script>
+function pick(id,name){document.querySelectorAll('.concept').forEach(c=>c.classList.remove('sel'));document.getElementById(id).classList.add('sel');
+document.getElementById('selnote').textContent='✓ Selected: '+name+'.  Tell Claude "let\'s go with '+name+'".';}
+</script>
+</body>
+</html>
