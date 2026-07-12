@@ -7,18 +7,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [2026-07-12]
 
 ### Added
-- **Global cosmetic-glow dim + Soul-halo toggle.** `Config.ARENA_GLOW_DIM` (default
-  0.4) softens ALL decorative Neon dressing to a dim LED level via the new pure
-  `src/shared/GlowDim.luau` (`tests/glow_dim.spec.luau`): hex floor edge-trim, lobby
-  energy rings + spectator orbs, Soul Sweeper wake/chase/rotor/shaft/lens accents, and
-  the sky wisps/aurora/crowd. Gameplay-critical tells (sweeper amber-blade/crimson kill
-  tells, hex tile warning colors -- built server-side) are untouched, so readability and
-  fairness are unchanged; arena-agnostic (a future arena inherits the dim by routing its
-  cosmetic Neon through `GlowDim.apply`). `Config.SOUL_HALO_ENABLED` (default true) gates
-  the over-head Soul identity halo for clean marketing screenshots. Verified: 26/26 lune
-  suites; Studio visual pass pending. See
+- **Per-effect cosmetic-glow dim + Soul-halo toggle.** 15 independent `Config.GLOW_DIM_*`
+  knobs each soften ONE visual effect via the pure `src/shared/GlowDim.luau`
+  (`tests/glow_dim.spec.luau`): sky wisps/aurora/crowd, lobby rings + spectator orbs,
+  hex floor trim, sweeper wake/chase/rotor/shaft/lens/rim/dormant, plus the two
+  server-side gameplay tells (sweeper kill tells; hex tile warning, which darkens the
+  warning color rather than fading it). ALL default `0.0` (no dim = original brightness),
+  so the world ships unchanged and each effect is tuned up independently; the two tell
+  knobs default `0.0` (full bright) so readability/fairness are unaffected unless
+  deliberately tuned. `Config.SOUL_HALO_ENABLED` (default true) gates the over-head Soul
+  identity halo for clean marketing screenshots. Verified: 26/26 lune suites; Studio
+  visual pass pending. See
   [spec](superpowers/specs/2026-07-12-arena-dim-soul-toggle-design.md) and
-  [plan](superpowers/plans/2026-07-12-arena-dim-soul-toggle.md).
+  [plan](superpowers/plans/2026-07-12b-per-effect-dim.md).
 
 ## [2026-07-10]
 
