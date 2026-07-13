@@ -2,9 +2,10 @@
 	SweeperHazard (server) -- the Soul Sweeper v2.3 touch-elimination arena behind
 	the ArenaHazard interface. One annulus platform (segmented tangent-box floor)
 	around a non-walkable hub pillar, with a fall-gap ring between hub and hole. Two
-	NON-COLLIDABLE machine-bar beams (low/high) -- dark-metal spine + class-colored
-	Neon energy edge (spec v2.3 §2-5) -- are unanchored welded assemblies driven by
-	HingeConstraint motors on the anchored hub axle (spec
+	NON-COLLIDABLE layered bars (low/high) -- each spine IS the emissive
+	class-colored Neon core, framed by dark structural rails top and bottom with a
+	rounded Neon tip cap (T4 glow-up, 2026-07-13 spec §4.1) -- are unanchored
+	welded assemblies driven by HingeConstraint motors on the anchored hub axle (spec
 	2026-07-09 v2.2 §2-4): the PHYSICS ENGINE still rotates them for a smooth,
 	desync-proof visual, but CanCollide = false means bodies pass through them
 	physically -- a beam TOUCH is not a contact, it is read off the same measured
@@ -139,9 +140,11 @@ local function beamBottom(class)
 	return Config.SWEEP_BEAM_HIGH_BOTTOM
 end
 
--- One machine-arm bar: a non-collidable root spine + welded "machine arm + energy
--- edge" dressing (spec v2.3 §2-5) + a hub collar, all rigidly welded (so they move
--- as one body), hinged to the anchored hub axle by a torque-capped motor. Every
+-- One layered bar (spec §4.1): a non-collidable root spine that IS the emissive
+-- class-colored Neon core, plus welded dressing -- dark structural rails framing
+-- the glow top and bottom, a rounded Neon tip cap, and a hub collar -- all rigidly
+-- welded (so they move as one body), hinged to the anchored hub axle by a
+-- torque-capped motor. Every
 -- part is CanCollide = false (spec v2.2 §2-4): the bar physically touches nothing,
 -- so no collision group is needed either -- a touch is read off the measured pose
 -- (SweeperHazard.step), not felt as a physics contact.
@@ -201,6 +204,8 @@ local function buildBeamAssembly(folder, hubPart, beam)
 	}) do
 		local rail = Instance.new("Part")
 		rail.Name = root.Name .. side.suffix
+		-- Z is 0.3 wider than the core so the rails overhang it laterally and the
+		-- shell reads as framing the glow from the side, not just capping it.
 		rail.Size = Vector3.new(railLen, RAIL_THICK, thick + 0.3)
 		rail.CFrame = root.CFrame * CFrame.new(-thick / 2, side.yOff, 0)
 		rail.Color = side.railColor
