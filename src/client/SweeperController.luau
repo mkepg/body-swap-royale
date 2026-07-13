@@ -52,6 +52,7 @@ local SEAM_IDLE_TRANSPARENCY = GlowDim.apply(0.35, Config.GLOW_DIM_SWEEP_SEAM)
 local SEAM_FLARE_TRANSPARENCY = GlowDim.apply(0, Config.GLOW_DIM_SWEEP_SEAM)
 local RIM_RING_TRANSPARENCY = GlowDim.apply(0, Config.GLOW_DIM_SWEEP_RIM_RING)
 local MOAT_TRANSPARENCY = GlowDim.apply(0.5, Config.GLOW_DIM_SWEEP_MOAT)
+local LANTERN_TRANSPARENCY = GlowDim.apply(0, Config.GLOW_DIM_SWEEP_LANTERN)
 local DORMANT_TRANSPARENCY = GlowDim.apply(Config.SWEEP_STANDBY_TRANSPARENCY, Config.GLOW_DIM_SWEEP_DORMANT)
 
 -- Seam flare fade-window width in RADIANS (fixed, not speed-scaled) -- the lit
@@ -209,7 +210,52 @@ function SweeperController.start()
 	end
 
 	----------------------------------------------------------------------------
-	-- 4. Under-structure: 4 angled struts + 1 lower ring of tangent bars (static,
+	-- 4. Hub stack (spec §4.2): flared skirt into the moat, stacked drums with
+	--    a shadow groove, high-bar ledge, GLASS-encased amber lantern core with
+	--    a PointLight, bezel rings, rounded cap. Replaces the visual role of the
+	--    retired rotor rings / light shaft / spotlight fixtures. All
+	--    non-collidable anchored cosmetics; the server's collidable r=6 pillar
+	--    and the beam motor axle are untouched.
+	----------------------------------------------------------------------------
+	local lanternCore, lanternLight
+	do
+		local function cyl(name, radius, yBottom, yTop, cylColor, material, transparency)
+			local p = newPart(folder, name, Vector3.new(yTop - yBottom, radius * 2, radius * 2),
+				CFrame.new(c.X, surfaceY + (yBottom + yTop) / 2, c.Z) * CFrame.Angles(0, 0, math.rad(90)),
+				cylColor, material, transparency)
+			p.Shape = Enum.PartType.Cylinder
+			return counted(p)
+		end
+		local grooveColor = Color3.fromRGB(10, 13, 30)
+		-- Skirt: flares down into the fall-gap; max radius 8.5 < HOLE_RADIUS 12,
+		-- so the moat stays open (and lethal). Non-collidable like everything here.
+		cyl("HubSkirt1", 8.5, -2.5, -0.8, Config.SWEEP_RAIL_COLOR, Enum.Material.Metal, 0)
+		cyl("HubSkirt2", 7.6, -0.8, 0.2, Config.SWEEP_RAIL_COLOR, Enum.Material.Metal, 0)
+		-- Drums hug the collidable pillar (visual overhang 0.3, cosmetic-only).
+		cyl("HubDrum1", 6.3, 0.2, 3.3, Config.SWEEP_PLATFORM_COLOR, Enum.Material.Metal, 0)
+		cyl("HubGroove", 5.95, 3.3, 3.5, grooveColor, Enum.Material.SmoothPlastic, 0)
+		cyl("HubDrum2", 6.15, 3.5, 6.8, Config.SWEEP_PLATFORM_COLOR, Enum.Material.Metal, 0)
+		-- Ledge sits ABOVE the high-bar collar's sweep (collar top ~ y 9.0).
+		cyl("HubLedge", 7.2, 9.3, 9.7, Config.SWEEP_RAIL_COLOR, Enum.Material.Metal, 0)
+		cyl("HubBezelLow", 3.8, 9.9, 10.3, Config.SWEEP_RAIL_COLOR, Enum.Material.Metal, 0)
+		-- Lantern: outer GLASS wall (visible transparency), inner Neon core with
+		-- an air gap, per the reference read (glow embedded in glass).
+		cyl("HubLanternGlass", 3.4, 10.2, 14.0,
+			Color3.fromRGB(205, 222, 255), Enum.Material.Glass, 0.45)
+		lanternCore = cyl("HubLanternCore", 2.3, 10.5, 13.7,
+			Config.SWEEP_ACCENT, Enum.Material.Neon, LANTERN_TRANSPARENCY)
+		lanternLight = Instance.new("PointLight")
+		lanternLight.Color = Config.SWEEP_ACCENT
+		lanternLight.Brightness = 2
+		lanternLight.Range = 26
+		lanternLight.Parent = lanternCore
+		cyl("HubBezelHigh", 3.8, 13.9, 14.3, Config.SWEEP_RAIL_COLOR, Enum.Material.Metal, 0)
+		cyl("HubCap", 3.2, 14.3, 15.3, Config.SWEEP_RAIL_COLOR, Enum.Material.Metal, 0)
+		cyl("HubCapTop", 2.6, 15.3, 15.7, Config.SWEEP_RAIL_COLOR, Enum.Material.Metal, 0)
+	end
+
+	----------------------------------------------------------------------------
+	-- 5. Under-structure: 4 angled struts + 1 lower ring of tangent bars (static,
 	--    dark SmoothPlastic -- reads as built, not floating).
 	----------------------------------------------------------------------------
 	local strutColor = Color3.fromRGB(14, 17, 30)
@@ -237,7 +283,7 @@ function SweeperController.start()
 	end
 
 	----------------------------------------------------------------------------
-	-- 5. Smooth annulus (the lobby technique): one seamless EditableMesh MeshPart
+	-- 6. Smooth annulus (the lobby technique): one seamless EditableMesh MeshPart
 	--    laid directly over the server's segmented collision floor, carrying the
 	--    SweeperStageFloor MaterialVariant. pcall-wrapped like LobbyStage.smoothCyl:
 	--    on any client where EditableMesh is unavailable, the build simply fails
@@ -289,15 +335,18 @@ function SweeperController.start()
 
 	----------------------------------------------------------------------------
 	-- Dormancy sync: one pass over every Neon element. Static elements (rim
-	-- ring, moat line) flip between a fixed live value and the standby dim.
-	-- The animated element (seams) resets to idle dim on flip; the live loop
-	-- repaints it once running.
+	-- ring, moat line, hub lantern core) flip between a fixed live value and
+	-- the standby dim; the lantern's PointLight switches off entirely when
+	-- dormant (it has no dim analog). The animated element (seams) resets to
+	-- idle dim on flip; the live loop repaints it once running.
 	----------------------------------------------------------------------------
 	local staticNeon = {}
 	for _, b in ipairs(rimRing) do staticNeon[#staticNeon + 1] = b end
 	for _, b in ipairs(moatRing) do staticNeon[#staticNeon + 1] = b end
+	staticNeon[#staticNeon + 1] = { part = lanternCore, liveTransparency = LANTERN_TRANSPARENCY }
 
 	local function setLive(live)
+		lanternLight.Enabled = live
 		for _, e in ipairs(staticNeon) do
 			e.part.Transparency = live and e.liveTransparency or DORMANT_TRANSPARENCY
 		end

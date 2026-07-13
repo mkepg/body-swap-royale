@@ -393,6 +393,7 @@ Config.GLOW_DIM_SWEEP_DORMANT = 0.0   -- idle-sweeper standby dim (keep dormant 
 Config.GLOW_DIM_SWEEP_SEAM = 0.0      -- wedge seam strips incl. flare (SweeperController)
 Config.GLOW_DIM_SWEEP_RIM_RING = 0.0  -- continuous rim ring band (SweeperController)
 Config.GLOW_DIM_SWEEP_MOAT = 0.0      -- fall-gap inner-rim readability line (SweeperController)
+Config.GLOW_DIM_SWEEP_LANTERN = 0.0   -- hub lantern core (SweeperController)
 -- Gameplay TELLS (server-side): default 0.0 = full brightness (no readability change).
 -- Raise only if you deliberately want the danger signal dimmer.
 Config.GLOW_DIM_SWEEP_KILL_TELLS = 0.5 -- amber blade / crimson underglow / emitter / lamps (SweeperHazard)
