@@ -53,6 +53,7 @@ end
 -- Every floor glows by Neon alone -- uniform across all floors, no real
 -- PointLights (matches the deeper floors' style; mobile-friendly).
 local function buildFloorTrim(folder, desc)
+	if desc.trim == false then return end -- arena carries its own built-in border
 	local segs = Config.WORLD_TRIM_SEGMENTS
 	local radius = desc.footprint.X / 2 + Config.WORLD_TRIM_MARGIN
 	local pts = WorldLayout.ring(desc.center.X, desc.center.Z, radius, segs)
