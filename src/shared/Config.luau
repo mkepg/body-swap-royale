@@ -191,6 +191,12 @@ Config.SWEEP_WAKE_CHANNELS = 36      -- radial floor strips igniting in the low 
 Config.SWEEP_CHASE_STUDS = 32        -- rim marquee chase lights
 Config.SWEEP_STANDBY_TRANSPARENCY = 0.85 -- dormant-arena Neon dim (one-time flip)
 
+-- T4 glow-up (2026-07-13 spec §4.2): the disc reads as 12 pie wedges separated
+-- by permanent amber seams; the old wake ignition is FUSED into them (seams
+-- idle dim, flare behind the low bar). Rim ring + moat line replace chase
+-- studs / rim accents / the generic edge trim.
+Config.SWEEP_SEAM_COUNT = 12
+
 -- ===== Hybrid assets (each with a code-only fallback) =====
 -- SWEEP_DISC_MATERIAL: a MaterialVariant NAME resolved against the place's
 -- MaterialService (sourced via Studio MCP 2026-07-09; alternate takes parked in
@@ -384,6 +390,9 @@ Config.GLOW_DIM_SWEEP_SHAFT = 0.0     -- sweeper light shaft (SweeperController)
 Config.GLOW_DIM_SWEEP_LENS = 0.0      -- sweeper spotlight lenses (SweeperController)
 Config.GLOW_DIM_SWEEP_RIM = 0.5       -- sweeper rim accent bars (SweeperController)
 Config.GLOW_DIM_SWEEP_DORMANT = 0.0   -- idle-sweeper standby dim (keep dormant dimmest)
+Config.GLOW_DIM_SWEEP_SEAM = 0.0      -- wedge seam strips incl. flare (SweeperController)
+Config.GLOW_DIM_SWEEP_RIM_RING = 0.0  -- continuous rim ring band (SweeperController)
+Config.GLOW_DIM_SWEEP_MOAT = 0.0      -- fall-gap inner-rim readability line (SweeperController)
 -- Gameplay TELLS (server-side): default 0.0 = full brightness (no readability change).
 -- Raise only if you deliberately want the danger signal dimmer.
 Config.GLOW_DIM_SWEEP_KILL_TELLS = 0.5 -- amber blade / crimson underglow / emitter / lamps (SweeperHazard)

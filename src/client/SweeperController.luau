@@ -2,9 +2,9 @@
 	SweeperController (client) -- "Soul Turbine" cosmetics for the Soul Sweeper
 	v2.2 "Touch Elimination" arena. 100% cosmetic; the server owns the physical
 	beams and all gameplay geometry (SweeperHazard) -- this module only renders
-	the machine: wake channels, rim marquee, rotor spin, a seamless smooth
-	annulus, light shaft, and the static under-structure/spotlights that make
-	the platform read as a built broadcast stage. Fully self-gating on the
+	the machine: 12 permanent wedge seams (idle dim, flaring behind the low
+	bar), a continuous rim ring, a faint moat line at the fall-gap, the static
+	under-structure, and a seamless smooth annulus. Fully self-gating on the
 	`LiveArena` workspace attribute, so it is safe to start unconditionally: an
 	idle Soul Sweeper performs ZERO per-frame writes.
 
@@ -12,16 +12,15 @@
 	server-side kill via the grace-gated hazard chokepoint, not a physics shove.
 	Beams are non-collidable server kill zones -- there is no client-visible
 	contact response to render, so the cosmetic tumble watcher (which followed a
-	server body-attribute stamp on strike) is gone. Everything else below --
-	annulus, wake, chase, rotors, dormancy -- is unchanged from v2.1.
+	server body-attribute stamp on strike) is gone.
 
-	Angle source of truth: the wake channel's ignition angle is read directly
-	off the low beam's REPLICATED root pose (atan2 of its center offset from
-	SWEEP_CENTER) -- the SAME measured-pose convention the server's strike math
-	uses (spec 2026-07-09 §2-5) -- so cosmetics can never drift from the
-	physical bar. No client math derives an angle from elapsed time anymore;
-	the floor telegraph arcs that used to do that are gone (v2 playtest: they
-	read as two extra phantom beams -- spec 2026-07-09 §1-3).
+	Angle source of truth: the seams' flare angle is read directly off the low
+	beam's REPLICATED root pose (atan2 of its center offset from SWEEP_CENTER)
+	-- the SAME measured-pose convention the server's strike math uses (spec
+	2026-07-09 §2-5) -- so cosmetics can never drift from the physical bar. No
+	client math derives an angle from elapsed time anymore; the floor telegraph
+	arcs that used to do that are gone (v2 playtest: they read as two extra
+	phantom beams -- spec 2026-07-09 §1-3).
 
 	Location: StarterPlayerScripts/Client/SweeperController (ModuleScript)
 --]]
@@ -43,34 +42,21 @@ local TAU = math.pi * 2
 -- Resting/base transparencies (live state); dormant always overrides to
 -- Config.SWEEP_STANDBY_TRANSPARENCY. Kept as named constants so the build pass
 -- and the live/dormancy sync pass never drift from each other.
--- v2.4 dim pass (spec §2-4): the dressing is ATMOSPHERE, not signal -- only the
--- bars' kill tells (amber blade / crimson underglow / end emitters, built server-
--- side in SweeperHazard) stay full-brightness Neon. Everything here sits at accent
--- level so the tells, the floor, and other players stay readable under Bloom 0.9.
--- Lit/static values stay below SWEEP_STANDBY_TRANSPARENCY (0.85) so dormancy still
--- visibly dims the arena.
--- Accent bases, each softened by ITS OWN per-effect dim knob (0 = original, no dim).
--- Every downstream reference (build, wake/chase animation targets, dormancy resets)
--- reads these named constants, so each knob cascades. The dormant standby has its own
--- knob so a dormant arena can be kept the dimmest state under manual tuning.
-local WAKE_BASE_TRANSPARENCY = GlowDim.apply(0.9, Config.GLOW_DIM_SWEEP_WAKE)
-local WAKE_LIT_TRANSPARENCY = GlowDim.apply(0.5, Config.GLOW_DIM_SWEEP_WAKE)
-local CHASE_BASE_TRANSPARENCY = GlowDim.apply(0.75, Config.GLOW_DIM_SWEEP_CHASE)
-local CHASE_LIT_TRANSPARENCY = GlowDim.apply(0.4, Config.GLOW_DIM_SWEEP_CHASE)
-local ROTOR_TRANSPARENCY = GlowDim.apply(0.6, Config.GLOW_DIM_SWEEP_ROTOR)
-local SHAFT_TRANSPARENCY = GlowDim.apply(0.8, Config.GLOW_DIM_SWEEP_SHAFT)
-local LENS_TRANSPARENCY = GlowDim.apply(0.5, Config.GLOW_DIM_SWEEP_LENS)
-local RIM_ACCENT_TRANSPARENCY = GlowDim.apply(0.55, Config.GLOW_DIM_SWEEP_RIM)
+-- T4 glow-up (spec 2026-07-13 §4.2): the dressing is ATMOSPHERE, not signal --
+-- the kill tells are the server-built whole-bar Neon cores + end caps
+-- (SweeperHazard), not anything rendered here. Each element below keeps its
+-- own GlowDim knob so it can be tuned independently; idle/lit values stay
+-- below SWEEP_STANDBY_TRANSPARENCY (0.85) so dormancy still visibly dims the
+-- arena.
+local SEAM_IDLE_TRANSPARENCY = GlowDim.apply(0.35, Config.GLOW_DIM_SWEEP_SEAM)
+local SEAM_FLARE_TRANSPARENCY = GlowDim.apply(0, Config.GLOW_DIM_SWEEP_SEAM)
+local RIM_RING_TRANSPARENCY = GlowDim.apply(0, Config.GLOW_DIM_SWEEP_RIM_RING)
+local MOAT_TRANSPARENCY = GlowDim.apply(0.5, Config.GLOW_DIM_SWEEP_MOAT)
 local DORMANT_TRANSPARENCY = GlowDim.apply(Config.SWEEP_STANDBY_TRANSPARENCY, Config.GLOW_DIM_SWEEP_DORMANT)
-local ROTOR_SPIN_SPEED = 0.4 -- rad/s, cosmetic only
 
--- Wake fade-window width in RADIANS (fixed, not speed-scaled): the lit trail
--- behind the low bar spans this angular arc regardless of the bar's current
--- speed. v2's window was speed-scaled (SWEEP_WAKE_FADE seconds * angular
--- speed) because it derived the low bar's angle from the elapsed round clock;
--- the v2.1 measured pose has no elapsed term to scale by, so a fixed width is
--- simpler and reads fine across the whole ramp (idle-look implementer's call).
-local WAKE_WINDOW = 0.9
+-- Seam flare fade-window width in RADIANS (fixed, not speed-scaled) -- the lit
+-- trail behind the low bar's measured pose; same rationale as the old wake window.
+local SEAM_FLARE_WINDOW = 0.9
 
 --------------------------------------------------------------------------------
 -- Build helpers.
@@ -101,14 +87,6 @@ local function radialCFrame(center, angle, y, radiusMid)
 	local dirX, dirZ = math.cos(angle), math.sin(angle)
 	local mid = Vector3.new(center.X + dirX * radiusMid, y, center.Z + dirZ * radiusMid)
 	return CFrame.lookAt(mid, mid + Vector3.new(dirX, 0, dirZ)) * CFrame.Angles(0, math.rad(90), 0)
-end
-
--- Orients a part so its LOCAL Z axis is TANGENT to the circle at `angle` (the
--- WORLD_TRIM / floor-trim convention) -- used for small individually-animated
--- bars (rotor rings) where we don't have a precomputed neighbor point.
-local function tangentCFrame(pos, angle)
-	local dir = Vector3.new(-math.sin(angle), 0, math.cos(angle))
-	return CFrame.lookAt(pos, pos + dir)
 end
 
 -- A seamless TRUE-CIRCLE annulus (EditableMesh): inner/outer vertex rings top
@@ -165,109 +143,70 @@ function SweeperController.start()
 	local lowBeamPart = nil
 
 	----------------------------------------------------------------------------
-	-- 1. Wake channels: 36 radial Neon strips flush with the surface.
+	-- 1. Wedge seams: SWEEP_SEAM_COUNT radial Neon strips (hole -> rim) in dark
+	--    grooves. Permanently visible (idle dim); the Heartbeat loop flares them
+	--    behind the low bar -- the old wake beat fused into reference geometry.
 	----------------------------------------------------------------------------
-	local wakeStrips = {}
+	local seamStrips = {}
 	do
-		local n = Config.SWEEP_WAKE_CHANNELS
+		local n = Config.SWEEP_SEAM_COUNT
 		local len = Config.SWEEP_PLATFORM_RADIUS - Config.SWEEP_HOLE_RADIUS
 		local mid = Config.SWEEP_HOLE_RADIUS + len / 2
-		local y = surfaceY + 0.05
 		for i = 0, n - 1 do
 			local angle = (i / n) * TAU
-			local cf = radialCFrame(c, angle, y, mid)
-			local p = counted(newPart(folder, "Wake_" .. i, Vector3.new(len, 0.15, 0.6),
-				cf, Config.SWEEP_ACCENT, Enum.Material.Neon, WAKE_BASE_TRANSPARENCY))
-			wakeStrips[#wakeStrips + 1] = { part = p, angle = angle, lastTransparency = WAKE_BASE_TRANSPARENCY }
+			counted(newPart(folder, "SeamGroove_" .. i, Vector3.new(len, 0.12, 1.6),
+				radialCFrame(c, angle, surfaceY + 0.03, mid), Config.SWEEP_RAIL_COLOR,
+				Enum.Material.SmoothPlastic, 0))
+			local p = counted(newPart(folder, "Seam_" .. i, Vector3.new(len, 0.15, 0.9),
+				radialCFrame(c, angle, surfaceY + 0.05, mid), Config.SWEEP_ACCENT,
+				Enum.Material.Neon, SEAM_IDLE_TRANSPARENCY))
+			seamStrips[#seamStrips + 1] = { part = p, angle = angle, lastTransparency = SEAM_IDLE_TRANSPARENCY }
 		end
 	end
 
 	----------------------------------------------------------------------------
-	-- 2. Rim chase studs: 32 small Neon cubes on the rim ring.
+	-- 2. Rim ring: continuous bright band on the disc's outer edge face (48
+	--    tangent segments, slack-overlapped like the floor). Replaces the chase
+	--    studs, rim accent bars, and the generic ArenaDressing edge trim.
 	----------------------------------------------------------------------------
-	local chaseStuds = {}
+	local rimRing = {}
 	do
-		local n = Config.SWEEP_CHASE_STUDS
-		local pts = WorldLayout.ring(c.X, c.Z, Config.SWEEP_PLATFORM_RADIUS + 1, n)
-		local y = surfaceY + 0.4
+		local segs = 48
+		local radius = Config.SWEEP_PLATFORM_RADIUS + 0.2
+		local pts = WorldLayout.ring(c.X, c.Z, radius, segs)
+		local chord = 2 * radius * math.sin(math.pi / segs) * 1.06
+		local y = surfaceY - 0.55 -- band top flush with the deck (+0.05)
 		for i, pt in ipairs(pts) do
-			local p = counted(newPart(folder, "Chase_" .. i, Vector3.new(0.6, 0.6, 0.6),
-				CFrame.new(pt.x, y, pt.z), Config.SWEEP_ACCENT, Enum.Material.Neon, CHASE_BASE_TRANSPARENCY))
-			chaseStuds[#chaseStuds + 1] = { part = p }
+			local nxt = pts[(i % segs) + 1]
+			local p = counted(newPart(folder, "RimRing_" .. i, Vector3.new(0.4, 1.2, chord),
+				CFrame.lookAt(Vector3.new(pt.x, y, pt.z), Vector3.new(nxt.x, y, nxt.z)),
+				Config.SWEEP_ACCENT, Enum.Material.Neon, RIM_RING_TRANSPARENCY))
+			rimRing[#rimRing + 1] = { part = p, liveTransparency = RIM_RING_TRANSPARENCY }
 		end
 	end
 
 	----------------------------------------------------------------------------
-	-- 3. Rotor rings: two assemblies of 8 tangent bars around the hub, at two
-	--    heights on the pillar; these visually "drive" the beams.
+	-- 3. Moat line: faint inner-rim band at the fall-gap's disc edge -- keeps
+	--    the hole readable at play speed (fairness; the reference hides it).
 	----------------------------------------------------------------------------
-	local function buildRotorRing(namePrefix, y)
-		local bars = {}
-		local n = 8
-		local radius = Config.SWEEP_HUB_RADIUS + 1.5
-		local chord = 2 * radius * math.sin(math.pi / n) * 1.1
-		for i = 0, n - 1 do
-			local angle = (i / n) * TAU
-			local pos = Vector3.new(c.X + radius * math.cos(angle), y, c.Z + radius * math.sin(angle))
-			local p = counted(newPart(folder, namePrefix .. "_" .. i, Vector3.new(0.5, 0.5, chord),
-				tangentCFrame(pos, angle), Config.SWEEP_ACCENT, Enum.Material.Neon, ROTOR_TRANSPARENCY))
-			bars[#bars + 1] = { part = p, baseAngle = angle, radius = radius, y = y }
-		end
-		return bars
-	end
-	local rotor1Bars = buildRotorRing("Rotor1", surfaceY + 2)
-	-- Ring 2 sits above the thick high bar now (bottom 5.5 + thickness 3 = top 8.5;
-	-- v2.1 scale-up -- was +6 when the bar was a thin light beam).
-	local rotor2Bars = buildRotorRing("Rotor2", surfaceY + 9.5)
-	local rotor1Offset, rotor2Offset = 0, 0
-
-	----------------------------------------------------------------------------
-	-- 3b. Hub hero mesh (hybrid asset, PRESENCE-based): if the place carries
-	--     ReplicatedStorage.SweeperAssets.HubMesh (sourced via Studio MCP; the
-	--     folder lives outside Rojo's Shared mapping so syncs never delete it),
-	--     clone it over the server's collision pillar as the turbine housing.
-	--     Absent => the procedural pillar + rotors above stand alone.
-	----------------------------------------------------------------------------
+	local moatRing = {}
 	do
-		local assets = ReplicatedStorage:FindFirstChild("SweeperAssets")
-		local hubMesh = assets and assets:FindFirstChild("HubMesh")
-		if hubMesh then
-			local m = hubMesh:Clone()
-			for _, d in ipairs(m:GetDescendants()) do
-				if d:IsA("BasePart") then
-					d.Anchored = true -- clone-time defense; the source is pre-normalized
-					d.CanCollide = false
-					d.CanQuery = false
-					d.CanTouch = false
-					counted(d)
-				end
-			end
-			-- Seat the housing's bounding box on the hub base (pillar spans
-			-- surface-6..+8), centered on the hub, whatever the model's own pivot.
-			local bbox, size = m:GetBoundingBox()
-			local target = CFrame.new(c.X, surfaceY - 6 + size.Y / 2, c.Z)
-			m:PivotTo(target * (bbox:Inverse() * m:GetPivot()))
-			m.Parent = folder
+		local segs = 24
+		local radius = Config.SWEEP_HOLE_RADIUS - 0.2
+		local pts = WorldLayout.ring(c.X, c.Z, radius, segs)
+		local chord = 2 * radius * math.sin(math.pi / segs) * 1.06
+		local y = surfaceY - 0.2 -- band top flush with the deck (+0.05)
+		for i, pt in ipairs(pts) do
+			local nxt = pts[(i % segs) + 1]
+			local p = counted(newPart(folder, "MoatRing_" .. i, Vector3.new(0.3, 0.5, chord),
+				CFrame.lookAt(Vector3.new(pt.x, y, pt.z), Vector3.new(nxt.x, y, nxt.z)),
+				Config.SWEEP_ACCENT, Enum.Material.Neon, MOAT_TRANSPARENCY))
+			moatRing[#moatRing + 1] = { part = p, liveTransparency = MOAT_TRANSPARENCY }
 		end
 	end
 
 	----------------------------------------------------------------------------
-	-- 4. Light shaft: translucent Neon cylinder through the hole.
-	----------------------------------------------------------------------------
-	local shaftPart
-	do
-		local topY = surfaceY + 20
-		local bottomY = Config.SWEEP_VOID_Y
-		local height = topY - bottomY
-		local midY = (topY + bottomY) / 2
-		shaftPart = counted(newPart(folder, "LightShaft", Vector3.new(height, 5, 5),
-			CFrame.new(c.X, midY, c.Z) * CFrame.Angles(0, 0, math.rad(90)),
-			Config.SWEEP_ACCENT, Enum.Material.Neon, SHAFT_TRANSPARENCY))
-		shaftPart.Shape = Enum.PartType.Cylinder
-	end
-
-	----------------------------------------------------------------------------
-	-- 5. Under-structure: 4 angled struts + 1 lower ring of tangent bars (static,
+	-- 4. Under-structure: 4 angled struts + 1 lower ring of tangent bars (static,
 	--    dark SmoothPlastic -- reads as built, not floating).
 	----------------------------------------------------------------------------
 	local strutColor = Color3.fromRGB(14, 17, 30)
@@ -295,46 +234,7 @@ function SweeperController.start()
 	end
 
 	----------------------------------------------------------------------------
-	-- 6. Spotlight fixtures: housing + Neon lens, angled at the platform from
-	--    above the rim (static).
-	----------------------------------------------------------------------------
-	do
-		for i = 0, 2 do
-			local angle = (i / 3) * TAU
-			local hRadius = Config.SWEEP_PLATFORM_RADIUS * 0.55
-			local hPos = Vector3.new(c.X + hRadius * math.cos(angle), surfaceY + 28, c.Z + hRadius * math.sin(angle))
-			local targetRadius = Config.SWEEP_PLATFORM_RADIUS * 0.3
-			local target = Vector3.new(c.X + targetRadius * math.cos(angle), surfaceY, c.Z + targetRadius * math.sin(angle))
-			local aim = CFrame.lookAt(hPos, target)
-			counted(newPart(folder, "SpotHousing_" .. i, Vector3.new(2, 2, 1.2),
-				aim, strutColor, Enum.Material.SmoothPlastic, 0))
-			counted(newPart(folder, "SpotLens_" .. i, Vector3.new(1.2, 1.2, 0.2),
-				aim * CFrame.new(0, 0, -0.7), Config.SWEEP_ACCENT, Enum.Material.Neon, LENS_TRANSPARENCY))
-		end
-	end
-
-	----------------------------------------------------------------------------
-	-- 7. Rim accent ring: WORLD_TRIM-style tangent bars at the rim.
-	----------------------------------------------------------------------------
-	local rimAccentBars = {}
-	do
-		local segs = Config.SWEEP_PLATFORM_SEGMENTS
-		local radius = Config.SWEEP_PLATFORM_RADIUS + 2.5
-		local pts = WorldLayout.ring(c.X, c.Z, radius, segs)
-		local chord = 2 * radius * math.sin(math.pi / segs) * 1.06
-		local y = surfaceY + 0.8
-		for i, pt in ipairs(pts) do
-			local nxt = pts[(i % segs) + 1]
-			local here = Vector3.new(pt.x, y, pt.z)
-			local p = counted(newPart(folder, "RimAccent_" .. i, Vector3.new(0.5, 0.6, chord),
-				CFrame.lookAt(here, Vector3.new(nxt.x, y, nxt.z)), Config.SWEEP_ACCENT, Enum.Material.Neon,
-				RIM_ACCENT_TRANSPARENCY))
-			rimAccentBars[#rimAccentBars + 1] = { part = p }
-		end
-	end
-
-	----------------------------------------------------------------------------
-	-- 8. Smooth annulus (the lobby technique): one seamless EditableMesh MeshPart
+	-- 5. Smooth annulus (the lobby technique): one seamless EditableMesh MeshPart
 	--    laid directly over the server's segmented collision floor, carrying the
 	--    SweeperStageFloor MaterialVariant. pcall-wrapped like LobbyStage.smoothCyl:
 	--    on any client where EditableMesh is unavailable, the build simply fails
@@ -384,42 +284,25 @@ function SweeperController.start()
 
 	assert(partCount <= 180, "SweeperController: dressing part budget exceeded (" .. partCount .. " > 180)")
 
-	-- Chase state declared here (before setLive, which reads it) so it persists
-	-- across dormancy flips instead of resetting to index 0 each time.
-	local chaseIndex = 0
-	local chaseAccum = 0
-	local chaseWindow = 3
-
 	----------------------------------------------------------------------------
-	-- Dormancy sync: one pass over every Neon element. Static elements (shaft,
-	-- rim accent, spotlight lens) flip between a fixed live value and the
-	-- standby dim. Animated elements (wake/chase/rotor) reset to a safe
-	-- rest/synced state on flip; the live loop repaints them once running.
+	-- Dormancy sync: one pass over every Neon element. Static elements (rim
+	-- ring, moat line) flip between a fixed live value and the standby dim.
+	-- The animated element (seams) resets to idle dim on flip; the live loop
+	-- repaints it once running.
 	----------------------------------------------------------------------------
-	local staticNeon = { { part = shaftPart, liveTransparency = SHAFT_TRANSPARENCY } }
-	for _, b in ipairs(rimAccentBars) do
-		staticNeon[#staticNeon + 1] = { part = b.part, liveTransparency = RIM_ACCENT_TRANSPARENCY }
-	end
-	for i = 0, 2 do
-		local lens = folder:FindFirstChild("SpotLens_" .. i)
-		if lens then staticNeon[#staticNeon + 1] = { part = lens, liveTransparency = LENS_TRANSPARENCY } end
-	end
+	local staticNeon = {}
+	for _, b in ipairs(rimRing) do staticNeon[#staticNeon + 1] = b end
+	for _, b in ipairs(moatRing) do staticNeon[#staticNeon + 1] = b end
 
 	local function setLive(live)
 		for _, e in ipairs(staticNeon) do
 			e.part.Transparency = live and e.liveTransparency or DORMANT_TRANSPARENCY
 		end
 		local resetTo = (not live) and DORMANT_TRANSPARENCY or nil
-		for _, w in ipairs(wakeStrips) do
-			w.part.Transparency = resetTo or WAKE_BASE_TRANSPARENCY
-			w.lastTransparency = nil -- force a resync on the next live tick
+		for _, s in ipairs(seamStrips) do
+			s.part.Transparency = resetTo or SEAM_IDLE_TRANSPARENCY
+			s.lastTransparency = nil -- force a resync on the next live tick
 		end
-		for i, cstud in ipairs(chaseStuds) do
-			local lit = ((i - 1 - chaseIndex) % Config.SWEEP_CHASE_STUDS) < chaseWindow
-			cstud.part.Transparency = resetTo or (lit and CHASE_LIT_TRANSPARENCY or CHASE_BASE_TRANSPARENCY)
-		end
-		for _, b in ipairs(rotor1Bars) do b.part.Transparency = resetTo or ROTOR_TRANSPARENCY end
-		for _, b in ipairs(rotor2Bars) do b.part.Transparency = resetTo or ROTOR_TRANSPARENCY end
 	end
 
 	setLive(false) -- server starts with no live arena
@@ -437,10 +320,10 @@ function SweeperController.start()
 		local field = Workspace:FindFirstChild("SweeperField")
 		if not field then return end
 
-		-- Wake channels: ignite behind the low beam's MEASURED pose (atan2 of its
+		-- Seams flare behind the low beam's MEASURED pose (atan2 of its
 		-- replicated root's offset from SWEEP_CENTER -- spec 2026-07-09 §2-5/§2-7),
-		-- fading back to base over a fixed WAKE_WINDOW. Re-find the part if it's
-		-- ever nil (not yet replicated, or a hot reload); tolerate its absence.
+		-- fading back to idle over a fixed SEAM_FLARE_WINDOW. Re-find the part if
+		-- it's ever nil (not yet replicated, or a hot reload); tolerate its absence.
 		if not lowBeamPart or not lowBeamPart.Parent then
 			lowBeamPart = field:FindFirstChild("SweepBeam_low")
 		end
@@ -468,48 +351,20 @@ function SweeperController.start()
 					end
 				end
 			end
-			for _, w in ipairs(wakeStrips) do
-				local behind = (lowBeam.direction * (lowAngle - w.angle)) % TAU
+			for _, s in ipairs(seamStrips) do
+				local behind = (lowBeam.direction * (lowAngle - s.angle)) % TAU
 				local target
-				if behind >= WAKE_WINDOW then
-					target = WAKE_BASE_TRANSPARENCY
+				if behind >= SEAM_FLARE_WINDOW then
+					target = SEAM_IDLE_TRANSPARENCY
 				else
-					target = WAKE_LIT_TRANSPARENCY
-						+ (WAKE_BASE_TRANSPARENCY - WAKE_LIT_TRANSPARENCY) * (behind / WAKE_WINDOW)
+					target = SEAM_FLARE_TRANSPARENCY
+						+ (SEAM_IDLE_TRANSPARENCY - SEAM_FLARE_TRANSPARENCY) * (behind / SEAM_FLARE_WINDOW)
 				end
-				if w.lastTransparency == nil or math.abs(target - w.lastTransparency) > 0.02 then
-					w.part.Transparency = target
-					w.lastTransparency = target
+				if s.lastTransparency == nil or math.abs(target - s.lastTransparency) > 0.02 then
+					s.part.Transparency = target
+					s.lastTransparency = target
 				end
 			end
-		end
-
-		-- Chase: advance the lit window (3 studs) roughly every 0.08s; only the
-		-- studs that actually change state are written.
-		chaseAccum += dt
-		if chaseAccum >= 0.08 then
-			chaseAccum -= 0.08
-			local leaving = chaseIndex
-			chaseIndex = (chaseIndex + 1) % Config.SWEEP_CHASE_STUDS
-			local entering = (chaseIndex + chaseWindow - 1) % Config.SWEEP_CHASE_STUDS
-			local leavingStud = chaseStuds[leaving + 1]
-			local enteringStud = chaseStuds[entering + 1]
-			if leavingStud then leavingStud.part.Transparency = CHASE_BASE_TRANSPARENCY end
-			if enteringStud then enteringStud.part.Transparency = CHASE_LIT_TRANSPARENCY end
-		end
-
-		-- Rotors: counter-rotate the two ring assemblies.
-		rotor1Offset += ROTOR_SPIN_SPEED * dt
-		rotor2Offset -= ROTOR_SPIN_SPEED * dt
-		for _, b in ipairs(rotor1Bars) do
-			local angle = b.baseAngle + rotor1Offset
-			local pos = Vector3.new(c.X + b.radius * math.cos(angle), b.y, c.Z + b.radius * math.sin(angle))
-			b.part.CFrame = tangentCFrame(pos, angle)
-		end
-		for _, b in ipairs(rotor2Bars) do
-			local angle = b.baseAngle + rotor2Offset
-			local pos = Vector3.new(c.X + b.radius * math.cos(angle), b.y, c.Z + b.radius * math.sin(angle))
-			b.part.CFrame = tangentCFrame(pos, angle)
 		end
 	end)
 end
