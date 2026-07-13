@@ -15,9 +15,10 @@ the carousel can tell the mechanic as a **sequence/story** across multiple image
 The set must feel like the same brand family as the shipped "Swap Arrows" icon
 (orange/blue boy + pink/teal girl, cyan soul-⇄, Soul Festival dusk palette).
 
-Core loop being communicated (GDD §1): every 30 seconds control is randomly
-reassigned — you get swapped into another player's body; combat-free survival
-royale where the arena itself is the threat.
+Core loop being communicated (GDD §1): control is randomly reassigned on a
+**dynamic cadence** (~20s at round start → ~8s in the endgame, speeding up — NOT
+a fixed 30s; see `Config.CADENCE_*`) — you get swapped into another player's
+body; combat-free survival royale where the arena itself is the threat.
 
 ## 2. The set — "Swap Story" (4 images)
 
@@ -27,9 +28,9 @@ Four 16:9 frames, one clear idea each, in carousel order. Each carries a
 | # | Idea | Scene | Caption (working) |
 |---|------|-------|-------------------|
 | 1 | **The swap (hero)** | Boy (near-white cube head, spiky ORANGE hair, royal-blue hoodie w/ orange accents) + girl (long PINK ponytail, teal hoodie), head-and-shoulders, angled slightly inward, both comic-surprise. Bold glowing CYAN soul-energy double-arrow ⇄ between/above their heads. The icon reflowed to 16:9 with more dusk sky. | **SWAPPED into their body** |
-| 2 | **Every 30 seconds** | 3–4 blocky avatars mid-scramble in the dusk arena; cyan soul-wisps/arrows arcing between several of them; a glowing cyan soul-RING (no digits) as a timer motif. Reads "control keeps reassigning." | **Every 30 seconds** |
+| 2 | **Random swaps** | 3–4 blocky avatars mid-scramble in the dusk arena; cyan soul-wisps/arrows arcing between several of them; a glowing cyan soul-RING (no digits) as a timer motif. Reads "control keeps reassigning." | **Swapped at random** |
 | 3 | **Survive the arena** | **Character peril shot — no built arena.** Single blocky avatar in a big comic-panic / off-balance (or freefall) pose against the open dusk sky; danger sold through pose + streaking cyan soul-energy motion. Brand-consistent with T1/T2/T4. (The in-game Hex-A-Gone floor was dropped here — its tiles render as hourglass/bowtie shapes, not clean hexagons, so it doesn't depict cleanly.) Combat-free. | **Survive the arena** |
-| 4 | **Play with friends** | Set in the real **Soul Sweeper turbine arena**: 4+ colorful blocky avatars playing together on the dark round turbine disc with its central hub, some jumping the LOW amber beam, others grounded under the HIGH crimson beam; amber rim marquee, dusk sunset. Social pull + accurate gameplay. | **Grab your friends** |
+| 4 | **Play with friends** | Set in the real **Soul Sweeper turbine arena**: 4+ colorful blocky avatars playing together on the dark round turbine disc with its central hub, some jumping the LOW amber beam, others grounded under the HIGH crimson beam; amber rim marquee, dusk sunset. Social pull + accurate gameplay. | **Play with your friends** |
 
 Captions are composited in post (§4), so wording is cheap to change during
 finalize; the table values are the current defaults.
@@ -51,8 +52,9 @@ teal aurora ribbon, soft vignette. **16:9 landscape, full-bleed.**
 ## 3. Two locked defaults
 
 - **Timer motif on #2 = a glowing cyan soul-ring shape, NO numbers.** Gemini
-  cannot render "0:30" cleanly and the caption already carries "30 seconds";
-  keep all Gemini art digit-free.
+  cannot render digits cleanly, and any fixed number would be false (the swap
+  cadence is dynamic, ~20s→8s). The T2 caption is "Swapped at random" — no number.
+  Keep all Gemini art digit-free.
 - **Tracking = same as the icon slice:** candidates + reference + finals all
   committed to git; `desktop.ini` gitignored. Work on branch
   `feat/experience-thumbnails` off `main`. `src/shared/Config.luau` has

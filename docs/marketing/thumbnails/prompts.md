@@ -1,7 +1,7 @@
 # Experience Thumbnails — Prompt Kit ("Swap Story")
 
 **Concept:** four 16:9 carousel frames telling the core loop as a sequence —
-the swap (hero), every-30-seconds chaos, survive-the-arena stakes (a character
+the swap (hero), random-swap chaos, survive-the-arena stakes (a character
 peril shot on open dusk sky, no built arena), and play-with-friends social (set
 in the real **Soul Sweeper turbine arena**) — same brand family as the shipped
 "Swap Arrows" icon (orange/blue boy + pink/teal girl, cyan soul-⇄, Soul Festival
@@ -48,7 +48,7 @@ Use the blocky character in the attached reference image ONLY as a structural gu
 
 ---
 
-## T2 — Every 30 seconds (chaos)
+## T2 — Random swaps (chaos)
 
 ### Master
 

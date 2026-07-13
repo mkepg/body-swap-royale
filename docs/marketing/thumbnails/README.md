@@ -8,9 +8,9 @@ is the workflow of record.
 ## The set — "Swap Story" (4 images, 1920×1080)
 
 1. **The swap (hero)** — boy (orange/blue) + girl (pink/teal) + cyan soul-⇄. Caption: "SWAPPED into their body". *Primary store thumbnail.*
-2. **Every 30 seconds** — 3–4 avatars mid-scramble, cyan swap-wisps, glowing soul-ring (no digits). Caption: "Every 30 seconds".
-3. **Survive the arena** — one avatar in comic panic at an environmental hazard. Caption: "Survive the arena".
-4. **Play with friends** — lineup of 4+ colorful avatars, festive. Caption: "Grab your friends".
+2. **Random swaps** — 3–4 avatars mid-scramble, cyan swap-wisps, glowing soul-ring (no digits). Caption: "Swapped at random".
+3. **Survive the arena** — one avatar in a comic-panic freefall on open dusk sky (no built arena). Caption: "Survive the arena".
+4. **Play with friends** — friends together on the Soul Sweeper turbine disc (low amber + high crimson beams). Caption: "Play with your friends".
 
 ## Layout
 
