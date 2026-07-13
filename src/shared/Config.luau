@@ -187,8 +187,6 @@ Config.SWEEP_BEAM_LOW_UNDERRAIL_COLOR = Color3.fromRGB(122, 74, 24)  -- bronze u
 Config.SWEEP_BEAM_HIGH_UNDERRAIL_COLOR = Color3.fromRGB(84, 18, 38)  -- deep maroon under the crimson core
 
 -- Soul Turbine dressing (client; budgets: <=180 parts, one shared loop, <=40 writes/frame).
-Config.SWEEP_WAKE_CHANNELS = 36      -- radial floor strips igniting in the low beam's wake
-Config.SWEEP_CHASE_STUDS = 32        -- rim marquee chase lights
 Config.SWEEP_STANDBY_TRANSPARENCY = 0.85 -- dormant-arena Neon dim (one-time flip)
 
 -- T4 glow-up (2026-07-13 spec §4.2): the disc reads as 12 pie wedges separated
@@ -209,7 +207,7 @@ Config.SWEEP_DISC_MATERIAL_BASE = "Metal"
 -- The hub hero mesh is PRESENCE-based, not ID-based: the client clones
 -- ReplicatedStorage.SweeperAssets.HubMesh when it exists. That folder lives in the
 -- place file, OUTSIDE Rojo's ReplicatedStorage.Shared mapping, so syncs never touch
--- it. Absent => the procedural hub pillar + rotor rings stand alone.
+-- it. Absent => the procedural hub stack (pillar + lantern core) stands alone.
 
 -- Round population thresholds (consumed by RoundState via the server glue).
 -- MIN_PLAYERS_TO_START gates beginning a round; default 2 keeps the MVP playable
@@ -382,13 +380,6 @@ Config.GLOW_DIM_CROWD = 0.0           -- distant crowd orbs (WorldShell)
 Config.GLOW_DIM_LOBBY_RINGS = 0.0     -- lobby energy rings (LobbyStage)
 Config.GLOW_DIM_SPECTATOR_ORBS = 0.0  -- lobby spectator-soul orbs (LobbyStage)
 Config.GLOW_DIM_HEX_TRIM = 0.0        -- hex play-area edge-trim border (ArenaDressing, via descriptor.trimDim)
-Config.GLOW_DIM_SWEEP_TRIM = 0.5      -- sweeper play-area edge-trim border (ArenaDressing, via descriptor.trimDim)
-Config.GLOW_DIM_SWEEP_WAKE = 0.0      -- sweeper wake channels (SweeperController)
-Config.GLOW_DIM_SWEEP_CHASE = 0.0     -- sweeper rim chase studs (SweeperController)
-Config.GLOW_DIM_SWEEP_ROTOR = 0.0     -- sweeper rotor bars (SweeperController)
-Config.GLOW_DIM_SWEEP_SHAFT = 0.0     -- sweeper light shaft (SweeperController)
-Config.GLOW_DIM_SWEEP_LENS = 0.0      -- sweeper spotlight lenses (SweeperController)
-Config.GLOW_DIM_SWEEP_RIM = 0.5       -- sweeper rim accent bars (SweeperController)
 Config.GLOW_DIM_SWEEP_DORMANT = 0.0   -- idle-sweeper standby dim (keep dormant dimmest)
 Config.GLOW_DIM_SWEEP_SEAM = 0.0      -- wedge seam strips incl. flare (SweeperController)
 Config.GLOW_DIM_SWEEP_RIM_RING = 0.0  -- continuous rim ring band (SweeperController)
@@ -396,7 +387,7 @@ Config.GLOW_DIM_SWEEP_MOAT = 0.0      -- fall-gap inner-rim readability line (Sw
 Config.GLOW_DIM_SWEEP_LANTERN = 0.0   -- hub lantern core (SweeperController)
 -- Gameplay TELLS (server-side): default 0.0 = full brightness (no readability change).
 -- Raise only if you deliberately want the danger signal dimmer.
-Config.GLOW_DIM_SWEEP_KILL_TELLS = 0.5 -- amber blade / crimson underglow / emitter / lamps (SweeperHazard)
+Config.GLOW_DIM_SWEEP_KILL_TELLS = 0.5 -- dims the bars' whole Neon core spines + tip caps (SweeperHazard)
 -- Hex tile warning is an opaque floor COLOR, so this knob DARKENS it toward black
 -- (0 = full warning red, 1 = black) rather than fading transparency (HazardSystem).
 Config.GLOW_DIM_HEX_WARNING = 0.0
