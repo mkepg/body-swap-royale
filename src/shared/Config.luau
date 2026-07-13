@@ -180,6 +180,12 @@ Config.SWEEP_HUB_TOP = 10             -- hub pillar top (studs above surface; ax
 Config.SWEEP_BEAM_LOW_COLOR = Color3.fromRGB(244, 162, 97)  -- amber: JUMP
 Config.SWEEP_BEAM_HIGH_COLOR = Color3.fromRGB(225, 75, 75)  -- crimson: STAY GROUNDED
 
+-- T4 glow-up (2026-07-13 spec §4.1): layered bars -- the emissive class-colored
+-- core is framed by dark structural rails top and bottom (glow inset in shell).
+Config.SWEEP_RAIL_COLOR = Color3.fromRGB(24, 30, 56)                 -- dark shell/rails/grooves/hub family
+Config.SWEEP_BEAM_LOW_UNDERRAIL_COLOR = Color3.fromRGB(122, 74, 24)  -- bronze under the amber core
+Config.SWEEP_BEAM_HIGH_UNDERRAIL_COLOR = Color3.fromRGB(84, 18, 38)  -- deep maroon under the crimson core
+
 -- Soul Turbine dressing (client; budgets: <=180 parts, one shared loop, <=40 writes/frame).
 Config.SWEEP_WAKE_CHANNELS = 36      -- radial floor strips igniting in the low beam's wake
 Config.SWEEP_CHASE_STUDS = 32        -- rim marquee chase lights

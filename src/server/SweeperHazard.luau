@@ -163,16 +163,20 @@ local function buildBeamAssembly(folder, hubPart, beam)
 	root.Name = "SweepBeam_" .. beam.class
 	root.Size = Vector3.new(span, thick, thick)
 	root.CFrame = beamPose(beam.baseAngle, centerY)
-	root.Color = Config.SWEEP_PLATFORM_COLOR
-	root.Material = Enum.Material.Metal
+	-- T4 glow-up: the spine IS the emissive core (spec §4.1). Because the kill
+	-- band derives from this same part's thickness, hitbox<->visual alignment is
+	-- exact by construction (v2.4 invariant strengthened).
+	root.Color = color
+	root.Material = Enum.Material.Neon
+	root.Transparency = GlowDim.apply(0, Config.GLOW_DIM_SWEEP_KILL_TELLS)
 	root.CanCollide = false
 	root.Parent = folder
 
-	-- Dressing only (spec v2.3 §2-5): the root's SIZE/POSE above stays the strike-math
-	-- + wake reference -- everything below is welded, massless, non-colliding cosmetic
-	-- that reads "machine arm + energy edge": the class color lives on a Neon strip,
-	-- not the spine body, so the visible energy edge IS the gameplay tell (amber
-	-- blade -> jump it; crimson underglow -> stay under it).
+	-- Dressing only (spec §4.1): the root's SIZE/POSE above stays the strike-math
+	-- + wake reference -- everything below is welded, massless, non-colliding cosmetic.
+	-- The gameplay tell is now the whole class-colored Neon core (spine + cap)
+	-- reading as one emissive capsule; the rails are neutral dark structural shell
+	-- framing that glow top and bottom, not a tell of their own.
 	local function weldOn(part)
 		part.CanCollide = false
 		part.Massless = true
@@ -183,61 +187,36 @@ local function buildBeamAssembly(folder, hubPart, beam)
 		weld.Parent = part
 	end
 
-	if beam.class == "low" then
-		-- Dark-metal housing on TOP of the spine.
-		local housing = Instance.new("Part")
-		housing.Name = root.Name .. "_Housing"
-		housing.Size = Vector3.new(span, 0.6, 0.8)
-		housing.CFrame = root.CFrame * CFrame.new(0, thick / 2 + 0.3, 0)
-		housing.Color = Config.SWEEP_PLATFORM_COLOR
-		housing.Material = Enum.Material.Metal
-		weldOn(housing)
-
-		-- Amber Neon blade strip along the UNDERSIDE (the energy edge: jump it).
-		local blade = Instance.new("Part")
-		blade.Name = root.Name .. "_Blade"
-		blade.Size = Vector3.new(span, 0.35, 0.9)
-		blade.CFrame = root.CFrame * CFrame.new(0, -(thick / 2 + 0.175), 0)
-		blade.Color = color
-		blade.Material = Enum.Material.Neon
-		blade.Transparency = GlowDim.apply(0, Config.GLOW_DIM_SWEEP_KILL_TELLS)
-		weldOn(blade)
-
-		-- End-emitter orb (replaces the old cap).
-		local emitter = Instance.new("Part")
-		emitter.Name = root.Name .. "_Emitter"
-		emitter.Shape = Enum.PartType.Ball
-		emitter.Size = Vector3.new(1.6, 1.6, 1.6)
-		emitter.CFrame = root.CFrame * CFrame.new(span / 2, 0, 0)
-		emitter.Color = color
-		emitter.Material = Enum.Material.Neon
-		emitter.Transparency = GlowDim.apply(0, Config.GLOW_DIM_SWEEP_KILL_TELLS)
-		weldOn(emitter)
-	else
-		-- Crimson Neon underglow strip on the BOTTOM face (the energy edge: stay
-		-- under it).
-		local underglow = Instance.new("Part")
-		underglow.Name = root.Name .. "_Underglow"
-		underglow.Size = Vector3.new(span, 0.3, 2.4)
-		underglow.CFrame = root.CFrame * CFrame.new(0, -(thick / 2 + 0.15), 0)
-		underglow.Color = color
-		underglow.Material = Enum.Material.Neon
-		underglow.Transparency = GlowDim.apply(0, Config.GLOW_DIM_SWEEP_KILL_TELLS)
-		weldOn(underglow)
-
-		-- Two crimson end lamps at the outer tip, side-by-side.
-		for _, zOffset in ipairs({ -0.9, 0.9 }) do
-			local lamp = Instance.new("Part")
-			lamp.Name = root.Name .. "_Lamp"
-			lamp.Shape = Enum.PartType.Ball
-			lamp.Size = Vector3.new(1.2, 1.2, 1.2)
-			lamp.CFrame = root.CFrame * CFrame.new(span / 2, 0, zOffset)
-			lamp.Color = color
-			lamp.Material = Enum.Material.Neon
-			lamp.Transparency = GlowDim.apply(0, Config.GLOW_DIM_SWEEP_KILL_TELLS)
-			weldOn(lamp)
-		end
+	-- Layered shell (spec §4.1): dark structural rails frame the glowing core
+	-- along its top and bottom edges; a rounded Neon cap closes the rim tip.
+	-- Envelope invariant: rails extend 0.25 past the spine's faces (< the 0.3
+	-- precedent), so perceived clearance/jump heights are unchanged in practice.
+	local RAIL_THICK = 0.25
+	local underRail = beam.class == "low" and Config.SWEEP_BEAM_LOW_UNDERRAIL_COLOR
+		or Config.SWEEP_BEAM_HIGH_UNDERRAIL_COLOR
+	local railLen = span - thick -- stop short of the rounded tip cap
+	for _, side in ipairs({
+		{ suffix = "_TopRail", yOff = thick / 2 + RAIL_THICK / 2, railColor = Config.SWEEP_RAIL_COLOR },
+		{ suffix = "_UnderRail", yOff = -(thick / 2 + RAIL_THICK / 2), railColor = underRail },
+	}) do
+		local rail = Instance.new("Part")
+		rail.Name = root.Name .. side.suffix
+		rail.Size = Vector3.new(railLen, RAIL_THICK, thick + 0.3)
+		rail.CFrame = root.CFrame * CFrame.new(-thick / 2, side.yOff, 0)
+		rail.Color = side.railColor
+		rail.Material = Enum.Material.SmoothPlastic
+		weldOn(rail)
 	end
+
+	local cap = Instance.new("Part")
+	cap.Name = root.Name .. "_Cap"
+	cap.Shape = Enum.PartType.Ball
+	cap.Size = Vector3.new(thick, thick, thick)
+	cap.CFrame = root.CFrame * CFrame.new(span / 2, 0, 0)
+	cap.Color = color
+	cap.Material = Enum.Material.Neon
+	cap.Transparency = GlowDim.apply(0, Config.GLOW_DIM_SWEEP_KILL_TELLS)
+	weldOn(cap)
 
 	-- Hub collar (mounts the bar on the axle visually): a short disc, same up/down
 	-- cylinder convention as buildHub, radius just past the hub so it never covers
