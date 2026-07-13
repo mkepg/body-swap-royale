@@ -28,7 +28,7 @@ Four 16:9 frames, one clear idea each, in carousel order. Each carries a
 |---|------|-------|-------------------|
 | 1 | **The swap (hero)** | Boy (near-white cube head, spiky ORANGE hair, royal-blue hoodie w/ orange accents) + girl (long PINK ponytail, teal hoodie), head-and-shoulders, angled slightly inward, both comic-surprise. Bold glowing CYAN soul-energy double-arrow ⇄ between/above their heads. The icon reflowed to 16:9 with more dusk sky. | **SWAPPED into their body** |
 | 2 | **Every 30 seconds** | 3–4 blocky avatars mid-scramble in the dusk arena; cyan soul-wisps/arrows arcing between several of them; a glowing cyan soul-RING (no digits) as a timer motif. Reads "control keeps reassigning." | **Every 30 seconds** |
-| 3 | **Survive the arena** | Set in the real **Hex-A-Gone arena**: single blocky avatar in comic panic on the stacked rainbow honeycomb hex floor (amber→green→teal→blue→indigo→magenta), a hex tile flashing alarm-red and dropping away, hex-shaped holes over the void. Combat-free — the eroding floor is the threat. | **Survive the arena** |
+| 3 | **Survive the arena** | **Character peril shot — no built arena.** Single blocky avatar in a big comic-panic / off-balance (or freefall) pose against the open dusk sky; danger sold through pose + streaking cyan soul-energy motion. Brand-consistent with T1/T2/T4. (The in-game Hex-A-Gone floor was dropped here — its tiles render as hourglass/bowtie shapes, not clean hexagons, so it doesn't depict cleanly.) Combat-free. | **Survive the arena** |
 | 4 | **Play with friends** | Set in the real **Soul Sweeper turbine arena**: 4+ colorful blocky avatars playing together on the dark round turbine disc with its central hub, some jumping the LOW amber beam, others grounded under the HIGH crimson beam; amber rim marquee, dusk sunset. Social pull + accurate gameplay. | **Grab your friends** |
 
 Captions are composited in post (§4), so wording is cheap to change during
@@ -137,10 +137,14 @@ user needs to start rolling and to finalize:
   the reference image + explicit per-character wording should hold; re-roll drift.
 - **Caption font availability** — `composite-caption.ps1` needs Fredoka installed,
   or falls back to a bundled/graceful default; the script must handle a missing font.
-- **Frame #3 hazard reading as combat/violence** — keep it the eroding
-  Hex-A-Gone floor (red tiles dropping into the void), comic panic, never a weapon
-  or another player attacking.
-- **Arena fidelity (T3/T4)** — Gemini may drift to a generic platform/stage. The
-  arena-accuracy failure-fixes (F8 hex honeycomb, F9 sweeper turbine disc + amber/
-  crimson beams) in `prompts.md` restate the required geometry; re-roll drift. The
-  in-game look was ground-truthed via Studio MCP screen captures on 2026-07-12.
+- **Frame #3 reading as combat/violence, or growing an arena** — T3 is a
+  character-only peril shot on open dusk sky (no floor/arena). Convey danger via
+  the off-balance/falling pose + cyan soul-energy motion; never a weapon or another
+  player. Apply F7 if a floor or arena creeps in. (T3 originally used the in-game
+  Hex-A-Gone arena but it was dropped — its tiles render as hourglass/bowtie shapes,
+  not clean hexagons, so it wouldn't depict cleanly; likely a composed-hex geometry
+  bug worth a separate look.)
+- **Arena fidelity (T4)** — Gemini may drift the Soul Sweeper to a generic stage.
+  Failure-fix F8 (sweeper turbine disc + central hub + low-amber/high-crimson beams)
+  in `prompts.md` restates the required geometry; re-roll drift. The Sweeper look was
+  ground-truthed via Studio MCP screen captures on 2026-07-12.
