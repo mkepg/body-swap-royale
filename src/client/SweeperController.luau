@@ -130,7 +130,7 @@ function SweeperController.start()
 	local partCount = 0
 	local function counted(p) partCount += 1; return p end
 
-	-- The low beam config drives the wake channels; the high beam has no wake (the
+	-- The low beam config drives the seam flare; the high beam has no trail (the
 	-- spec's "signature art beat" is scoped to the low/JUMP beam's trail).
 	local lowBeam
 	for _, beam in ipairs(Config.SWEEP_BEAMS) do
@@ -171,6 +171,8 @@ function SweeperController.start()
 	----------------------------------------------------------------------------
 	local rimRing = {}
 	do
+		-- Deliberately NOT tied to Config.SWEEP_PLATFORM_SEGMENTS: the smooth annulus
+		-- covers the floor segmentation; the ring's count is its own look choice.
 		local segs = 48
 		local radius = Config.SWEEP_PLATFORM_RADIUS + 0.2
 		local pts = WorldLayout.ring(c.X, c.Z, radius, segs)
@@ -186,8 +188,9 @@ function SweeperController.start()
 	end
 
 	----------------------------------------------------------------------------
-	-- 3. Moat line: faint inner-rim band at the fall-gap's disc edge -- keeps
-	--    the hole readable at play speed (fairness; the reference hides it).
+	-- 3. Moat line: faint inner-rim band at the fall-gap's disc edge (24 tangent
+	--    segments) -- keeps the hole readable at play speed (fairness; the
+	--    reference hides it).
 	----------------------------------------------------------------------------
 	local moatRing = {}
 	do
