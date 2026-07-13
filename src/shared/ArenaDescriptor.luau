@@ -9,6 +9,7 @@
 	  footprint -- X,Z extent of the course (Layer 2 dressing sizes to this)
 	  depth     -- how far the course drops below the surface
 	  accent    -- theme tint for this arena's dressing
+	  trim      -- optional (default true): false = arena builds its own border, skip edge trim
 
 	Future arenas add their own builder here; ArenaDressing consumes whichever
 	descriptor it is handed and never reads arena internals.
@@ -45,6 +46,8 @@ function ArenaDescriptor.hex()
 end
 
 -- Soul Sweeper v2 descriptor: one annulus level at the platform surface.
+-- trim = false: the T4 glow-up's built-in rim ring (SweeperController) replaces
+-- the generic ArenaDressing edge trim, so this arena opts out of Layer-2 trim.
 function ArenaDescriptor.sweeper()
 	local extent = Config.SWEEP_PLATFORM_RADIUS * 2
 	return {
@@ -53,7 +56,7 @@ function ArenaDescriptor.sweeper()
 		depth = Config.SWEEP_SURFACE_Y - Config.SWEEP_VOID_Y,
 		accent = Config.SWEEP_ACCENT,
 		levels = { { y = Config.SWEEP_SURFACE_Y, color = Config.SWEEP_ACCENT } },
-		trimDim = Config.GLOW_DIM_SWEEP_TRIM, -- per-arena dim for this arena's edge-trim border
+		trim = false,
 	}
 end
 
@@ -71,7 +74,12 @@ function ArenaDescriptor.validate(desc)
 	assert(typeof(desc.accent) == "Color3", "ArenaDescriptor.accent must be a Color3")
 	assert(type(desc.levels) == "table" and #desc.levels > 0,
 		"ArenaDescriptor.levels must be a non-empty array")
-	assert(type(desc.trimDim) == "number", "ArenaDescriptor.trimDim must be a number")
+	-- trim defaults to true; trimDim is only meaningful (and required) when trimmed.
+	assert(desc.trim == nil or type(desc.trim) == "boolean",
+		"ArenaDescriptor.trim must be a boolean when present")
+	if desc.trim ~= false then
+		assert(type(desc.trimDim) == "number", "ArenaDescriptor.trimDim must be a number")
+	end
 	for i, lv in ipairs(desc.levels) do
 		assert(type(lv.y) == "number", "ArenaDescriptor.levels[" .. i .. "].y must be a number")
 		assert(typeof(lv.color) == "Color3", "ArenaDescriptor.levels[" .. i .. "].color must be a Color3")
