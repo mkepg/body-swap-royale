@@ -235,7 +235,11 @@ function SweeperController.start()
 		cyl("HubDrum1", 6.3, 0.2, 3.3, Config.SWEEP_PLATFORM_COLOR, Enum.Material.Metal, 0)
 		cyl("HubGroove", 5.95, 3.3, 3.5, grooveColor, Enum.Material.SmoothPlastic, 0)
 		cyl("HubDrum2", 6.15, 3.5, 6.8, Config.SWEEP_PLATFORM_COLOR, Enum.Material.Metal, 0)
-		-- Ledge sits ABOVE the high-bar collar's sweep (collar top ~ y 9.0).
+		-- Ledge sits ABOVE the high-bar collar's sweep. Collar top ~ y 9.0 is
+		-- DERIVED from the server collar build (SweeperHazard): collar top =
+		-- SWEEP_BEAM_HIGH_BOTTOM + SWEEP_BEAM_HIGH_THICKNESS/2 + (thick + 1)/2
+		-- = 5.5 + 1.5 + 2.0. Re-derive the 9.3 below if either knob changes
+		-- (the Config.SWEEP_AIRBORNE_BAND re-derive-note precedent).
 		cyl("HubLedge", 7.2, 9.3, 9.7, Config.SWEEP_RAIL_COLOR, Enum.Material.Metal, 0)
 		cyl("HubBezelLow", 3.8, 9.9, 10.3, Config.SWEEP_RAIL_COLOR, Enum.Material.Metal, 0)
 		-- Lantern: outer GLASS wall (visible transparency), inner Neon core with
@@ -248,6 +252,11 @@ function SweeperController.start()
 		lanternLight.Color = Config.SWEEP_ACCENT
 		lanternLight.Brightness = 2
 		lanternLight.Range = 26
+		-- Dormancy-safe initial state: the instance default is Enabled = true, and
+		-- setLive(false) only runs at the END of start() -- past section 6's
+		-- WaitForChild yield -- so a slow-replicating client would otherwise show
+		-- the lantern lit for seconds while dormant. setLive syncs it from here on.
+		lanternLight.Enabled = false
 		lanternLight.Parent = lanternCore
 		cyl("HubBezelHigh", 3.8, 13.9, 14.3, Config.SWEEP_RAIL_COLOR, Enum.Material.Metal, 0)
 		cyl("HubCap", 3.2, 14.3, 15.3, Config.SWEEP_RAIL_COLOR, Enum.Material.Metal, 0)
