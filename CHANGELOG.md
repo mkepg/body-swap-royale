@@ -27,9 +27,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   accent bars, the HubMesh hybrid hook, and the sweeper's generic edge trim
   (arena-agnostic `ArenaDescriptor.trim = false` opt-out; hex unchanged) with
   their 9 dead Config keys (new knobs: `SWEEP_SEAM_COUNT`, rail/under-rail
-  colors, `GLOW_DIM_SWEEP_SEAM/RIM_RING/MOAT/LANTERN`). Verified: 26/26 lune
-  suites (strike math untouched); Studio visual pass vs the reference (live +
-  dormant states, hub close-ups, console clean). See
+  colors, `GLOW_DIM_SWEEP_SEAM/RIM_RING/LANTERN`). **Iteration 2 (in-game
+  review):** rim + moat rebuilt as TWO true-circle EditableMeshes — a dark
+  shell (disc + fascia/moat lips, replacing the SmoothAnnulus) and one recessed
+  edge-neon belt mesh — killing the jagged segmented-ring read; seam strips
+  gained dark flank rails so every glow line sits embedded in a metal channel
+  (the bars' shell language); disc finish switched from the rocky
+  `SweeperStageFloor` variant to smooth Metal + `SWEEP_DISC_REFLECTANCE`.
+  Verified: 26/26 lune suites (strike math untouched); Studio visual pass vs
+  the reference (live + dormant states, hub and rim close-ups, grazing-angle
+  artifact hunts, console clean). See
   [spec](superpowers/specs/2026-07-13-sweeper-t4-visual-glowup-design.md) and
   [plan](superpowers/plans/2026-07-13-sweeper-t4-visual-glowup.md).
 

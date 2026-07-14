@@ -241,6 +241,35 @@ the working tree.)
    flare behind the low bar, dormancy flip when the round rotates to hex
    (or via a forced state if convenient).
 
+## §6b Iteration 2 amendment (2026-07-14, user-directed after the first build)
+
+Three refinements from an in-game review superseded parts of §4.2 items 2–3 and
+the disc finish:
+
+1. **True circles, not polygons.** The 48/24-segment tangent rings read jagged
+   (overlapping chord ends). The rim + moat are now TWO EditableMesh true-circle
+   meshes (180 sides): `DiscShell` = smooth disc annulus + rim fascia lips +
+   moat lips (one dark-metal mesh, replaces the separate SmoothAnnulus), and
+   `EdgeNeon` = rim belt + moat belt (one Neon mesh; both share
+   `GLOW_DIM_SWEEP_RIM_RING`; `GLOW_DIM_SWEEP_MOAT` retired). Segmented rings
+   remain only as the EditableMesh-less fallback.
+   - Hard-won constraints (encoded as code comments): a MeshPart renders its
+     LIVE EditableMesh (destroying the editable blanks the part); every live
+     editable holds a slab of a small device-wide memory budget that LobbyStage
+     already draws from — hence exactly TWO meshes; neon belt edges need a
+     0.10-stud VERTICAL setback behind the lips (flush edges leave a sub-pixel
+     glow sliver at grazing angles that rasterizes as a dashed line); lip tops
+     sit flush with the deck (+0.02) so the metal edge catchlight doesn't read
+     as a separate line.
+2. **Embedded neon everywhere.** The glow must read recessed INSIDE dark metal,
+   never laid on top: rim/moat belts sit 0.15/0.14 behind their lips; each seam
+   strip gains two dark flank rails on its groove plate (flank tops 0.20 >
+   strip top 0.125) — the same shell language as the bars.
+3. **Premium dark-metal disc.** The rocky `SweeperStageFloor` MaterialVariant
+   read like obsidian; default is now smooth `Metal` + `SWEEP_DISC_REFLECTANCE`
+   (0.15) on shell and server floor segments (variant mechanism kept, `""` by
+   default).
+
 ## §7 Out of scope
 
 - Sky/lighting service changes (shipped world slices already match T4's
