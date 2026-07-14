@@ -195,12 +195,19 @@ Config.SWEEP_STANDBY_TRANSPARENCY = 0.85 -- dormant-arena Neon dim (one-time fli
 -- studs / rim accents / the generic edge trim.
 Config.SWEEP_SEAM_COUNT = 12
 
+-- Disc finish (T4 glow-up iter 2): premium dark painted/brushed metal with a
+-- subtle reflection, per the reference -- smooth Metal + this Reflectance on the
+-- annulus/floor. (The old "SweeperStageFloor" rocky variant read like obsidian.)
+Config.SWEEP_DISC_REFLECTANCE = 0.15
+
 -- ===== Hybrid assets (each with a code-only fallback) =====
 -- SWEEP_DISC_MATERIAL: a MaterialVariant NAME resolved against the place's
 -- MaterialService (sourced via Studio MCP 2026-07-09; alternate takes parked in
 -- MaterialService.AssistantMaterials). A variant only renders when the part's
--- Material equals its BaseMaterial, hence the *_BASE key. "" => stock Glass look.
-Config.SWEEP_DISC_MATERIAL = "SweeperStageFloor"
+-- Material equals its BaseMaterial, hence the *_BASE key. "" => the stock
+-- dark-metal finish above (the retired "SweeperStageFloor" variant remains
+-- available in MaterialService if ever wanted back).
+Config.SWEEP_DISC_MATERIAL = ""
 Config.SWEEP_DISC_MATERIAL_BASE = "Metal"
 -- (v2.1: the beams are solid striped SmoothPlastic machine bars now -- the old Neon
 -- beam-material slot was retired with the light-beam look.)
@@ -382,8 +389,7 @@ Config.GLOW_DIM_SPECTATOR_ORBS = 0.0  -- lobby spectator-soul orbs (LobbyStage)
 Config.GLOW_DIM_HEX_TRIM = 0.0        -- hex play-area edge-trim border (ArenaDressing, via descriptor.trimDim)
 Config.GLOW_DIM_SWEEP_DORMANT = 0.0   -- idle-sweeper standby dim (keep dormant dimmest)
 Config.GLOW_DIM_SWEEP_SEAM = 0.0      -- wedge seam strips incl. flare (SweeperController)
-Config.GLOW_DIM_SWEEP_RIM_RING = 0.0  -- continuous rim ring band (SweeperController)
-Config.GLOW_DIM_SWEEP_MOAT = 0.0      -- fall-gap inner-rim readability line (SweeperController)
+Config.GLOW_DIM_SWEEP_RIM_RING = 0.0  -- edge neon: rim belt + fall-gap moat belt, one mesh (SweeperController)
 Config.GLOW_DIM_SWEEP_LANTERN = 0.0   -- hub lantern core (SweeperController)
 -- Gameplay TELLS (server-side): default 0.0 = full brightness (no readability change).
 -- Raise only if you deliberately want the danger signal dimmer.

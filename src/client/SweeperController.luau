@@ -50,8 +50,9 @@ local TAU = math.pi * 2
 -- arena.
 local SEAM_IDLE_TRANSPARENCY = GlowDim.apply(0.35, Config.GLOW_DIM_SWEEP_SEAM)
 local SEAM_FLARE_TRANSPARENCY = GlowDim.apply(0, Config.GLOW_DIM_SWEEP_SEAM)
+-- Rim + moat belts are ONE mesh (editable-memory budget), so they share this
+-- knob; the retired GLOW_DIM_SWEEP_MOAT went with the separate segmented moat.
 local RIM_RING_TRANSPARENCY = GlowDim.apply(0, Config.GLOW_DIM_SWEEP_RIM_RING)
-local MOAT_TRANSPARENCY = GlowDim.apply(0.5, Config.GLOW_DIM_SWEEP_MOAT)
 local LANTERN_TRANSPARENCY = GlowDim.apply(0, Config.GLOW_DIM_SWEEP_LANTERN)
 local DORMANT_TRANSPARENCY = GlowDim.apply(Config.SWEEP_STANDBY_TRANSPARENCY, Config.GLOW_DIM_SWEEP_DORMANT)
 
@@ -90,33 +91,50 @@ local function radialCFrame(center, angle, y, radiusMid)
 	return CFrame.lookAt(mid, mid + Vector3.new(dirX, 0, dirZ)) * CFrame.Angles(0, math.rad(90), 0)
 end
 
--- A seamless TRUE-CIRCLE annulus (EditableMesh): inner/outer vertex rings top
--- and bottom, top & bottom quad strips + outer and inner skirts (the lobby's
--- `buildEditableCyl` pattern -- LobbyStage -- adapted to a ring). The caller
--- pcall-wraps this: on any client where EditableMesh is unavailable, the build
--- simply fails and the server's segmented floor stays visible (current look).
-local function buildEditableAnnulus(innerR, outerR, thickness, sides)
-	local em = AssetService:CreateEditableMesh()
-	local ti, to, bi, bo = {}, {}, {}, {}
-	for i = 0, sides - 1 do
-		local a = (2 * math.pi * i) / sides
-		local cx, sz = math.cos(a), math.sin(a)
-		ti[i] = em:AddVertex(Vector3.new(innerR * cx, thickness / 2, innerR * sz))
-		to[i] = em:AddVertex(Vector3.new(outerR * cx, thickness / 2, outerR * sz))
-		bi[i] = em:AddVertex(Vector3.new(innerR * cx, -thickness / 2, innerR * sz))
-		bo[i] = em:AddVertex(Vector3.new(outerR * cx, -thickness / 2, outerR * sz))
+-- A seamless TRUE-CIRCLE multi-band ring mesh (EditableMesh): each band is an
+-- annulus (inner/outer vertex rings top and bottom, top/bottom quad strips +
+-- outer and inner skirts -- the lobby's `buildEditableCyl` pattern adapted to
+-- rings); several bands share ONE mesh/part. Bands give y0/y1 in SURFACE-
+-- relative studs; vertices are authored around the combined vertical center so
+-- the part pivot is the bbox center. The caller pcall-wraps this: on any client
+-- where EditableMesh is unavailable, the build simply fails and the caller
+-- falls back to the segmented look.
+--
+-- BUDGET WARNING: the returned MeshPart renders the LIVE EditableMesh --
+-- destroying the editable blanks the part (verified in Studio) -- and every
+-- live editable holds a slab of a small device-wide memory budget that
+-- LobbyStage's smooth deck/rings already draw from. That is exactly why the
+-- arena consolidates ALL its circle geometry into just TWO of these meshes
+-- (dark shell + edge neon); do not add more without retesting the budget.
+local function buildEditableBands(bands, sides)
+	local yMin, yMax = math.huge, -math.huge
+	for _, b in ipairs(bands) do
+		if b.y0 < yMin then yMin = b.y0 end
+		if b.y1 > yMax then yMax = b.y1 end
 	end
-	for i = 0, sides - 1 do
-		local j = (i + 1) % sides
-		em:AddTriangle(ti[i], to[j], to[i]); em:AddTriangle(ti[i], ti[j], to[j])   -- top
-		em:AddTriangle(bi[i], bo[i], bo[j]); em:AddTriangle(bi[i], bo[j], bi[j])   -- bottom
-		em:AddTriangle(to[i], bo[j], bo[i]); em:AddTriangle(to[i], to[j], bo[j])   -- outer skirt
-		em:AddTriangle(ti[i], bi[i], bi[j]); em:AddTriangle(ti[i], bi[j], ti[j])   -- inner skirt
+	local mid = (yMin + yMax) / 2
+	local em = AssetService:CreateEditableMesh()
+	for _, b in ipairs(bands) do
+		local ti, to, bi, bo = {}, {}, {}, {}
+		for i = 0, sides - 1 do
+			local a = (2 * math.pi * i) / sides
+			local cx, sz = math.cos(a), math.sin(a)
+			ti[i] = em:AddVertex(Vector3.new(b.inner * cx, b.y1 - mid, b.inner * sz))
+			to[i] = em:AddVertex(Vector3.new(b.outer * cx, b.y1 - mid, b.outer * sz))
+			bi[i] = em:AddVertex(Vector3.new(b.inner * cx, b.y0 - mid, b.inner * sz))
+			bo[i] = em:AddVertex(Vector3.new(b.outer * cx, b.y0 - mid, b.outer * sz))
+		end
+		for i = 0, sides - 1 do
+			local j = (i + 1) % sides
+			em:AddTriangle(ti[i], to[j], to[i]); em:AddTriangle(ti[i], ti[j], to[j])   -- top
+			em:AddTriangle(bi[i], bo[i], bo[j]); em:AddTriangle(bi[i], bo[j], bi[j])   -- bottom
+			em:AddTriangle(to[i], bo[j], bo[i]); em:AddTriangle(to[i], to[j], bo[j])   -- outer skirt
+			em:AddTriangle(ti[i], bi[i], bi[j]); em:AddTriangle(ti[i], bi[j], ti[j])   -- inner skirt
+		end
 	end
 	local mp = AssetService:CreateMeshPartAsync(Content.fromObject(em),
 		{ CollisionFidelity = Enum.CollisionFidelity.Box }) -- cosmetic + non-colliding anyway
-	mp.Size = Vector3.new(outerR * 2, thickness, outerR * 2)
-	return mp
+	return mp, mid
 end
 
 function SweeperController.start()
@@ -143,10 +161,50 @@ function SweeperController.start()
 	-- Studio reload can have the client running before SweeperField replicates).
 	local lowBeamPart = nil
 
+	-- Bake one multi-band TRUE-CIRCLE mesh (96 sides) as a configured cosmetic
+	-- part. Returns nil where EditableMesh is unavailable (or the editable-memory
+	-- budget is exhausted); callers fall back to the segmented look.
+	local function bandMesh(name, bands, color, material, transparency)
+		-- 180 sides (vs the old annulus' 96): on the reflective metal shell, each
+		-- silhouette facet catches the sun separately -- at 96 the edge glints
+		-- read as a dashed line; at 180 they merge into one continuous catchlight.
+		local ok, mp, mid = pcall(buildEditableBands, bands, 180)
+		if not ok or not mp then return nil end
+		mp.Name = name
+		mp.CFrame = CFrame.new(c.X, surfaceY + mid, c.Z)
+		mp.Anchored = true
+		mp.CanCollide = false
+		mp.CanQuery = false
+		mp.CanTouch = false
+		mp.CastShadow = false
+		mp.Color = color
+		mp.Material = material
+		mp.Transparency = transparency
+		mp.Parent = folder
+		return counted(mp)
+	end
+
+	-- Segmented tangent-ring fallback (pre-mesh look) for clients without
+	-- EditableMesh; also keeps the dormancy wiring identical either way.
+	local function segmentedRing(list, namePrefix, segs, radius, size, y, transparency)
+		local pts = WorldLayout.ring(c.X, c.Z, radius, segs)
+		local chord = 2 * radius * math.sin(math.pi / segs) * 1.06
+		for i, pt in ipairs(pts) do
+			local nxt = pts[(i % segs) + 1]
+			local p = counted(newPart(folder, namePrefix .. i, Vector3.new(size.X, size.Y, chord),
+				CFrame.lookAt(Vector3.new(pt.x, y, pt.z), Vector3.new(nxt.x, y, nxt.z)),
+				Config.SWEEP_ACCENT, Enum.Material.Neon, transparency))
+			list[#list + 1] = { part = p, liveTransparency = transparency }
+		end
+	end
+
 	----------------------------------------------------------------------------
-	-- 1. Wedge seams: SWEEP_SEAM_COUNT radial Neon strips (hole -> rim) in dark
-	--    grooves. Permanently visible (idle dim); the Heartbeat loop flares them
-	--    behind the low bar -- the old wake beat fused into reference geometry.
+	-- 1. Wedge seams: SWEEP_SEAM_COUNT radial Neon strips (hole -> rim), each
+	--    RECESSED in a dark metal channel -- groove plate below, flank rails
+	--    either side rising past the strip's top -- so the light reads embedded
+	--    in the platform, not laid on it (same shell language as the bars).
+	--    Permanently visible (idle dim); the Heartbeat loop flares them behind
+	--    the low bar -- the old wake beat fused into reference geometry.
 	----------------------------------------------------------------------------
 	local seamStrips = {}
 	do
@@ -161,51 +219,74 @@ function SweeperController.start()
 			local p = counted(newPart(folder, "Seam_" .. i, Vector3.new(len, 0.15, 0.9),
 				radialCFrame(c, angle, surfaceY + 0.05, mid), Config.SWEEP_ACCENT,
 				Enum.Material.Neon, SEAM_IDLE_TRANSPARENCY))
+			-- Flank rails on the groove plate's edges: tops at +0.20 vs the strip's
+			-- +0.125, so the neon sits below the metal -- a lit channel, not a bump.
+			for _, side in ipairs({ -0.625, 0.625 }) do
+				counted(newPart(folder, "SeamFlank_" .. i, Vector3.new(len, 0.28, 0.35),
+					radialCFrame(c, angle, surfaceY + 0.06, mid) * CFrame.new(0, 0, side),
+					Config.SWEEP_RAIL_COLOR, Enum.Material.Metal, 0))
+			end
 			seamStrips[#seamStrips + 1] = { part = p, angle = angle, lastTransparency = SEAM_IDLE_TRANSPARENCY }
 		end
 	end
 
 	----------------------------------------------------------------------------
-	-- 2. Rim ring: continuous bright band on the disc's outer edge face (48
-	--    tangent segments, slack-overlapped like the floor). Replaces the chase
-	--    studs, rim accent bars, and the generic ArenaDressing edge trim.
+	-- 2. Disc shell + edge neon: the whole circular look is exactly TWO true-
+	--    circle meshes (see the budget warning on buildEditableBands):
+	--    SHELL = the smooth disc annulus + rim fascia lips + moat lips, one dark
+	--    metal mesh; NEON = the rim belt + moat belt, one Neon mesh whose faces
+	--    sit 0.18 (rim) / 0.14 (moat) BEHIND the lips -- the glow reads embedded
+	--    in the platform's metal, per the reference, on a perfectly smooth
+	--    circle. The rim assembly replaces the chase studs, rim accent bars, and
+	--    the generic ArenaDressing edge trim; the moat belt keeps the fall-gap
+	--    readable at play speed (fairness; the reference hides it).
+	--    Fallback without EditableMesh: the server's segmented floor stays
+	--    visible and both rings build as segmented tangent bars (pre-mesh look).
 	----------------------------------------------------------------------------
-	local rimRing = {}
+	local edgeNeon = {} -- dormancy entries; single mesh OR fallback segments
+	local discShell = nil
 	do
-		-- Deliberately NOT tied to Config.SWEEP_PLATFORM_SEGMENTS: the smooth annulus
-		-- covers the floor segmentation; the ring's count is its own look choice.
-		local segs = 48
-		local radius = Config.SWEEP_PLATFORM_RADIUS + 0.2
-		local pts = WorldLayout.ring(c.X, c.Z, radius, segs)
-		local chord = 2 * radius * math.sin(math.pi / segs) * 1.06
-		local y = surfaceY - 0.55 -- band top flush with the deck (+0.05)
-		for i, pt in ipairs(pts) do
-			local nxt = pts[(i % segs) + 1]
-			local p = counted(newPart(folder, "RimRing_" .. i, Vector3.new(0.4, 1.2, chord),
-				CFrame.lookAt(Vector3.new(pt.x, y, pt.z), Vector3.new(nxt.x, y, nxt.z)),
-				Config.SWEEP_ACCENT, Enum.Material.Neon, RIM_RING_TRANSPARENCY))
-			rimRing[#rimRing + 1] = { part = p, liveTransparency = RIM_RING_TRANSPARENCY }
-		end
-	end
-
-	----------------------------------------------------------------------------
-	-- 3. Moat line: faint inner-rim band at the fall-gap's disc edge (24 tangent
-	--    segments) -- keeps the hole readable at play speed (fairness; the
-	--    reference hides it).
-	----------------------------------------------------------------------------
-	local moatRing = {}
-	do
-		local segs = 24
-		local radius = Config.SWEEP_HOLE_RADIUS - 0.2
-		local pts = WorldLayout.ring(c.X, c.Z, radius, segs)
-		local chord = 2 * radius * math.sin(math.pi / segs) * 1.06
-		local y = surfaceY - 0.2 -- band top flush with the deck (+0.05)
-		for i, pt in ipairs(pts) do
-			local nxt = pts[(i % segs) + 1]
-			local p = counted(newPart(folder, "MoatRing_" .. i, Vector3.new(0.3, 0.5, chord),
-				CFrame.lookAt(Vector3.new(pt.x, y, pt.z), Vector3.new(nxt.x, y, nxt.z)),
-				Config.SWEEP_ACCENT, Enum.Material.Neon, MOAT_TRANSPARENCY))
-			moatRing[#moatRing + 1] = { part = p, liveTransparency = MOAT_TRANSPARENCY }
+		local th = Config.SWEEP_PLATFORM_THICKNESS
+		local holeR = Config.SWEEP_HOLE_RADIUS
+		local platR = Config.SWEEP_PLATFORM_RADIUS
+		-- Vertical stacks (rel. surface): rim lips -0.25..+0.02 and -1.85..-1.55
+		-- (tops flush with the deck top +0.02 -- a proud lip corner reads as a
+		-- separate glint line); moat lips -0.08..+0.02 and -0.45..-0.32. Disc
+		-- bottom -1.98 (the fascia stays within the disc's depth). The rim neon
+		-- carries ~70% of the fascia height (reference read: a BOLD glow band
+		-- framed by slim metal lips, not a thin slit).
+		discShell = bandMesh("DiscShell", {
+			{ inner = holeR, outer = platR, y0 = 0.02 - th, y1 = 0.02 },          -- the disc
+			{ inner = platR - 0.5, outer = platR + 0.5, y0 = -0.25, y1 = 0.02 },  -- rim lip top (flush with deck)
+			{ inner = platR - 0.5, outer = platR + 0.5, y0 = -1.85, y1 = -1.55 }, -- rim lip bottom
+			{ inner = holeR - 0.5, outer = holeR + 0.1, y0 = -0.08, y1 = 0.02 },  -- moat lip top (flush with deck)
+			{ inner = holeR - 0.5, outer = holeR + 0.1, y0 = -0.45, y1 = -0.32 }, -- moat lip bottom
+		}, Config.SWEEP_PLATFORM_COLOR, Enum.Material.Metal, 0)
+		if discShell then
+			-- Premium dark-metal finish (reference read: painted/brushed metal with
+			-- subtle reflections -- NOT the rocky variant look).
+			discShell.Reflectance = Config.SWEEP_DISC_REFLECTANCE
+			if Config.SWEEP_DISC_MATERIAL ~= "" then
+				discShell.Material = Enum.Material[Config.SWEEP_DISC_MATERIAL_BASE]
+				discShell.MaterialVariant = Config.SWEEP_DISC_MATERIAL
+			end
+			-- Belt edges sit 0.10 INSIDE the lip openings (vertical setback, not
+			-- flush): a flush edge leaves a sub-pixel neon sliver visible past the
+			-- lip corner at grazing angles, which rasterizes as a dashed line along
+			-- the deck edge. With the setback, grazing rays land on dark channel
+			-- shadow (the disc's own skirt) instead of glow.
+			local neon = bandMesh("EdgeNeon", {
+				{ inner = platR - 0.5, outer = platR + 0.35, y0 = -1.45, y1 = -0.35 }, -- rim belt (recess 0.15)
+				{ inner = holeR - 0.36, outer = holeR + 0.1, y0 = -0.29, y1 = -0.12 }, -- moat belt (recess 0.14)
+			}, Config.SWEEP_ACCENT, Enum.Material.Neon, RIM_RING_TRANSPARENCY)
+			if neon then
+				edgeNeon[#edgeNeon + 1] = { part = neon, liveTransparency = RIM_RING_TRANSPARENCY }
+			end
+		else
+			segmentedRing(edgeNeon, "RimRing_", 48, Config.SWEEP_PLATFORM_RADIUS + 0.2,
+				Vector3.new(0.4, 1.2, 0), surfaceY - 0.55, RIM_RING_TRANSPARENCY)
+			segmentedRing(edgeNeon, "MoatRing_", 24, Config.SWEEP_HOLE_RADIUS - 0.2,
+				Vector3.new(0.3, 0.5, 0), surfaceY - 0.2, RIM_RING_TRANSPARENCY)
 		end
 	end
 
@@ -294,66 +375,39 @@ function SweeperController.start()
 	end
 
 	----------------------------------------------------------------------------
-	-- 6. Smooth annulus (the lobby technique): one seamless EditableMesh MeshPart
-	--    laid directly over the server's segmented collision floor, carrying the
-	--    SweeperStageFloor MaterialVariant. pcall-wrapped like LobbyStage.smoothCyl:
-	--    on any client where EditableMesh is unavailable, the build simply fails
-	--    and the server's segments (still fully visible + collidable) are the look
-	--    -- nothing else breaks. On SUCCESS, the segments are hidden LOCALLY ONLY
-	--    (LocalTransparencyModifier) so their collision stays exactly as-is for
-	--    the server and every other client.
+	-- 6. With the DiscShell mesh up (section 2), hide the server's segmented
+	--    collision floor LOCALLY ONLY (LocalTransparencyModifier), so its
+	--    collision stays exactly as-is for the server and every other client.
+	--    Done here (end of the build) because WaitForChild can yield up to 5s.
 	----------------------------------------------------------------------------
-	do
-		local th = Config.SWEEP_PLATFORM_THICKNESS
-		local topY = surfaceY + 0.02
-		local ok, mp = pcall(buildEditableAnnulus,
-			Config.SWEEP_HOLE_RADIUS, Config.SWEEP_PLATFORM_RADIUS, th, 96)
-		if ok and mp then
-			mp.Name = "SmoothAnnulus"
-			mp.CFrame = CFrame.new(c.X, topY - th / 2, c.Z)
-			mp.Anchored = true
-			mp.CanCollide = false
-			mp.CanQuery = false
-			mp.CanTouch = false
-			mp.CastShadow = false
-			mp.Color = Config.SWEEP_PLATFORM_COLOR
-			mp.Material = Enum.Material.Glass
-			if Config.SWEEP_DISC_MATERIAL ~= "" then
-				mp.Material = Enum.Material[Config.SWEEP_DISC_MATERIAL_BASE]
-				mp.MaterialVariant = Config.SWEEP_DISC_MATERIAL
-			end
-			mp.Parent = folder
-			counted(mp)
-
-			-- SweeperField is server-built at startup (SweeperHazard.build), so it
-			-- should already exist by the time a client runs this -- but wait a
-			-- short beat and degrade gracefully (segments stay visible) rather than
-			-- assume replication order.
-			local field = Workspace:WaitForChild("SweeperField", 5)
-			if field then
-				for _, seg in ipairs(field:GetChildren()) do
-					if seg:IsA("BasePart") and seg.Name:match("^SweepFloor_") then
-						seg.LocalTransparencyModifier = 1
-					end
+	if discShell then
+		-- SweeperField is server-built at startup (SweeperHazard.build), so it
+		-- should already exist by the time a client runs this -- but wait a
+		-- short beat and degrade gracefully (segments stay visible) rather than
+		-- assume replication order.
+		local field = Workspace:WaitForChild("SweeperField", 5)
+		if field then
+			for _, seg in ipairs(field:GetChildren()) do
+				if seg:IsA("BasePart") and seg.Name:match("^SweepFloor_") then
+					seg.LocalTransparencyModifier = 1
 				end
 			end
 		end
-		-- pcall failure: skip both the smooth mesh and the segment hide, so the
-		-- server's segmented floor stays fully visible (the pre-v2.1 look).
 	end
+	-- No shell mesh: the server's segmented floor stays fully visible.
 
 	assert(partCount <= 180, "SweeperController: dressing part budget exceeded (" .. partCount .. " > 180)")
 
 	----------------------------------------------------------------------------
-	-- Dormancy sync: one pass over every Neon element. Static elements (rim
-	-- ring, moat line, hub lantern core) flip between a fixed live value and
-	-- the standby dim; the lantern's PointLight switches off entirely when
-	-- dormant (it has no dim analog). The animated element (seams) resets to
-	-- idle dim on flip; the live loop repaints it once running.
+	-- Dormancy sync: one pass over every Neon element. Static elements (the
+	-- edge-neon mesh -- or its segmented fallback rings -- and the hub lantern
+	-- core) flip between a fixed live value and the standby dim; the lantern's
+	-- PointLight switches off entirely when dormant (it has no dim analog). The
+	-- animated element (seams) resets to idle dim on flip; the live loop
+	-- repaints it once running.
 	----------------------------------------------------------------------------
 	local staticNeon = {}
-	for _, b in ipairs(rimRing) do staticNeon[#staticNeon + 1] = b end
-	for _, b in ipairs(moatRing) do staticNeon[#staticNeon + 1] = b end
+	for _, b in ipairs(edgeNeon) do staticNeon[#staticNeon + 1] = b end
 	staticNeon[#staticNeon + 1] = { part = lanternCore, liveTransparency = LANTERN_TRANSPARENCY }
 
 	local function setLive(live)
