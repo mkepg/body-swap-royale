@@ -241,12 +241,14 @@ function SweeperController.start()
 		-- = 5.5 + 1.5 + 2.0. Re-derive the 9.3 below if either knob changes
 		-- (the Config.SWEEP_AIRBORNE_BAND re-derive-note precedent).
 		cyl("HubLedge", 7.2, 9.3, 9.7, Config.SWEEP_RAIL_COLOR, Enum.Material.Metal, 0)
-		cyl("HubBezelLow", 3.8, 9.9, 10.3, Config.SWEEP_RAIL_COLOR, Enum.Material.Metal, 0)
+		cyl("HubBezelLow", 3.4, 9.9, 10.3, Config.SWEEP_RAIL_COLOR, Enum.Material.Metal, 0)
 		-- Lantern: outer GLASS wall (visible transparency), inner Neon core with
-		-- an air gap, per the reference read (glow embedded in glass).
-		cyl("HubLanternGlass", 3.4, 10.2, 14.0,
+		-- an air gap, per the reference read (glow embedded in glass). Taller than
+		-- wide (visual-pass iter 1): the reference lantern is a slim upright
+		-- capsule, not a squat drum.
+		cyl("HubLanternGlass", 3.0, 10.2, 15.0,
 			Color3.fromRGB(205, 222, 255), Enum.Material.Glass, 0.45)
-		lanternCore = cyl("HubLanternCore", 2.3, 10.5, 13.7,
+		lanternCore = cyl("HubLanternCore", 2.0, 10.5, 14.7,
 			Config.SWEEP_ACCENT, Enum.Material.Neon, LANTERN_TRANSPARENCY)
 		lanternLight = Instance.new("PointLight")
 		lanternLight.Color = Config.SWEEP_ACCENT
@@ -258,9 +260,9 @@ function SweeperController.start()
 		-- the lantern lit for seconds while dormant. setLive syncs it from here on.
 		lanternLight.Enabled = false
 		lanternLight.Parent = lanternCore
-		cyl("HubBezelHigh", 3.8, 13.9, 14.3, Config.SWEEP_RAIL_COLOR, Enum.Material.Metal, 0)
-		cyl("HubCap", 3.2, 14.3, 15.3, Config.SWEEP_RAIL_COLOR, Enum.Material.Metal, 0)
-		cyl("HubCapTop", 2.6, 15.3, 15.7, Config.SWEEP_RAIL_COLOR, Enum.Material.Metal, 0)
+		cyl("HubBezelHigh", 3.4, 14.9, 15.3, Config.SWEEP_RAIL_COLOR, Enum.Material.Metal, 0)
+		cyl("HubCap", 2.8, 15.3, 16.3, Config.SWEEP_RAIL_COLOR, Enum.Material.Metal, 0)
+		cyl("HubCapTop", 2.2, 16.3, 16.7, Config.SWEEP_RAIL_COLOR, Enum.Material.Metal, 0)
 	end
 
 	----------------------------------------------------------------------------
