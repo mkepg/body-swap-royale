@@ -81,9 +81,12 @@ local function buildAnnulus(folder)
 		seg.Size = Vector3.new(radialWidth, Config.SWEEP_PLATFORM_THICKNESS, segLen)
 		seg.CFrame = CFrame.lookAt(Vector3.new(pt.x, floorY, pt.z), Vector3.new(nxt.x, floorY, nxt.z))
 		seg.Color = Config.SWEEP_PLATFORM_COLOR
-		seg.Material = Enum.Material.Glass
+		-- Premium dark-metal finish (T4 glow-up): smooth Metal + Reflectance knob,
+		-- matching the client's SmoothAnnulus overlay so the fallback look agrees.
+		seg.Material = Enum.Material.Metal
+		seg.Reflectance = Config.SWEEP_DISC_REFLECTANCE
 		-- Hybrid skin: swap the stock look for the sourced MaterialVariant when
-		-- configured ("" keeps Glass). An unknown variant name renders the base.
+		-- configured ("" keeps the metal finish). An unknown name renders the base.
 		if Config.SWEEP_DISC_MATERIAL ~= "" then
 			seg.Material = Enum.Material[Config.SWEEP_DISC_MATERIAL_BASE]
 			seg.MaterialVariant = Config.SWEEP_DISC_MATERIAL
