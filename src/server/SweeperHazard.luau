@@ -343,9 +343,9 @@ end
 function SweeperHazard.start(now)
 	startClock = now
 	-- Publish the round-start time on the SERVER clock -> client. Beams themselves no
-	-- longer need this (their pose is measured, not computed from elapsed) -- kept
-	-- because it's harmless and other client cosmetics (chase, rotors) still key off
-	-- it (spec 2026-07-09 §2-7).
+	-- longer need this (their pose is measured, not computed from elapsed), and the
+	-- T4 glow-up retired its last cosmetic consumers (chase/rotors) -- kept anyway as
+	-- a cheap, harmless round-start stamp for future consumers/diagnostics.
 	local folder = Workspace:FindFirstChild("SweeperField")
 	if folder then
 		folder:SetAttribute("RoundStartServerT", Workspace:GetServerTimeNow())
