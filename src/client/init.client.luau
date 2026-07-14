@@ -35,7 +35,8 @@ LobbyStage.start()
 ClientEconomyHud.start()
 DeviceOrientation.start()
 
--- Soul Sweeper (arena #2) cosmetics: Soul Turbine dressing (wake/chase/rotors/annulus).
+-- Soul Sweeper (arena #2) cosmetics: T4 glow-up dressing (wedge seams/rim ring/
+-- moat line/hub stack + lantern/annulus).
 -- Started unconditionally (persistent two-arena world) -- it self-gates on the
 -- server-authoritative LiveArena attribute, so it's fully dormant while hex is live.
 SweeperController.start()

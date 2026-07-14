@@ -4,6 +4,35 @@ All notable changes to this project are documented here.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2026-07-14]
+
+### Changed
+- **Soul Sweeper T4 visual glow-up — the arena now matches the store thumbnail.**
+  The real arena is rebuilt to match the shipped T4 thumbnail reference
+  (`docs/marketing/thumbnails/candidates/gemini-t4-master-1.png`) with zero
+  gameplay change ("play what you see"). **Bars** (server): each spine IS the
+  emissive class-colored Neon core — amber = JUMP, crimson = STAY GROUNDED —
+  framed by dark structural rails (class-tinted bronze/maroon under-rails) with
+  a rounded Neon tip cap; hitbox↔visual alignment is exact by construction (the
+  kill band derives from the same part). **Disc** (client): 12 permanent amber
+  wedge seams in dark grooves — the old wake ignition is FUSED into them (idle
+  dim, flare behind the low bar) — plus a continuous bright rim ring on the
+  outer edge face and a faint moat line keeping the fall-gap readable (fairness
+  over reference fidelity, user-confirmed). **Hub** (client): flared skirt into
+  the moat, stacked drums with shadow groove, high-bar ledge (clearance derived
+  from the server collar build, re-derive note included), glass-encased amber
+  lantern core + PointLight (taller-than-wide per the reference; light off at
+  construction for dormancy safety), bezels, rounded cap. **Retired:** wake
+  channels, chase studs, rotor rings, light shaft, spotlight fixtures, rim
+  accent bars, the HubMesh hybrid hook, and the sweeper's generic edge trim
+  (arena-agnostic `ArenaDescriptor.trim = false` opt-out; hex unchanged) with
+  their 9 dead Config keys (new knobs: `SWEEP_SEAM_COUNT`, rail/under-rail
+  colors, `GLOW_DIM_SWEEP_SEAM/RIM_RING/MOAT/LANTERN`). Verified: 26/26 lune
+  suites (strike math untouched); Studio visual pass vs the reference (live +
+  dormant states, hub close-ups, console clean). See
+  [spec](superpowers/specs/2026-07-13-sweeper-t4-visual-glowup-design.md) and
+  [plan](superpowers/plans/2026-07-13-sweeper-t4-visual-glowup.md).
+
 ## [2026-07-12]
 
 ### Added
