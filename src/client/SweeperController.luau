@@ -330,9 +330,9 @@ function SweeperController.start()
 		cyl("HubLanternGlass", 3.0, 10.2, 15.0,
 			Color3.fromRGB(205, 222, 255), Enum.Material.Glass, 0.45)
 		lanternCore = cyl("HubLanternCore", 2.0, 10.5, 14.7,
-			Config.SWEEP_ACCENT, Enum.Material.Neon, LANTERN_TRANSPARENCY)
+			Config.SWEEP_LANTERN_COLOR, Enum.Material.Neon, LANTERN_TRANSPARENCY)
 		lanternLight = Instance.new("PointLight")
-		lanternLight.Color = Config.SWEEP_ACCENT
+		lanternLight.Color = Config.SWEEP_LANTERN_COLOR
 		lanternLight.Brightness = 2
 		lanternLight.Range = 26
 		-- Dormancy-safe initial state: the instance default is Enabled = true, and

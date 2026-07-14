@@ -108,6 +108,9 @@ Config.SWEEP_SEGMENT_SLACK = 1.08    -- segment length vs chord (overlap => no s
 Config.SWEEP_PLATFORM_THICKNESS = 2
 Config.SWEEP_PLATFORM_COLOR = Color3.fromRGB(20, 26, 48)   -- dark glass/metal indigo
 Config.SWEEP_ACCENT = Color3.fromRGB(244, 162, 97)         -- turbine amber
+-- Hub lantern core + its PointLight: the reference lantern burns a hotter
+-- golden YELLOW than the salmon accent (sampled from gemini-t4-master-1).
+Config.SWEEP_LANTERN_COLOR = Color3.fromRGB(255, 205, 80)
 Config.SWEEP_VOID_Y = Config.SWEEP_SURFACE_Y - 24 -- kill-plane (a visible fall beat)
 Config.SWEEP_STAND_BAND = 6          -- Y band BELOW the surface that counts as "on" it
                                      -- (below this = fallen into the gap; see STAND_BAND_UP for above)
