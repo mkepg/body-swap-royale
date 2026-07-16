@@ -42,21 +42,32 @@ local WHITE = Color3.new(1, 1, 1)
 local registry = {}
 local animConn = nil
 
+local NEVER_PARENTED_GRACE = 600 -- ~10s @60fps: drop handles never mounted (leak guard)
+
 local function stepAnimator()
 	local now = os.clock()
 	local n = #registry
 	local w = 0
 	for i = 1, n do
 		local h = registry[i]
-		local alive = h and not h._dead and h.gui.Parent ~= nil
-		if alive or (h and not h._dead and not h._seen) then
-			-- keep: either running, or not-yet-parented (preview between build and mount)
-			w += 1
-			registry[w] = h
+		if h and not h._dead then
 			if h.gui.Parent then
+				-- running: parented (again) -> animate
 				h._seen = true
+				h._graceFrames = nil
+				w += 1
+				registry[w] = h
 				h._animate(now)
+			elseif not h._seen then
+				-- not-yet-parented (preview between build and mount): keep briefly,
+				-- but bound the wait so an orphaned preview can't linger forever.
+				h._graceFrames = (h._graceFrames or 0) + 1
+				if h._graceFrames < NEVER_PARENTED_GRACE then
+					w += 1
+					registry[w] = h
+				end
 			end
+			-- else: was seen parented, now unparented (destroyed) -> drop
 		end
 	end
 	for i = w + 1, n do
@@ -142,6 +153,20 @@ local function strokeTarget(s)
 	end
 end
 
+-- Full-scale invisible rim + luminous UIStroke that a flash color (Stormcloud)
+-- pulses on/off. Returns nil,nil for non-flash colors so it costs nothing on the
+-- styles that add it defensively. Stroke starts at 0.65 (subtle) until flashOn -> 0.
+local function makeFlashRim(root, state)
+	if not (state.anim and state.anim.kind == "flash") then
+		return nil, nil
+	end
+	local rim = circle(root, 1.0, state.luminous, 2)
+	rim.BackgroundTransparency = 1
+	local rimStroke = makeStroke(rim, state.sizePx * 0.12, state.luminous) -- 12% of billboard px
+	rimStroke.Transparency = 0.65
+	return rim, rimStroke
+end
+
 -- ===== style builders ===================================================
 -- Each builder fills `root` and populates `ctx`:
 --   ctx.applyColors()   -- write all STATIC/flat colors + emphasis color
@@ -200,13 +225,18 @@ function BUILDERS.ring(root, state, ticks, ctx)
 	local center = circle(root, 0.5, WHITE, 3)
 	center.BackgroundTransparency = 1
 	local emph = makeStroke(center, 0, WHITE)
+	local rim, rimStroke = makeFlashRim(root, state) -- flash colors (Stormcloud) pulse here
 
 	ctx.emphasisStroke = emph
 	ctx.fillTargets = { strokeTarget(ann) }
 	ctx.gradientTarget = annulus -- a UIGradient here tints the annulus stroke
+	ctx.rimStroke = rimStroke
 	ctx.applyColors = function()
 		under.BackgroundColor3 = state.luminous
 		ann.Color = state.fill
+		if rim then
+			rimStroke.Color = state.luminous
+		end
 		emph.Color = emphasisColor(state.fill)
 	end
 end
@@ -220,6 +250,7 @@ function BUILDERS.pulse(root, state, ticks, ctx)
 	ripple.BackgroundTransparency = 1
 	local rip = makeStroke(ripple, 3, state.luminous)
 	rip.Transparency = 0.2
+	local rim, rimStroke = makeFlashRim(root, state) -- flash colors (Stormcloud) pulse here
 
 	ticks[#ticks + 1] = function(now)
 		local p = (now % 1.6) / 1.6 -- 1.6s loop
@@ -231,10 +262,14 @@ function BUILDERS.pulse(root, state, ticks, ctx)
 	ctx.emphasisStroke = emph
 	ctx.fillTargets = { bgTarget(core) }
 	ctx.gradientTarget = core
+	ctx.rimStroke = rimStroke
 	ctx.applyColors = function()
 		under.BackgroundColor3 = state.luminous
 		core.BackgroundColor3 = state.fill
 		rip.Color = state.luminous
+		if rim then
+			rimStroke.Color = state.luminous
+		end
 		emph.Color = emphasisColor(state.fill)
 	end
 end
@@ -257,6 +292,7 @@ function BUILDERS.orbit(root, state, ticks, ctx)
 	satL.Position = UDim2.fromScale(0, 0.5)
 	local satR = circle(carrier, 0.25, state.luminous, 3)
 	satR.Position = UDim2.fromScale(1, 0.5)
+	local rim, rimStroke = makeFlashRim(root, state) -- flash colors (Stormcloud) pulse here
 
 	ticks[#ticks + 1] = function(now)
 		carrier.Rotation = (now / 3 * 360) % 360 -- 360deg / 3s
@@ -265,11 +301,15 @@ function BUILDERS.orbit(root, state, ticks, ctx)
 	ctx.emphasisStroke = emph
 	ctx.fillTargets = { bgTarget(core) }
 	ctx.gradientTarget = core
+	ctx.rimStroke = rimStroke
 	ctx.applyColors = function()
 		under.BackgroundColor3 = state.luminous
 		core.BackgroundColor3 = state.fill
 		satL.BackgroundColor3 = state.luminous
 		satR.BackgroundColor3 = state.luminous
+		if rim then
+			rimStroke.Color = state.luminous
+		end
 		emph.Color = emphasisColor(state.fill)
 	end
 end
@@ -341,6 +381,8 @@ function BUILDERS.seraph(root, state, ticks, ctx)
 		shards[i] = sh
 	end
 
+	local rim, rimStroke = makeFlashRim(root, state) -- flash colors (Stormcloud) pulse here
+
 	ticks[#ticks + 1] = function(now)
 		local p = (now % 2.4) / 2.4 -- 2.4s ripple loop
 		local s = 0.48 + 1.04 * p -- 0.48 -> 1.52
@@ -352,6 +394,7 @@ function BUILDERS.seraph(root, state, ticks, ctx)
 	ctx.emphasisStroke = emph
 	ctx.fillTargets = { bgTarget(core) }
 	ctx.gradientTarget = core
+	ctx.rimStroke = rimStroke
 	ctx.applyColors = function()
 		under.BackgroundColor3 = state.luminous
 		core.BackgroundColor3 = state.fill
@@ -359,6 +402,9 @@ function BUILDERS.seraph(root, state, ticks, ctx)
 		ringStroke.Color = state.luminous
 		for _, sh in ipairs(shards) do
 			sh.BackgroundColor3 = state.luminous
+		end
+		if rim then
+			rimStroke.Color = state.luminous
 		end
 		emph.Color = emphasisColor(state.fill)
 	end
@@ -396,7 +442,10 @@ local function bindColorAnim(state, ctx, ticks)
 				targets[i](c)
 			end
 			if state.isMine then
-				emph.Color = emphasisColor(c) -- animated fills shift luminance
+				-- Base the emphasis contrast on the resolved fill (same as the static
+				-- path), not the instantaneous animated color -- for eclipse `c` is
+				-- luminous-based, so keying off fill keeps the two paths consistent.
+				emph.Color = emphasisColor(state.fill)
 			end
 		end
 
