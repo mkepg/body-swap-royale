@@ -333,16 +333,11 @@ Config.TELEGRAPH_FLASH_COLOR = Color3.fromRGB(255, 110, 40)
 -- SOUL_PALETTE: distinct, mobile-legible colors auto-assigned one per player (by
 -- join order, wrapping) as their persistent identity halo. The free "which body
 -- am I?" anchor (GDD §5). Index->color mapping is the pure SoulPalette module.
-Config.SOUL_PALETTE = {
-	Color3.fromRGB(255, 80, 80),    -- red
-	Color3.fromRGB(80, 160, 255),   -- blue
-	Color3.fromRGB(90, 220, 120),   -- green
-	Color3.fromRGB(255, 210, 70),   -- yellow
-	Color3.fromRGB(200, 110, 255),  -- purple
-	Color3.fromRGB(255, 150, 60),   -- orange
-	Color3.fromRGB(80, 230, 230),   -- cyan
-	Color3.fromRGB(255, 130, 200),  -- pink
-}
+local SoulPaletteData = require(script.Parent.SoulPaletteData)
+Config.SOUL_PALETTE = {}
+for i, c in ipairs(SoulPaletteData) do
+	Config.SOUL_PALETTE[i] = Color3.fromRGB(c.r, c.g, c.b)
+end
 
 -- ===== Broadcast World Shell ("Soul Festival Sky") -- Slice 1 ============
 -- All client-side cosmetic. Every assetId below has a code-only fallback: an
