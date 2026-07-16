@@ -44,9 +44,14 @@ local function withinRate(player)
 	for _, s in ipairs(stamps) do
 		if now - s < Config.SHOP_RATE_WINDOW then kept[#kept + 1] = s end
 	end
+	-- kept is bounded at SHOP_RATE_MAX -- rejected requests are never recorded, so a flood cannot grow the array
+	if #kept >= Config.SHOP_RATE_MAX then
+		rateStamps[player] = kept
+		return false
+	end
 	kept[#kept + 1] = now
 	rateStamps[player] = kept
-	return #kept <= Config.SHOP_RATE_MAX
+	return true
 end
 
 local function scheduleSave(player)
@@ -123,11 +128,11 @@ function EconomyService.onPlayerAdded(player)
 end
 
 function EconomyService.onPlayerRemoving(player)
+	saveDebounce[player] = nil
+	rateStamps[player] = nil
 	save(player)
 	profiles[player] = nil
 	persisted[player] = nil
-	rateStamps[player] = nil
-	saveDebounce[player] = nil
 end
 
 -- Award one round to one player. ctx = { survivedSwaps, isWinner, participated }.
