@@ -14,6 +14,10 @@
 --]]
 
 local TweenService = game:GetService("TweenService")
+local GuiService = game:GetService("GuiService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local HudZoneModel = require(ReplicatedStorage.Shared.HudZoneModel)
 
 local HudTheme = {}
 
@@ -46,15 +50,6 @@ HudTheme.Cap = {
 	timer = Vector2.new(120, 76),
 }
 
--- named screen zones: { anchor, position }
-HudTheme.Zone = {
-	top = { anchor = Vector2.new(0.5, 0), position = UDim2.new(0.5, 0, 0, 14) },
-	topTimer = { anchor = Vector2.new(0.5, 0), position = UDim2.fromScale(0.5, 0.04) },
-	center = { anchor = Vector2.new(0.5, 0.5), position = UDim2.fromScale(0.5, 0.40) },
-	notice = { anchor = Vector2.new(0.5, 0.5), position = UDim2.fromScale(0.5, 0.62) },
-	bottom = { anchor = Vector2.new(0.5, 1), position = UDim2.new(0.5, 0, 0.97, 0) },
-}
-
 HudTheme.Radius = UDim.new(0, 18)
 HudTheme.PanelStrokeThickness = 4
 HudTheme.TextStrokeThickness = 2
@@ -62,17 +57,56 @@ HudTheme.ShadowOffset = 6
 HudTheme.PopInTime = 0.25
 HudTheme.DisplayOrder = { swap = 5, bookend = 10 }
 
--- Place a GUI object into a named zone (anchor + position).
-function HudTheme.placeInZone(guiObject, zoneKey)
-	local z = HudTheme.Zone[zoneKey]
-	guiObject.AnchorPoint = z.anchor
-	guiObject.Position = z.position
+-- Zones are computed from viewport + Roblox top inset (HudZoneModel) and every
+-- placed object is re-placed when either changes -- the safe-area layer (spec §6.3).
+local placed = setmetatable({}, { __mode = "k" }) -- [guiObject] = zoneKey
+local placedCaps = setmetatable({}, { __mode = "k" }) -- [UISizeConstraint] = true (banner caps)
+
+local function currentViewport()
+	local cam = workspace.CurrentCamera
+	local size = cam and cam.ViewportSize or Vector2.new(1280, 720)
+	local inset = GuiService:GetGuiInset()
+	return { w = size.X, h = size.Y, insetTop = inset.Y }
 end
 
--- Cap a GUI object's pixel size so it never balloons on desktop/ultrawide.
+local function zoneData(zoneKey)
+	return HudZoneModel.zones(currentViewport())[zoneKey]
+end
+
+-- Place a GUI object into a named zone (anchor + position).
+function HudTheme.placeInZone(guiObject, zoneKey)
+	local z = zoneData(zoneKey)
+	guiObject.AnchorPoint = Vector2.new(z.anchor.x, z.anchor.y)
+	guiObject.Position = UDim2.new(z.position[1], z.position[2], z.position[3], z.position[4])
+	placed[guiObject] = zoneKey
+end
+
+local function replaceAll()
+	for guiObject, zoneKey in pairs(placed) do
+		if guiObject.Parent then
+			HudTheme.placeInZone(guiObject, zoneKey)
+		end
+	end
+	local cap = HudZoneModel.bannerCap(currentViewport())
+	for constraint in pairs(placedCaps) do
+		if constraint.Parent then
+			constraint.MaxSize = Vector2.new(cap.w, cap.h)
+		end
+	end
+end
+
+-- Cap a GUI object's pixel size so it never balloons on desktop/ultrawide. The
+-- banner cap is viewport-derived (shrinks on short screens) and re-applied on
+-- viewport change; other caps stay static from HudTheme.Cap.
 function HudTheme.applyMaxSize(guiObject, capKey)
 	local c = Instance.new("UISizeConstraint")
-	c.MaxSize = HudTheme.Cap[capKey]
+	if capKey == "banner" then
+		local cap = HudZoneModel.bannerCap(currentViewport())
+		c.MaxSize = Vector2.new(cap.w, cap.h)
+		placedCaps[c] = true
+	else
+		c.MaxSize = HudTheme.Cap[capKey]
+	end
 	c.Parent = guiObject
 	return c
 end
@@ -166,5 +200,21 @@ function HudTheme.popIn(root)
 		{ Scale = 1 }
 	):Play()
 end
+
+-- Re-place on viewport change; the camera can be replaced, so rebind (no
+-- listener stacking -- same pattern as InputController's viewport handling).
+local viewportConn = nil
+local function bindViewport()
+	if viewportConn then viewportConn:Disconnect() end
+	local cam = workspace.CurrentCamera
+	if cam then
+		viewportConn = cam:GetPropertyChangedSignal("ViewportSize"):Connect(replaceAll)
+	end
+end
+workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function()
+	bindViewport()
+	replaceAll()
+end)
+bindViewport()
 
 return HudTheme
