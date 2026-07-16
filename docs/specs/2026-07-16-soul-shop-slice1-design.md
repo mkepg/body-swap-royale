@@ -284,7 +284,7 @@ machine-checked disjoint from the free palette (decision #7).
 |---|---|---|---|
 | Moonlit | Common | pale | static pale lavender-white `(226,218,255)` |
 | Frostbite | Common | pale | static glacial ice `(190,235,255)` |
-| Seafoam | Common | pale | static soft mint `(160,255,210)` |
+| Seafoam | Common | pale | static soft mint `(170,255,190)` |
 | Roseglass | Common | pale | static pale blush `(255,224,236)` |
 | Ember | Uncommon | living | flicker `(200,30,20)` ↔ `(255,150,54)`, irregular ~1.3s (two overlaid sine phases) |
 | Tidepool | Uncommon | living | smooth 4s oscillation `(30,90,220)` ↔ `(45,220,200)` |
