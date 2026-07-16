@@ -522,7 +522,14 @@ Config.PROGRESSION_MAX_LEVEL = 100
 
 -- Persistence (ProfileStore / EconomyService).
 Config.DATASTORE_NAME = "PlayerData_v1"
-Config.PROFILE_VERSION = 1
+Config.PROFILE_VERSION = 2 -- v2: + ownedItems/equipped (Soul Shop slice 1)
+
+-- ===== Soul Shop (slice 1) =====
+Config.SHOP_PRICES = { common = 200, uncommon = 450, rare = 900, epic = 1800, legendary = 4000 }
+Config.SHOP_RATE_MAX = 5        -- max ShopRequests per window per player
+Config.SHOP_RATE_WINDOW = 2     -- seconds
+Config.SHOP_SAVE_DEBOUNCE = 5   -- seconds after last purchase before async save
+
 Config.ECONOMY_LOAD_RETRIES = 4         -- load attempts before giving up (then persisted=false)
 Config.ECONOMY_SAVE_RETRIES = 3         -- save attempts before logging failure
 Config.ECONOMY_RETRY_BACKOFF = 1.0      -- seconds; multiplied by the attempt number
