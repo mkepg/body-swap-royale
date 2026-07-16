@@ -70,4 +70,37 @@ do
 	print("profile: seenHints OK")
 end
 
+-- ===== Slice-1 shop fields (2026-07-16) =====
+
+-- default() carries empty shop fields.
+do
+	local p = ProfileModel.default(2)
+	expect(type(p.ownedItems) == "table" and #p.ownedItems == 0, "default ownedItems empty")
+	expect(type(p.equipped) == "table" and next(p.equipped) == nil, "default equipped empty")
+	print("profile: shop defaults OK")
+end
+
+-- sanitize: garbage ownedItems/equipped coerced; valid entries kept.
+do
+	local p = ProfileModel.sanitize({
+		coins = 5,
+		ownedItems = { "color_void", "", 7, "color_void", "style_ring" },
+		equipped = { halo_color = "color_void", trail = 9, bogus_kind = "x", halo_style = "" },
+	}, 2)
+	expect(#p.ownedItems == 2 and p.ownedItems[1] == "color_void" and p.ownedItems[2] == "style_ring",
+		"ownedItems deduped + cleaned")
+	expect(p.equipped.halo_color == "color_void", "valid equip kept")
+	expect(p.equipped.trail == nil, "non-string equip dropped")
+	expect(p.equipped.bogus_kind == nil, "unknown kind dropped")
+	expect(p.equipped.halo_style == nil, "empty-string equip dropped")
+	print("profile: shop sanitize OK")
+end
+
+-- sanitize(nil) still yields clean shop fields.
+do
+	local p = ProfileModel.sanitize(nil, 2)
+	expect(#p.ownedItems == 0 and next(p.equipped) == nil, "nil blob -> empty shop fields")
+	print("profile: nil blob shop fields OK")
+end
+
 print("ALL ProfileModel TESTS PASSED")
