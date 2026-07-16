@@ -14,53 +14,79 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
 local Remotes = require(Shared:WaitForChild("Remotes"))
+local ShopCatalog = require(Shared:WaitForChild("ShopCatalog"))
+local SoulStyles = require(script.Parent:WaitForChild("SoulStyles"))
 local SoulMap = Remotes.get("SoulMap")
 local SetControlledBody = Remotes.get("SetControlledBody")
 
 local SoulController = {}
 local myBody = nil
-local halos = {} -- [body] = BillboardGui
+local halos = {} -- [body] = { handle, gui, styleKey, colorId, isMine }
+local trails = {} -- [body] = { trailKey, lumColor, trails, attachments, animHandle? }
 local myUserId = game:GetService("Players").LocalPlayer.UserId
 
-local SIZE_MINE = UDim2.fromOffset(42, 42)
-local SIZE_OTHER = UDim2.fromOffset(24, 24)
+local SIZE_MINE = 42
+local SIZE_OTHER = 24
 
-local function makeHalo(head)
+local function rgbFromColor3(c)
+	return { r = c.R * 255, g = c.G * 255, b = c.B * 255 }
+end
+
+local function makeBillboard(head, sizePx)
 	local halo = Instance.new("BillboardGui")
 	halo.Name = "SoulHalo"
-	halo.Size = SIZE_OTHER
+	halo.Size = UDim2.fromOffset(sizePx, sizePx)
 	halo.StudsOffsetWorldSpace = Vector3.new(0, 2.6, 0)
 	halo.AlwaysOnTop = true
 	halo.Adornee = head
 	halo.Parent = head
-
-	local dot = Instance.new("Frame")
-	dot.Name = "Dot"
-	dot.Size = UDim2.fromScale(1, 1)
-	dot.BackgroundColor3 = Color3.new(1, 1, 1)
-	dot.BorderSizePixel = 0
-	dot.Parent = halo
-
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0.5, 0)
-	corner.Parent = dot
-
-	local stroke = Instance.new("UIStroke")
-	stroke.Name = "Emphasis"
-	stroke.Thickness = 0
-	stroke.Color = Color3.new(1, 1, 1)
-	stroke.Parent = dot
-
 	return halo
 end
 
-local function applyEmphasis(body, halo)
-	local isMine = (body == myBody)
-	halo.Size = isMine and SIZE_MINE or SIZE_OTHER
-	local stroke = halo:FindFirstChild("Dot") and halo.Dot:FindFirstChild("Emphasis")
-	if stroke then
-		stroke.Thickness = isMine and 3 or 0
+-- Resolve the style FRAME key from the equipped style item id (nil/unknown -> classic).
+local function styleKeyFor(styleId)
+	if not styleId then
+		return "classic"
 	end
+	local item = ShopCatalog.byId(styleId)
+	return (item and item.styleKey) or "classic"
+end
+
+-- Resolve the trail SHAPE key from the equipped trail item id (nil -> no trail).
+local function trailKeyFor(trailId)
+	if not trailId then
+		return nil
+	end
+	local item = ShopCatalog.byId(trailId)
+	return item and item.trailKey or nil
+end
+
+-- Build the pre-resolved color spec SoulStyles consumes: a premium color item drives
+-- fill/luminous/anim; otherwise the server's resolved identity color is used flat.
+local function colorSpecFor(entry)
+	local colorItem = entry.colorId and ShopCatalog.byId(entry.colorId) or nil
+	if colorItem and colorItem.kind ~= "halo_color" then
+		colorItem = nil
+	end
+	if colorItem then
+		local fillRgb = colorItem.fill
+		local lumRgb = ShopCatalog.luminousOf(colorItem)
+		return {
+			fill = Color3.fromRGB(fillRgb.r, fillRgb.g, fillRgb.b),
+			luminous = Color3.fromRGB(lumRgb.r, lumRgb.g, lumRgb.b),
+			fillRgb = fillRgb,
+			luminousRgb = lumRgb,
+			anim = colorItem.anim,
+		}
+	end
+	local fillRgb = rgbFromColor3(entry.color)
+	return {
+		fill = entry.color,
+		luminous = entry.color,
+		fillRgb = fillRgb,
+		luminousRgb = fillRgb,
+		anim = nil,
+	}
 end
 
 -- A brief shield shimmer on the body you control, driven by the SERVER's authoritative
@@ -156,39 +182,181 @@ local function reconcileMyBody(list)
 	end
 end
 
+-- ===== Soul trails ======================================================
+-- Trails ride the body's UpperTorso (fallback HumanoidRootPart) via attachment
+-- pairs; each trail key is a different soul-wake shape. Color = wearer's luminous.
+local function trailAttachRoot(body)
+	return body:FindFirstChild("UpperTorso") or body:FindFirstChild("HumanoidRootPart")
+end
+
+local function destroyTrail(trec)
+	if trec.animHandle then
+		trec.animHandle._dead = true -- drop from the SoulStyles animator
+	end
+	for _, t in ipairs(trec.trails) do
+		t:Destroy()
+	end
+	for _, a in ipairs(trec.attachments) do
+		a:Destroy()
+	end
+end
+
+local function buildTrail(body, trailKey, lumColor)
+	local part = trailAttachRoot(body)
+	if not part then
+		return nil
+	end
+	local trec = { trailKey = trailKey, lumColor = lumColor, trails = {}, attachments = {} }
+
+	-- One trail on a fresh attachment pair (vertical spread; optional X shoulder offset).
+	local function addTrail(spread, xOffset)
+		local a0 = Instance.new("Attachment")
+		a0.Position = Vector3.new(xOffset or 0, spread / 2, 0)
+		a0.Parent = part
+		local a1 = Instance.new("Attachment")
+		a1.Position = Vector3.new(xOffset or 0, -spread / 2, 0)
+		a1.Parent = part
+		trec.attachments[#trec.attachments + 1] = a0
+		trec.attachments[#trec.attachments + 1] = a1
+		local t = Instance.new("Trail")
+		t.Attachment0 = a0
+		t.Attachment1 = a1
+		t.FaceCamera = true
+		t.LightEmission = 0.6
+		t.Color = ColorSequence.new(lumColor)
+		t.Parent = part
+		trec.trails[#trec.trails + 1] = t
+		return t
+	end
+
+	if trailKey == "wisp" then
+		local t = addTrail(0.35)
+		t.Lifetime = 0.45
+		t.Transparency = NumberSequence.new(0.35, 1)
+	elseif trailKey == "stream" then
+		local t = addTrail(1.4)
+		t.Lifetime = 0.8
+		t.Transparency = NumberSequence.new(0.25, 1)
+	elseif trailKey == "sparkline" then
+		local t = addTrail(0.9)
+		t.Lifetime = 0.6
+		t.Transparency = NumberSequence.new(0.3, 1)
+		t.WidthScale = NumberSequence.new({
+			NumberSequenceKeypoint.new(0, 1),
+			NumberSequenceKeypoint.new(0.25, 0.15),
+			NumberSequenceKeypoint.new(0.5, 1),
+			NumberSequenceKeypoint.new(0.75, 0.15),
+			NumberSequenceKeypoint.new(1, 1),
+		})
+	elseif trailKey == "comet" then
+		local core = addTrail(0.35)
+		core.Lifetime = 1.0
+		core.Color = ColorSequence.new(lumColor:Lerp(Color3.new(1, 1, 1), 0.75)) -- hot white-ish core
+		local sheath = addTrail(1.8)
+		sheath.Lifetime = 1.0
+		sheath.Transparency = NumberSequence.new(0.55, 1)
+	elseif trailKey == "meteor" then
+		local tA = addTrail(0.55, -0.8) -- twin wakes offset to the shoulders
+		local tB = addTrail(0.55, 0.8)
+		tA.Lifetime = 1.2
+		tB.Lifetime = 1.2
+		tA.Transparency = NumberSequence.new(0.25, 1)
+		tB.Transparency = NumberSequence.new(0.7, 1)
+		-- Alternate the two wakes' base transparency on a 1.1s cycle. NumberSequence
+		-- swaps only at the half-cycle crossing (not per frame) to keep it cheap.
+		local swapped = false
+		trec.animHandle = SoulStyles.registerAnimated(tA, function(now)
+			local firstHalf = (now % 1.1) < 0.55
+			if firstHalf ~= swapped then
+				swapped = firstHalf
+				tA.Transparency = NumberSequence.new(firstHalf and 0.25 or 0.7, 1)
+				tB.Transparency = NumberSequence.new(firstHalf and 0.7 or 0.25, 1)
+			end
+		end)
+	end
+	return trec
+end
+
+-- ===== halo + trail reconcile ==========================================
+local function updateHalo(body, entry, colorSpec, isMine)
+	local head = body:FindFirstChild("Head") or body:FindFirstChild("HumanoidRootPart")
+	if not head then
+		return
+	end
+	local styleKey = styleKeyFor(entry.styleId)
+	local rec = halos[body]
+	-- Rebuild the billboard + handle only on a structural change (style/color item/
+	-- mine/lost adornee); a mere resolved-color shift takes the cheap setColors path.
+	local rebuild = (not rec)
+		or rec.gui.Parent ~= head
+		or rec.styleKey ~= styleKey
+		or rec.colorId ~= entry.colorId
+		or rec.isMine ~= isMine
+	if rebuild then
+		if rec then
+			rec.handle.destroy()
+			rec.gui:Destroy()
+		end
+		local sizePx = isMine and SIZE_MINE or SIZE_OTHER
+		local gui = makeBillboard(head, sizePx)
+		local handle = SoulStyles.build(gui, styleKey, colorSpec, sizePx, isMine)
+		halos[body] = { handle = handle, gui = gui, styleKey = styleKey, colorId = entry.colorId, isMine = isMine }
+	elseif entry.colorId == nil then
+		-- Same item, but the server's assigned identity color may have changed.
+		rec.handle.setColors(colorSpec.fill, colorSpec.luminous)
+	end
+end
+
+local function updateTrail(body, entry, lumColor)
+	local trailKey = trailKeyFor(entry.trailId)
+	local trec = trails[body]
+	if not trailKey then
+		if trec then
+			destroyTrail(trec)
+			trails[body] = nil
+		end
+		return
+	end
+	-- Rebuild on shape OR color change (color changes are equip-only, so effectively rare).
+	if not trec or trec.trailKey ~= trailKey or trec.lumColor ~= lumColor then
+		if trec then
+			destroyTrail(trec)
+		end
+		trails[body] = buildTrail(body, trailKey, lumColor)
+	end
+end
+
 local function reconcile(list)
 	reconcileMyBody(list)
 	local seen = {}
 	for _, entry in ipairs(list) do
-		local body, color = entry.body, entry.color
+		local body = entry.body
 		if body and body.Parent then
-			local head = body:FindFirstChild("Head") or body:FindFirstChild("HumanoidRootPart")
-			if head then
-				seen[body] = true
-				local halo = halos[body]
-				if not halo or halo.Parent ~= head then
-					if halo then halo:Destroy() end
-					halo = makeHalo(head)
-					halos[body] = halo
-				end
-				local dot = halo:FindFirstChild("Dot")
-				if dot then
-					dot.BackgroundColor3 = color
-				end
-				applyEmphasis(body, halo)
-			end
+			seen[body] = true
+			local isMine = (body == myBody)
+			local colorSpec = colorSpecFor(entry)
+			updateHalo(body, entry, colorSpec, isMine)
+			updateTrail(body, entry, colorSpec.luminous)
 		end
 	end
-	-- Drop halos for bodies no longer in the map.
-	for body, halo in pairs(halos) do
+	-- Drop halos AND trails for bodies no longer in the map.
+	for body, rec in pairs(halos) do
 		if not seen[body] then
-			halo:Destroy()
+			rec.handle.destroy()
+			rec.gui:Destroy()
 			halos[body] = nil
+		end
+	end
+	for body, trec in pairs(trails) do
+		if not seen[body] then
+			destroyTrail(trec)
+			trails[body] = nil
 		end
 	end
 end
 
 function SoulController.start()
+	SoulStyles.start() -- bind the shared halo animator (idempotent)
 	if not Config.SOUL_HALO_ENABLED then
 		return -- halos suppressed (e.g. clean marketing screenshots)
 	end
@@ -196,9 +364,18 @@ function SoulController.start()
 
 	SetControlledBody.OnClientEvent:Connect(function(body, _isSwap)
 		myBody = body
-		-- Re-emphasize immediately (don't wait for the next SoulMap broadcast).
-		for b, halo in pairs(halos) do
-			applyEmphasis(b, halo)
+		-- Re-emphasize immediately (don't wait for the next SoulMap broadcast): resize
+		-- the billboard and flip the emphasis ring for the bodies whose mine-ness
+		-- changed. `rec.isMine` is left STALE on purpose so the next SoulMap (always
+		-- broadcast alongside SetControlledBody) does one authoritative rebuild that
+		-- also re-sizes the style's px-based strokes.
+		for b, rec in pairs(halos) do
+			local desired = (b == myBody)
+			if rec.isMine ~= desired then
+				local px = desired and SIZE_MINE or SIZE_OTHER
+				rec.gui.Size = UDim2.fromOffset(px, px)
+				rec.handle.setEmphasis(desired)
+			end
 		end
 		watchGrace(body)
 	end)
