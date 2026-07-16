@@ -15,8 +15,12 @@
 local Players = game:GetService("Players")
 Players.CharacterAutoLoads = false
 
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Remotes = require(ReplicatedStorage.Shared.Remotes)
+
 local RoundManager = require(script.RoundManager)
 local EconomyService = require(script.EconomyService)
+local ControlManager = require(script.ControlManager)
 
 local function onPlayerAdded(player)
 	-- Economy persistence yields on DataStore (retry+backoff, seconds on a throttled
@@ -37,5 +41,7 @@ Players.PlayerRemoving:Connect(function(player)
 end)
 
 EconomyService.start() -- autosave loop + BindToClose flush
+EconomyService.setEquipChangedCallback(ControlManager.broadcastSoulMap)
+Remotes.get("ShopRequest").OnServerEvent:Connect(EconomyService.onShopRequest)
 RoundManager.start()
 print("[BSR] Server ready (ownership-transfer model + round loop + economy).")
