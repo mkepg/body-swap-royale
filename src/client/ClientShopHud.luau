@@ -629,6 +629,7 @@ local function build()
 	capText(shopLabel, CAP_BODY)
 	shopLabel.Parent = toggleBtn
 	toggleBtn.Activated:Connect(openPanel)
+	toggleBtn.Parent = gui
 
 	-- ===== panel =====
 	panel = Instance.new("Frame")
