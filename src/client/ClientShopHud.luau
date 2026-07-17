@@ -19,12 +19,14 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 local GuiService = game:GetService("GuiService")
+local UserInputService = game:GetService("UserInputService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
 local ShopCatalog = require(Shared:WaitForChild("ShopCatalog"))
 local ShopModel = require(Shared:WaitForChild("ShopModel"))
 local ShopLayoutModel = require(Shared:WaitForChild("ShopLayoutModel"))
+local TouchJumpLayout = require(Shared:WaitForChild("TouchJumpLayout"))
 local Remotes = require(Shared:WaitForChild("Remotes"))
 
 local HudTheme = require(script.Parent:WaitForChild("HudTheme"))
@@ -74,7 +76,8 @@ local BUY_DEBOUNCE = 0.5
 -- ===== live state ======================================================
 local owned = {}                                    -- [itemId] = true
 local equipped = { halo_color = nil, halo_style = nil, trail = nil }
-local coins = 0
+local coins = 0                                       -- authoritative (optimistic on buy) balance mirror
+local displayedCoins = 0                              -- the value CURRENTLY shown on the chip; the tween animates FROM this
 local coinsAnimToken = nil                           -- cancels a running coin count anim
 local profileOk = true                               -- false after profile_unavailable, until next ProfileUpdated
 local activeTab = "halo_color"
@@ -113,16 +116,22 @@ local function eligible()
 end
 
 -- ===== coin chip =======================================================
+-- The single entry point that writes the chip: records what's on screen so the
+-- tween always animates FROM the displayed value, not from the (already-decremented)
+-- balance mirror.
 local function setCoinText(n)
-	coinChipCount.Text = tostring(math.max(0, math.floor(n + 0.5)))
+	displayedCoins = math.max(0, math.floor(n + 0.5))
+	coinChipCount.Text = tostring(displayedCoins)
 end
 
--- Tick the displayed coin count from its current value to `target` (~0.4s), so a
--- purchase reads as spending rather than a silent number swap.
+-- Tick the displayed coin count from the value CURRENTLY on screen to `target`
+-- (~0.4s), so a purchase reads as spending rather than a silent number swap. Both
+-- the optimistic buy result and the authoritative ProfileUpdated route through here,
+-- so the shared token makes the last writer win to a consistent target (no fight).
 local function animateCoinsTo(target)
 	local token = {}
 	coinsAnimToken = token
-	local from = coins
+	local from = displayedCoins
 	task.spawn(function()
 		local t = 0
 		local DUR = 0.4
@@ -485,12 +494,29 @@ local function selectTab(kind)
 end
 
 -- ===== layout application =============================================
+-- Bottom-right toggle. On touch devices it must never intersect the TouchJumpLayout
+-- rect -- see 2026-07-10 mobile jump spec -- so we compute the live jump rect (same
+-- pure module + Config scale InputController uses) and sit 12px ABOVE it, right edge
+-- aligned to the jump button's. Non-touch keeps the plain 16px corner. Recomputed on
+-- every viewport change (the jump rect moves with the viewport).
+local function placeToggle()
+	local vp = currentViewport()
+	local ts = ShopLayoutModel.layout(vp).typeScale
+	local d = math.max(44, math.floor(56 * ts))
+	toggleBtn.Size = UDim2.fromOffset(d, d)
+	toggleBtn.AnchorPoint = Vector2.new(1, 1)
+	if UserInputService.TouchEnabled then
+		local j = TouchJumpLayout.compute(vp.w, vp.h, Config.TOUCH_JUMP_SCALE)
+		-- right edge aligned to jump's right edge; bottom 12px above jump's top edge
+		toggleBtn.Position = UDim2.new(1, j.xOffset + j.size, 1, j.yOffset - 12)
+	else
+		toggleBtn.Position = UDim2.new(1, -16, 1, -16)
+	end
+end
+
 local function applyLayout()
 	L = ShopLayoutModel.layout(currentViewport())
-
-	-- toggle diameter
-	local d = math.max(44, math.floor(56 * L.typeScale))
-	toggleBtn.Size = UDim2.fromOffset(d, d)
+	placeToggle()
 
 	-- panel geometry
 	local top = L.panelTopPx
@@ -562,14 +588,11 @@ local function build()
 	gui.Parent = player:WaitForChild("PlayerGui")
 
 	-- ===== toggle button (bottom-right; clear of ClientEconomyHud's top-left/center) =====
-	local d = math.max(44, math.floor(56 * L.typeScale))
+	-- Size + position are set by placeToggle() (called via applyLayout at build end).
 	toggleBtn = Instance.new("TextButton")
 	toggleBtn.Name = "ShopToggle"
 	toggleBtn.Text = ""
 	toggleBtn.AutoButtonColor = false
-	toggleBtn.AnchorPoint = Vector2.new(1, 1)
-	toggleBtn.Position = UDim2.new(1, -16, 1, -16)
-	toggleBtn.Size = UDim2.fromOffset(d, d)
 	toggleBtn.BackgroundColor3 = HudTheme.Color.panelDark
 	toggleBtn.BackgroundTransparency = 0.06
 	toggleBtn.BorderSizePixel = 0
@@ -786,9 +809,16 @@ end
 local function applyProfile(view)
 	profileOk = true
 	hintLabel.Visible = false
-	coinsAnimToken = nil -- authoritative snapshot cancels any running tick anim
 	coins = view.coins or 0
-	setCoinText(coins)
+	-- Authoritative balance. While the panel is open, animate to it through the same
+	-- token'd path as a buy -- if it lands mid buy-tween toward the same balance the
+	-- tick continues smoothly (last-writer token, no snap). Hidden: snap and cancel.
+	if panelOpen then
+		animateCoinsTo(coins)
+	else
+		coinsAnimToken = nil
+		setCoinText(coins)
+	end
 
 	owned = {}
 	for _, id in ipairs(view.ownedItems or {}) do
@@ -857,9 +887,8 @@ end
 local viewportConn = nil
 local function onViewportChange()
 	if not panelOpen then
-		-- keep the toggle sized for the new viewport even while closed
-		local d = math.max(44, math.floor(ShopLayoutModel.layout(currentViewport()).typeScale * 56))
-		toggleBtn.Size = UDim2.fromOffset(math.max(44, d), math.max(44, d))
+		-- keep the toggle sized AND clear of the (moved) jump rect even while closed
+		placeToggle()
 		return
 	end
 	applyLayout()
