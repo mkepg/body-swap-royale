@@ -42,9 +42,9 @@ HudTheme.Accent = {
 	lose = { top = Color3.fromRGB(240, 88, 78), bottom = Color3.fromRGB(200, 58, 50) },
 }
 
--- pixel max sizes (the bottom pill never exceeds the banner)
+-- pixel max sizes (static caps; the banner's cap is NOT here -- it is
+-- viewport-derived via HudZoneModel.bannerCap and re-applied on viewport change)
 HudTheme.Cap = {
-	banner = Vector2.new(350, 168),
 	bottomLine = Vector2.new(210, 50),
 	notice = Vector2.new(320, 80),
 	timer = Vector2.new(120, 76),

@@ -381,3 +381,37 @@ subagent-driven execution (fresh subagent per task; spec review + code-quality r
 per task). CHANGELOG entry at the end. **Never commit the dev flips** in
 `src/shared/Config.luau` (`SOLO_TEST_MODE`, `ARENA_OVERRIDE`) — use the flip→stage→
 verify→commit→flip-back procedure from the 2026-07-13 plan header.
+
+## §13 Implementation amendments (2026-07-17, recorded post-build)
+
+Deltas between this spec and what shipped, each deliberately adjudicated during
+execution:
+
+1. **Seafoam retuned** `(160,255,210)` → `(170,255,190)` (§7 table already updated):
+   the §10 disjointness invariant caught the original at RGB distance 86.2 from free
+   cyan on its first run. The invariant, not the reviewer, found it — working as
+   designed.
+2. **Sheet-mode threshold is 50% post-clamp, not the §6.2 ">55%"** — measured against
+   the CLAMPED panel width: at 640×360 the 38% panel clamps up to 330px = 51.6%
+   coverage, which must become a sheet for usability; the plan's own phone test
+   encodes that. §6.2's number describes the intent; `ShopLayoutModel` (comment) is
+   the authority.
+3. **Shop toggle placement is derived from `TouchJumpLayout`** on touch devices
+   (right-aligned to the jump button, 12px above its rect) rather than a fixed corner
+   offset — a fixed corner collided with the jump button on phones.
+4. **`SoulResolveModel` + `SoulAnimModel` signatures** carry injected prices/catalog
+   args not spelled out in §4/§5 prose (`validatePurchase(profile, catalog, prices,
+   itemId)` etc.); the plan is the authority for exact signatures.
+5. **Rate limiter is bounded by construction**: rejected requests are never recorded,
+   so the stamps array caps at `SHOP_RATE_MAX` entries even under a remote flood
+   (hardening added after adversarial review of the first C→S remote).
+6. **HudTheme registries are STRONG tables with explicit purge**, not weak-keyed:
+   Roblox Instances in weak tables are collected once Lua refs drop even while
+   parented — live verification caught the banner cap stuck at a boot-time (0,0).
+   `currentViewport()` also guards the boot (1,1) viewport.
+7. **`HudTheme.Cap.banner` removed** — superseded by `HudZoneModel.bannerCap`
+   (viewport-derived); keeping the static value invited a stale read.
+8. Two runtime-only bugs found by the live MCP pass (unparented shop toggle; banner
+   cap (0,0)) are fixed on-branch; see the
+   [smoke record](../../smoke-tests/2026-07-16-soul-shop-slice1-smoke-test.md) for
+   the machine-verified checklist and the deferred manual items.
