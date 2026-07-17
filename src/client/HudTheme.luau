@@ -59,12 +59,27 @@ HudTheme.DisplayOrder = { swap = 5, bookend = 10 }
 
 -- Zones are computed from viewport + Roblox top inset (HudZoneModel) and every
 -- placed object is re-placed when either changes -- the safe-area layer (spec §6.3).
-local placed = setmetatable({}, { __mode = "k" }) -- [guiObject] = zoneKey
-local placedCaps = setmetatable({}, { __mode = "k" }) -- [UISizeConstraint] = true (banner caps)
+-- STRONG tables (not weak-keyed): Roblox Instances in a weak-keyed Lua table are
+-- collected once no Lua ref remains even while still parented in the DataModel --
+-- a consumer that discards applyMaxSize's return (as makePanel does) would silently
+-- lose re-placement. This happened live: the banner's UISizeConstraint fell out of
+-- a weak `placedCaps`, so replaceAll() re-capped nothing and the boot-time (0,0)
+-- cap (see currentViewport's guard below) stuck forever. We purge dead entries
+-- ourselves in replaceAll's sweep instead (Parent == nil), keyed off Destroy() --
+-- the real lifecycle end. NOTE: an object temporarily unparented then reparented
+-- will have been purged in the meantime and won't be tracked again automatically;
+-- acceptable, since current consumers never unparent (only Destroy).
+local placed = {} -- [guiObject] = zoneKey
+local placedCaps = {} -- [UISizeConstraint] = true (banner caps)
 
 local function currentViewport()
 	local cam = workspace.CurrentCamera
 	local size = cam and cam.ViewportSize or Vector2.new(1280, 720)
+	-- Boot-time ViewportSize is (1,1) before the camera's first render; treat it
+	-- as "not ready yet" and fall back, or bannerCap would floor to a 0-size cap.
+	if size.X <= 1 or size.Y <= 1 then
+		size = Vector2.new(1280, 720)
+	end
 	local inset = GuiService:GetGuiInset()
 	return { w = size.X, h = size.Y, insetTop = inset.Y }
 end
@@ -85,12 +100,16 @@ local function replaceAll()
 	for guiObject, zoneKey in pairs(placed) do
 		if guiObject.Parent then
 			HudTheme.placeInZone(guiObject, zoneKey)
+		else
+			placed[guiObject] = nil
 		end
 	end
 	local cap = HudZoneModel.bannerCap(currentViewport())
 	for constraint in pairs(placedCaps) do
 		if constraint.Parent then
 			constraint.MaxSize = Vector2.new(cap.w, cap.h)
+		else
+			placedCaps[constraint] = nil
 		end
 	end
 end
