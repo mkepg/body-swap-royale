@@ -4,6 +4,38 @@ All notable changes to this project are documented here.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2026-07-17]
+
+### Added
+- **Soul Shop slice 1 — the first coin sink.** A 25-item Soul cosmetic shop (15 halo
+  colors / 5 halo styles / 5 soul trails) with direct coin purchases, auto-equip,
+  persistent inventory (`PROFILE_VERSION 2`: + `ownedItems`/`equipped`), and per-rarity
+  Config pricing (◈200/450/900/1,800/4,000). **The zero client→server remote property
+  is deliberately retired** (spec §3 decision #1): `ShopRequest` is the game's first
+  upstream remote, treated as a claim behind a validation gauntlet (rate limit — bounded
+  under flood — payload sanitation, persisted-profile gate, pure `ShopModel` decisions);
+  `ShopResult`/extended `ProfileUpdated` return state. **Identity-color resolution is
+  server-authoritative** (Option A): `SoulMap` now broadcasts the RESOLVED color
+  (equipped > assigned) + equip ids; the premium palette is machine-checked disjoint
+  from the free palette (RGB distance ≥ 90, lune-enforced — it caught and retuned
+  Seafoam). **Unified halo pipeline:** new `SoulStyles` renders every halo including a
+  layered Classic upgrade (underglow + core + emphasis; free look = one more styleKey);
+  animated colors (flicker/osc/steps/sweep/gradient/flash/hue via pure `SoulAnimModel`),
+  fill/luminous two-color rule (dark colors compose with every style), trails re-parent
+  + recolor on swap, zero particles. **Responsive shop UI:** pure `ShopLayoutModel`
+  (panel/sheet modes, 44px touch floor) drives `ClientShopHud` (live SoulStyles
+  previews in-card, two-tap buy, lazy card build, toggle placement derived from
+  `TouchJumpLayout` so it never overlaps the jump button). **HUD safe-area layer:**
+  pure `HudZoneModel` computes zones from viewport + Roblox top inset — the Main Lobby
+  Banner now clears the mobile top menu (root-cause fix for every zone consumer);
+  banner caps are viewport-relative with strong (GC-safe) re-cap registries. Access:
+  lobby + eliminated spectators. Verified: 32/32 lune suites; 16-check solo Studio MCP
+  pass (found + fixed 2 runtime-only bugs: unparented toggle, banner cap stuck (0,0));
+  manual pass + 2-client smoke pending. See
+  [spec](superpowers/specs/2026-07-16-soul-shop-slice1-design.md),
+  [plan](superpowers/plans/2026-07-16-soul-shop-slice1.md), and
+  [smoke record](smoke-tests/2026-07-16-soul-shop-slice1-smoke-test.md).
+
 ## [2026-07-14]
 
 ### Changed
