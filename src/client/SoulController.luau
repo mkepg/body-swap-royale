@@ -364,9 +364,10 @@ function SoulController.start()
 
 	SetControlledBody.OnClientEvent:Connect(function(body, _isSwap)
 		myBody = body
-		-- Re-emphasize immediately (don't wait for the next SoulMap broadcast): resize
-		-- the billboard and flip the emphasis ring for the bodies whose mine-ness
-		-- changed. `rec.isMine` is left STALE on purpose so the next SoulMap (always
+		-- Resize immediately (don't wait for the next SoulMap broadcast): grow/shrink
+		-- the billboard for the bodies whose mine-ness changed. The billboard SIZE is
+		-- the sole "this is me" cue (mine 42px / others 24px) now that the emphasis ring
+		-- is gone. `rec.isMine` is left STALE on purpose so the next SoulMap (always
 		-- broadcast alongside SetControlledBody) does one authoritative rebuild that
 		-- also re-sizes the style's px-based strokes.
 		for b, rec in pairs(halos) do
@@ -374,7 +375,6 @@ function SoulController.start()
 			if rec.isMine ~= desired then
 				local px = desired and SIZE_MINE or SIZE_OTHER
 				rec.gui.Size = UDim2.fromOffset(px, px)
-				rec.handle.setEmphasis(desired)
 			end
 		end
 		watchGrace(body)

@@ -9,7 +9,7 @@
 	  parent: the BillboardGui to fill
 	  styleKey: "classic"|"ring"|"pulse"|"orbit"|"eclipse"|"seraph" (unknown -> classic)
 	  colorSpec: { fill = Color3, luminous = Color3, anim = table? } -- PRE-RESOLVED
-	  handle: { setColors(fill, luminous), setEmphasis(isMine), destroy() }
+	  handle: { setColors(fill, luminous), destroy() }
 	SoulStyles.buildPreview(item, px) -> Frame  (same constructions for shop cards; Task 9 consumes)
 	SoulStyles.start() -- binds the shared animator (idempotent)
 
@@ -106,13 +106,6 @@ local function rgbFromColor3(c)
 	return { r = c.R * 255, g = c.G * 255, b = c.B * 255 }
 end
 
--- Emphasis-ring contrast: Rec.601 luma of the fill; > 0.75 means a near-white
--- halo, so ring it in near-black instead of white to keep "this is me" legible.
-local function emphasisColor(fillColor3)
-	local lum = 0.299 * fillColor3.R + 0.587 * fillColor3.G + 0.114 * fillColor3.B
-	return lum > 0.75 and Color3.fromRGB(20, 24, 31) or WHITE
-end
-
 local function colorsDiffer(a, b)
 	return a.R ~= b.R or a.G ~= b.G or a.B ~= b.B
 end
@@ -169,8 +162,7 @@ end
 
 -- ===== style builders ===================================================
 -- Each builder fills `root` and populates `ctx`:
---   ctx.applyColors()   -- write all STATIC/flat colors + emphasis color
---   ctx.emphasisStroke  -- the "this is me" ring (thickness driven by setEmphasis)
+--   ctx.applyColors()   -- write all STATIC/flat colors
 --   ctx.fillTargets     -- apply-fns for the animated color (bg / stroke)
 --   ctx.baseKey         -- "fillRgb" (default) or "luminousRgb" -- animation base
 --   ctx.gradientTarget  -- instance to host a sweep/gradient UIGradient (optional)
@@ -183,8 +175,6 @@ function BUILDERS.classic(root, state, ticks, ctx)
 	local under = circle(root, 1.30, state.luminous, 1)
 	under.BackgroundTransparency = 0.72
 	local core = circle(root, 0.92, state.fill, 2)
-	local emph = makeStroke(core, 0, WHITE)
-	emph.Name = "Emphasis"
 
 	-- Rim ring only where it reads: Void-type (luminous != fill, no anim) for the
 	-- glow halo, or a flash color which pulses the rim on/off.
@@ -200,7 +190,6 @@ function BUILDERS.classic(root, state, ticks, ctx)
 		end
 	end
 
-	ctx.emphasisStroke = emph
 	ctx.fillTargets = { bgTarget(core) }
 	ctx.gradientTarget = core
 	ctx.rimStroke = isFlash and rimStroke or nil
@@ -210,7 +199,6 @@ function BUILDERS.classic(root, state, ticks, ctx)
 		if rim then
 			rimStroke.Color = state.luminous
 		end
-		emph.Color = emphasisColor(state.fill)
 	end
 end
 
@@ -221,13 +209,8 @@ function BUILDERS.ring(root, state, ticks, ctx)
 	local annulus = circle(root, 1.0, state.fill, 2)
 	annulus.BackgroundTransparency = 1
 	local ann = makeStroke(annulus, px * 0.18, state.fill) -- 18% of billboard px
-	-- emphasis on an invisible center frame so the mine-rule stays uniform
-	local center = circle(root, 0.5, WHITE, 3)
-	center.BackgroundTransparency = 1
-	local emph = makeStroke(center, 0, WHITE)
 	local rim, rimStroke = makeFlashRim(root, state) -- flash colors (Stormcloud) pulse here
 
-	ctx.emphasisStroke = emph
 	ctx.fillTargets = { strokeTarget(ann) }
 	ctx.gradientTarget = annulus -- a UIGradient here tints the annulus stroke
 	ctx.rimStroke = rimStroke
@@ -237,7 +220,6 @@ function BUILDERS.ring(root, state, ticks, ctx)
 		if rim then
 			rimStroke.Color = state.luminous
 		end
-		emph.Color = emphasisColor(state.fill)
 	end
 end
 
@@ -245,7 +227,6 @@ function BUILDERS.pulse(root, state, ticks, ctx)
 	local under = circle(root, 1.30, state.luminous, 1)
 	under.BackgroundTransparency = 0.72
 	local core = circle(root, 0.80, state.fill, 2)
-	local emph = makeStroke(core, 0, WHITE)
 	local ripple = circle(root, 0.80, state.luminous, 1)
 	ripple.BackgroundTransparency = 1
 	local rip = makeStroke(ripple, 3, state.luminous)
@@ -259,7 +240,6 @@ function BUILDERS.pulse(root, state, ticks, ctx)
 		rip.Transparency = 0.2 + 0.8 * p
 	end
 
-	ctx.emphasisStroke = emph
 	ctx.fillTargets = { bgTarget(core) }
 	ctx.gradientTarget = core
 	ctx.rimStroke = rimStroke
@@ -270,7 +250,6 @@ function BUILDERS.pulse(root, state, ticks, ctx)
 		if rim then
 			rimStroke.Color = state.luminous
 		end
-		emph.Color = emphasisColor(state.fill)
 	end
 end
 
@@ -278,7 +257,6 @@ function BUILDERS.orbit(root, state, ticks, ctx)
 	local under = circle(root, 1.20, state.luminous, 1)
 	under.BackgroundTransparency = 0.72
 	local core = circle(root, 0.70, state.fill, 2)
-	local emph = makeStroke(core, 0, WHITE)
 
 	local carrier = Instance.new("Frame")
 	carrier.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -298,7 +276,6 @@ function BUILDERS.orbit(root, state, ticks, ctx)
 		carrier.Rotation = (now / 3 * 360) % 360 -- 360deg / 3s
 	end
 
-	ctx.emphasisStroke = emph
 	ctx.fillTargets = { bgTarget(core) }
 	ctx.gradientTarget = core
 	ctx.rimStroke = rimStroke
@@ -310,7 +287,6 @@ function BUILDERS.orbit(root, state, ticks, ctx)
 		if rim then
 			rimStroke.Color = state.luminous
 		end
-		emph.Color = emphasisColor(state.fill)
 	end
 end
 
@@ -320,13 +296,7 @@ function BUILDERS.eclipse(root, state, ticks, ctx)
 	glow.BackgroundTransparency = 0.82
 	local disc = circle(root, 1.0, ECLIPSE_DISC, 1)
 	local corona = makeStroke(disc, px * 0.14, state.luminous) -- 14% of billboard px
-	-- disc already carries the corona UIStroke (one per instance), so emphasis
-	-- rides its own invisible center frame.
-	local center = circle(root, 0.5, WHITE, 2)
-	center.BackgroundTransparency = 1
-	local emph = makeStroke(center, 0, WHITE)
 
-	ctx.emphasisStroke = emph
 	-- The corona (luminous) is eclipse's only colored element, so the flat color
 	-- anim rides it -- base = luminous so Void-type keeps its bright ring.
 	ctx.fillTargets = { strokeTarget(corona) }
@@ -337,46 +307,54 @@ function BUILDERS.eclipse(root, state, ticks, ctx)
 		glow.BackgroundColor3 = state.luminous
 		disc.BackgroundColor3 = ECLIPSE_DISC
 		corona.Color = state.luminous
-		emph.Color = emphasisColor(state.fill)
 	end
 end
 
+-- V1 concept (2026-07-16-soul-shop-v1-concepts.html §seraph): a bright 22px core
+-- with a subtle ripple, wrapped by a thin 6s-spinning ring that carries 3 small
+-- rounded-diamond shards on its edge. Airy halo-wrap, not a filled blob.
 function BUILDERS.seraph(root, state, ticks, ctx)
-	local under = circle(root, 1.30, state.luminous, 1)
-	under.BackgroundTransparency = 0.72
-	local core = circle(root, 0.48, state.fill, 2)
-	-- core is tiny; emphasis rides a roomier invisible center frame
-	local center = circle(root, 0.70, WHITE, 2)
-	center.BackgroundTransparency = 1
-	local emph = makeStroke(center, 0, WHITE)
+	-- soft glow only (V1 had box-shadow, not a filled disc); subtle for 24px legibility
+	local under = circle(root, 0.95, state.luminous, 1)
+	under.BackgroundTransparency = 0.82
+	local core = circle(root, 0.34, state.fill, 2)
 
-	local ripple = circle(root, 0.48, state.luminous, 1)
+	local ripple = circle(root, 0.34, state.luminous, 1)
 	ripple.BackgroundTransparency = 1
 	local rip = makeStroke(ripple, 3, state.luminous)
 	rip.Transparency = 0.2
 
+	-- shard-ring: a thin luminous ring on a 0.875-scale circular carrier (V1 inset:4px
+	-- on a 64px wrap) that spins 6s, carrying the shards around with it.
 	local carrier = Instance.new("Frame")
 	carrier.AnchorPoint = Vector2.new(0.5, 0.5)
 	carrier.Position = UDim2.fromScale(0.5, 0.5)
-	carrier.Size = UDim2.fromScale(1, 1)
+	carrier.Size = UDim2.fromScale(0.875, 0.875)
 	carrier.BackgroundTransparency = 1
 	carrier.BorderSizePixel = 0
 	carrier.ZIndex = 3
 	carrier.Parent = root
-	local ringStroke = makeStroke(carrier, 2, state.luminous)
+	local carrierCorner = Instance.new("UICorner")
+	carrierCorner.CornerRadius = UDim.new(0.5, 0) -- V1 border-radius:50% -> a true ring
+	carrierCorner.Parent = carrier
+	local ringStroke = makeStroke(carrier, 2.5, state.luminous)
 	ringStroke.Transparency = 0.25
 
-	local shardPos = { { 0.5, 0 }, { 0.07, 0.78 }, { 0.93, 0.78 } }
+	-- 3 rounded-diamond shards ON the ring edge: top / bottom-left / bottom-right.
+	local shardPos = { { 0.5, 0 }, { 0.09, 0.80 }, { 0.91, 0.80 } }
 	local shards = {}
 	for i, pos in ipairs(shardPos) do
 		local sh = Instance.new("Frame")
 		sh.AnchorPoint = Vector2.new(0.5, 0.5)
 		sh.Position = UDim2.fromScale(pos[1], pos[2])
-		sh.Size = UDim2.fromScale(0.18, 0.18)
+		sh.Size = UDim2.fromScale(0.16, 0.16)
 		sh.Rotation = 45
 		sh.BackgroundColor3 = state.luminous
 		sh.BorderSizePixel = 0
 		sh.ZIndex = 3
+		local shardCorner = Instance.new("UICorner")
+		shardCorner.CornerRadius = UDim.new(0.3, 0) -- V1 border-radius:2px -> rounded diamond
+		shardCorner.Parent = sh
 		sh.Parent = carrier
 		shards[i] = sh
 	end
@@ -385,13 +363,12 @@ function BUILDERS.seraph(root, state, ticks, ctx)
 
 	ticks[#ticks + 1] = function(now)
 		local p = (now % 2.4) / 2.4 -- 2.4s ripple loop
-		local s = 0.48 + 1.04 * p -- 0.48 -> 1.52
+		local s = 0.34 + 0.56 * p -- 0.34 -> 0.90 (subtle; stays within the ring)
 		ripple.Size = UDim2.fromScale(s, s)
 		rip.Transparency = 0.2 + 0.8 * p
 		carrier.Rotation = (now / 6 * 360) % 360 -- 360deg / 6s
 	end
 
-	ctx.emphasisStroke = emph
 	ctx.fillTargets = { bgTarget(core) }
 	ctx.gradientTarget = core
 	ctx.rimStroke = rimStroke
@@ -406,7 +383,6 @@ function BUILDERS.seraph(root, state, ticks, ctx)
 		if rim then
 			rimStroke.Color = state.luminous
 		end
-		emph.Color = emphasisColor(state.fill)
 	end
 end
 
@@ -435,17 +411,10 @@ local function bindColorAnim(state, ctx, ticks)
 	if FLAT_KINDS[kind] then
 		local baseKey = ctx.baseKey or "fillRgb"
 		local targets = ctx.fillTargets
-		local emph = ctx.emphasisStroke
 		ticks[#ticks + 1] = function(now)
 			local c = rgbToColor3(SoulAnimModel.colorAt(anim, state[baseKey], now))
 			for i = 1, #targets do
 				targets[i](c)
-			end
-			if state.isMine then
-				-- Base the emphasis contrast on the resolved fill (same as the static
-				-- path), not the instantaneous animated color -- for eclipse `c` is
-				-- luminous-based, so keying off fill keeps the two paths consistent.
-				emph.Color = emphasisColor(state.fill)
 			end
 		end
 
@@ -490,14 +459,13 @@ local function bindColorAnim(state, ctx, ticks)
 end
 
 -- ===== assembly =========================================================
-local function makeState(colorSpec, sizePx, isMine)
+local function makeState(colorSpec, sizePx)
 	return {
 		fill = colorSpec.fill,
 		luminous = colorSpec.luminous,
 		fillRgb = colorSpec.fillRgb or rgbFromColor3(colorSpec.fill),
 		luminousRgb = colorSpec.luminousRgb or rgbFromColor3(colorSpec.luminous),
 		anim = colorSpec.anim,
-		isMine = isMine and true or false,
 		sizePx = sizePx,
 	}
 end
@@ -519,17 +487,16 @@ local function construct(root, styleKey, state)
 	builder(root, state, ticks, ctx)
 	ctx.applyColors() -- initial static colors
 	bindColorAnim(state, ctx, ticks)
-	ctx.setEmphasis = function(isMine)
-		state.isMine = isMine and true or false
-		ctx.emphasisStroke.Thickness = state.isMine and 3 or 0
-	end
-	ctx.setEmphasis(state.isMine)
 	ctx.ticks = ticks
 	return ctx
 end
 
+-- `isMine` is accepted for call-site compatibility but no longer affects the halo:
+-- the "this is me" cue is the billboard SIZE (SoulController sizes mine 42px / others
+-- 24px). The emphasis stroke was removed (luminance-flipped + inconsistent per style).
 function SoulStyles.build(parent, styleKey, colorSpec, sizePx, isMine)
-	local state = makeState(colorSpec, sizePx, isMine)
+	local _ = isMine
+	local state = makeState(colorSpec, sizePx)
 	local root = makeRoot(parent, UDim2.fromScale(1, 1))
 	local ctx = construct(root, styleKey, state)
 
@@ -541,7 +508,6 @@ function SoulStyles.build(parent, styleKey, colorSpec, sizePx, isMine)
 		state.luminousRgb = rgbFromColor3(luminous)
 		ctx.applyColors()
 	end
-	handle.setEmphasis = ctx.setEmphasis
 	handle.destroy = function()
 		handle._dead = true
 		root:Destroy()
@@ -582,7 +548,7 @@ function SoulStyles.buildPreview(item, px)
 		colorSpec = { fill = IDENTITY, luminous = IDENTITY }
 	end
 
-	local state = makeState(colorSpec, px, false)
+	local state = makeState(colorSpec, px)
 	local root = makeRoot(nil, UDim2.fromOffset(px, px))
 	local ctx = construct(root, styleKey, state)
 
