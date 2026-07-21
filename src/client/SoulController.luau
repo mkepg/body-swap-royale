@@ -5,7 +5,9 @@
 	Renders a colored halo above every controlled body from the SoulMap broadcast
 	(color = whoever currently controls that body), so you can recognize players
 	across swaps. THIS client's own controlled body (from SetControlledBody) gets
-	an emphasized halo so "which one is me?" is unmistakable after the camera cut.
+	an oversized halo (42px vs 24px) so "which one is me?" is unmistakable after
+	the camera cut -- the size difference is the sole me-cue (the emphasis stroke
+	was removed; it read as an artifact on some style x color combos).
 	Also plays the brief post-swap grace shield shimmer on the body you inherit.
 --]]
 

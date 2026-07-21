@@ -62,3 +62,28 @@ dev pins active. Branch `feat/soul-shop-slice1` at `b89a122`. Spec:
    SoulMap, swap recolor timing, equip changes visible cross-client, rate limit under
    real spam, plus the standing [needs 2-client verification] backlog from the 2026-07-03
    review.
+
+---
+
+## Addendum 2026-07-21 — UI/halo polish pass (8 issues), live-verified
+
+MCP was reachable this session — `execute_luau`, `user_mouse_input`, AND `screen_capture`
+all worked (the prior session's capture/click timeouts were transient). Solo Play,
+same dev pins.
+
+| # | Issue | Verified how | Result |
+|---|---|---|---|
+| 1 | Close ✕ was tofu (U+2715 glyph) | inspected Close: `Text=""` + 2 bars rot ±45; clicked it → panel closes | ✅ renders + closes |
+| 2 | Coins/Level readout too plain | screenshot: gold medallion + "211 COINS" + "LV 12" badge + cyan XP bar | ✅ |
+| 3 | Buy button black-on-yellow | expanded a card: gold gradient, corner 10, dark-brown `(58,38,0)` text, inline "BUY ◈ 200", shadow `(168,126,30)` | ✅ |
+| 4 | Unlabeled rarity stripe | every card has a labeled chip (FREE/COMMON/…/LEGENDARY) + tier accent; old stripe gone | ✅ |
+| 5 | Seraph drifted from V1 | built via live SoulStyles: soft 0.95 glow (t=0.82, no blob), 0.34 core, 0.875 ring, 3 rounded shards | ✅ |
+| 6 | Coins/Level centered over banner | IgnoreGuiInset=true, registered `topLeft`; after boot `replaceAll` it's Anchor (0,0) at x=14, right edge 190 (center 461); screenshot confirms no overlap | ✅ |
+| 7 | Buttons need redesign + states | unified styling present; `wireInteraction` hover/press wired on all (motion needs a real client — tweens don't step in MCP) | ✅ (motion pending real client) |
+| 8 | Eclipse white inner ring (dark colors) | built Eclipse×Void(dark) isMine=true: 0 white frames/strokes; real equipped Eclipse×Void body halo: 0 white strokes, size 42 me-cue intact | ✅ |
+
+**Observed (NOT one of the 8, pre-existing, flagged for a decision):** when the shop is
+open in the lobby, the round banner (top-center, DisplayOrder `bookend`) draws over the
+shop's "SOUL SHOP" title (DisplayOrder `bookend-1`). One-line options: raise the shop
+above the banner, or hide the banner while the shop is open. Not changed pending the
+owner's call.
