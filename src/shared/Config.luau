@@ -30,8 +30,8 @@ Config.GRACE_MOVE_EPSILON = 0.5
 -- RoundManager loop tunables (server-owned clocks).
 -- LOBBY_COUNTDOWN_SECONDS: pre-round countdown once enough players are present.
 -- ROUND_END_SECONDS: winner-display window before resetting to Lobby.
-Config.LOBBY_COUNTDOWN_SECONDS = 5
-Config.ROUND_END_SECONDS = 5
+Config.LOBBY_COUNTDOWN_SECONDS = 20
+Config.ROUND_END_SECONDS = 10
 -- (VOID_Y is defined with the hex floor params below, since it tracks the lowest floor.)
 
 -- Hex-A-Gone arena floor. Seven stacked hexagonal floors; a hex arms the instant a
@@ -379,15 +379,15 @@ Config.SOUL_HALO_ENABLED = true
 -- ALL default 0.0, so out of the box the world looks exactly as it did before the dim
 -- feature; raise a knob to dim that one effect. Applied as GlowDim.apply(base, knob)
 -- on the effect's Neon transparency (except GLOW_DIM_HEX_WARNING -- see below).
-Config.GLOW_DIM_WISPS = 0.0            -- sky soul-wisps (WorldShell)
-Config.GLOW_DIM_AURORA = 0.0          -- aurora ribbon + swap flare (WorldShell)
-Config.GLOW_DIM_CROWD = 0.0           -- distant crowd orbs (WorldShell)
-Config.GLOW_DIM_LOBBY_RINGS = 0.0     -- lobby energy rings (LobbyStage)
+Config.GLOW_DIM_WISPS = 0.1            -- sky soul-wisps (WorldShell)
+Config.GLOW_DIM_AURORA = 0.2          -- aurora ribbon + swap flare (WorldShell)
+Config.GLOW_DIM_CROWD = 0.2           -- distant crowd orbs (WorldShell)
+Config.GLOW_DIM_LOBBY_RINGS = 0.2     -- lobby energy rings (LobbyStage)
 Config.GLOW_DIM_SPECTATOR_ORBS = 0.0  -- lobby spectator-soul orbs (LobbyStage)
-Config.GLOW_DIM_HEX_TRIM = 0.0        -- hex play-area edge-trim border (ArenaDressing, via descriptor.trimDim)
-Config.GLOW_DIM_SWEEP_DORMANT = 0.0   -- idle-sweeper standby dim (keep dormant dimmest)
-Config.GLOW_DIM_SWEEP_SEAM = 0.0      -- wedge seam strips incl. flare (SweeperController)
-Config.GLOW_DIM_SWEEP_RIM_RING = 0.0  -- edge neon: rim belt + fall-gap moat belt, one mesh (SweeperController)
+Config.GLOW_DIM_HEX_TRIM = 0.2        -- hex play-area edge-trim border (ArenaDressing, via descriptor.trimDim)
+Config.GLOW_DIM_SWEEP_DORMANT = 0.5  -- idle-sweeper standby dim (keep dormant dimmest)
+Config.GLOW_DIM_SWEEP_SEAM = 0.35      -- wedge seam strips incl. flare (SweeperController)
+Config.GLOW_DIM_SWEEP_RIM_RING = 0.2  -- edge neon: rim belt + fall-gap moat belt, one mesh (SweeperController)
 Config.GLOW_DIM_SWEEP_LANTERN = 0.0   -- hub lantern core (SweeperController)
 -- Gameplay TELLS (server-side): default 0.0 = full brightness (no readability change).
 -- Raise only if you deliberately want the danger signal dimmer.
