@@ -4,6 +4,36 @@ All notable changes to this project are documented here.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2026-07-21]
+
+### Fixed / Changed
+- **Soul Shop UI + halo polish pass (8 issues, from live review).** All fixes
+  verified in-game via Studio MCP (structural inspection + screenshots) on top of
+  the green lune suite. **(1) Close button** now draws its ✕ from two rotated bars
+  instead of the U+2715 glyph FredokaOne can't render (it was showing as tofu).
+  **(2) Coins/Level readout** redesigned: gold coin medallion, thousands-separated
+  amount, and a live XP progress bar under a cyan level badge (was flat white-bordered
+  text). **(3) Buy button** reworked to a premium 3D gold key (vertical gradient +
+  bottom-shadow, softer dark-brown text with a light highlight, inline price
+  "BUY ◈ N"). **(4) Rarity presentation** — the unlabeled color stripe is replaced
+  by a labeled tier chip (the rarity WORD in its tier color) plus a tier-colored
+  top accent strip; legendary gets a gold gradient. **(5) Seraph** restored to the
+  approved V1 concept — the drifted 1.30 filled underglow blob is gone; now a small
+  0.34 core + soft glow + a thin 0.875 shard-ring (6s spin) carrying 3 rounded
+  diamond shards. **(6) HUD positioning** — the coins/level readout no longer jumps
+  to screen-center over the lobby banner: it was registered in the `top` (center)
+  zone then manually overridden, so HudTheme's `replaceAll` re-centered it on every
+  viewport/camera change; fixed with a new inset-aware `topLeft` zone in the pure
+  `HudZoneModel` (lune-tested) so it stays top-left across all sizes/aspect ratios.
+  **(7) All shop buttons** (tabs, EQUIP/EQUIPPED, BUY, close, toggle) unified with a
+  shared `wireInteraction` helper providing hover (desktop) + press (all) states.
+  **(8) Eclipse white-inner-ring artifact** eliminated — the "this-is-me" emphasis
+  stroke was luminance-flipped (white on dark fills) and placed inconsistently per
+  style (an inner 0.5 frame on Eclipse); the emphasis stroke is **removed entirely**
+  from every style, leaving the billboard size difference (42px mine / 24px others)
+  as the sole identity cue. See the updated
+  [smoke record](smoke-tests/2026-07-16-soul-shop-slice1-smoke-test.md).
+
 ## [2026-07-17]
 
 ### Added
