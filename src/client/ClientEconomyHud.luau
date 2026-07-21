@@ -31,62 +31,216 @@ local player = Players.LocalPlayer
 -- + progress from it, the persistent readout reads coins + level.
 local lastView = { coins = 0, level = 1, progress = 0 }
 
-local balanceCoins, balanceLevel       -- persistent readout labels
+local balanceCoins, balanceLevel, balanceXpFill -- persistent readout: amount, level badge, XP fill
 local rewardRoot, rewardCoins, rewardXp, rewardLevel, rewardBarFill -- reward panel
 local rewardHandle                     -- makePanel handle; setPanelAccent needs the table, not a Frame
 local hideToken = nil  -- generation token: a newer reward cancels the prior hide
 local animToken = nil  -- same token gates the running fill coroutine (cancel-on-retrigger)
 
+-- Pure thousands separator: 7426 -> "7,426". Integer-floored; sign preserved
+-- (coins are non-negative, but the helper stays general).
+local function withCommas(n)
+	n = math.floor(n or 0)
+	local neg = n < 0
+	local s = tostring(math.abs(n))
+	local out, count = "", 0
+	for i = #s, 1, -1 do
+		out = s:sub(i, i) .. out
+		count += 1
+		if count % 3 == 0 and i > 1 then
+			out = "," .. out
+		end
+	end
+	return (neg and "-" or "") .. out
+end
+
 local function build()
 	local gui = Instance.new("ScreenGui")
 	gui.Name = "EconomyHud"
 	gui.ResetOnSpawn = false
-	-- Respect the topbar inset so the top-left balance panel below sits BELOW
-	-- Roblox's menu/unibar button on every device. The engine computes the inset
-	-- per-device (topbar height + notch/safe-area), which a fixed or scale offset
-	-- can't do reliably. The centered reward panel is unaffected (it just centers
-	-- within the inset-reduced area).
-	gui.IgnoreGuiInset = false
+	-- IGNORE the topbar inset (matches ShopHud/RoundHud). The HudZoneModel zones are
+	-- themselves inset-aware -- the `topLeft`/`top` zones offset children by
+	-- `safeTop = insetTop + margin` -- so they place the balance panel below Roblox's
+	-- menu/unibar button using the true screen origin. If the ScreenGui ALSO respected
+	-- the inset, the panel would be pushed down by the inset twice (double-count); with
+	-- IgnoreGuiInset = true the origin is the real screen top and the zone adds the
+	-- inset exactly once. The centered reward panel is unaffected.
+	gui.IgnoreGuiInset = true
 	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 	gui.DisplayOrder = HudTheme.DisplayOrder.bookend -- same layer as the results banner
 	gui.Parent = player:WaitForChild("PlayerGui")
 
 	-- ===== Persistent Coins/Level readout (top-left, below the topbar inset) =====
-	-- Pinned top-left with a small fixed margin. Because the ScreenGui RESPECTS the
-	-- GUI inset (IgnoreGuiInset = false above), (0,14)/(0,14) is measured from just
-	-- below Roblox's topbar -- clearing the top-left menu/unibar button on phone,
-	-- tablet, and desktop alike. We deliberately avoid the other corners: top-right
-	-- (default CoreGui player list), top-center (the round banner), and the bottom
-	-- corners (mobile joystick/jump).
-	local handle = HudTheme.makePanel(gui, UDim2.fromScale(0.16, 0.07), "top", nil)
-	HudTheme.setPanelFlat(handle, HudTheme.Color.panelDark)
-	handle.root.AnchorPoint = Vector2.new(0, 0)
-	handle.root.Position = UDim2.new(0, 14, 0, 14)
+	-- Placed via the inset-aware `topLeft` zone (anchor 0,0; offset x=14, y=safeTop).
+	-- makePanel registers the root in HudTheme's zone registry, so replaceAll() KEEPS
+	-- it top-left on every viewport/camera change -- no manual AnchorPoint/Position
+	-- override (that override was the center-clobber bug #6: the root was registered on
+	-- the "top" center zone and re-placed to center over the banner). We deliberately
+	-- avoid the other corners: top-right (default player list), top-center (round
+	-- banner), and the bottom corners (mobile joystick/jump).
+	--
+	-- Sizing: a scale width (0.16) clamped to 176..192px and 60..66px tall via a
+	-- UISizeConstraint. The scale grows the panel a touch on big screens but the max cap
+	-- keeps it compact (~192x66 at desktop); the min cap keeps it legible on phones. Its
+	-- top-left anchor + <=192px width means its right edge stays well left of the
+	-- centered banner (whose left edge is w/2 - bannerWidth/2) on every realistic
+	-- landscape viewport -- they can't overlap.
+	local handle = HudTheme.makePanel(gui, UDim2.fromScale(0.16, 0.09), "topLeft", nil)
+	do
+		local sc = Instance.new("UISizeConstraint")
+		sc.MinSize = Vector2.new(176, 60)
+		sc.MaxSize = Vector2.new(192, 66)
+		sc.Parent = handle.root
+	end
 
-	local layout = Instance.new("UIListLayout")
-	layout.FillDirection = Enum.FillDirection.Vertical
-	layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-	layout.VerticalAlignment = Enum.VerticalAlignment.Center
-	layout.SortOrder = Enum.SortOrder.LayoutOrder
-	layout.Parent = handle.panel
+	-- Dark gradient panel (top -> bottom) in HudTheme language, with a softer corner
+	-- and a subtle hairline stroke (makePanel's chunky 4px white stroke is dialed down).
+	handle.gradient.Color = ColorSequence.new(Color3.fromRGB(27, 33, 48), Color3.fromRGB(17, 22, 31))
+	local panelCorner = handle.panel:FindFirstChildOfClass("UICorner")
+	if panelCorner then
+		panelCorner.CornerRadius = UDim.new(0, 14)
+	end
+	local panelStroke = handle.panel:FindFirstChildOfClass("UIStroke")
+	if panelStroke then
+		panelStroke.Thickness = 1.5
+		panelStroke.Transparency = 0.85
+	end
+
+	local pad = Instance.new("UIPadding")
+	pad.PaddingLeft = UDim.new(0, 10)
+	pad.PaddingRight = UDim.new(0, 10)
+	pad.PaddingTop = UDim.new(0, 5)
+	pad.PaddingBottom = UDim.new(0, 5)
+	pad.Parent = handle.panel
+
+	-- ---- Row 1: gold coin medallion + amount + COINS sublabel ----
+	local medallion = Instance.new("Frame")
+	medallion.Name = "CoinMedallion"
+	medallion.AnchorPoint = Vector2.new(0, 0)
+	medallion.Position = UDim2.new(0, 0, 0, 0)
+	medallion.Size = UDim2.fromOffset(26, 26)
+	medallion.BackgroundColor3 = Color3.new(1, 1, 1) -- gradient tints it
+	medallion.BorderSizePixel = 0
+	medallion.ZIndex = 3
+	local medCorner = Instance.new("UICorner")
+	medCorner.CornerRadius = UDim.new(1, 0) -- circle
+	medCorner.Parent = medallion
+	local medGrad = Instance.new("UIGradient")
+	medGrad.Color = ColorSequence.new(Color3.fromRGB(255, 224, 138), Color3.fromRGB(201, 154, 46))
+	medGrad.Rotation = 45 -- diagonal sheen fakes a radial gold
+	medGrad.Parent = medallion
+	local medRing = Instance.new("UIStroke")
+	medRing.Color = Color3.fromRGB(255, 255, 255)
+	medRing.Transparency = 0.6
+	medRing.Thickness = 1.5
+	medRing.Parent = medallion
+	medallion.Parent = handle.panel
+
+	-- Diamond facet mark. FredokaOne's glyph coverage for U+25C8 can't be verified
+	-- without Studio, so we draw a font-independent rotated diamond Frame instead --
+	-- guaranteed to render on every device/font fallback.
+	local facet = Instance.new("Frame")
+	facet.Name = "Facet"
+	facet.AnchorPoint = Vector2.new(0.5, 0.5)
+	facet.Position = UDim2.fromScale(0.5, 0.5)
+	facet.Size = UDim2.fromOffset(9, 9)
+	facet.Rotation = 45
+	facet.BackgroundColor3 = Color3.fromRGB(150, 104, 40) -- dim gold-brown
+	facet.BorderSizePixel = 0
+	facet.ZIndex = 4
+	local facetCorner = Instance.new("UICorner")
+	facetCorner.CornerRadius = UDim.new(0, 2)
+	facetCorner.Parent = facet
+	facet.Parent = medallion
 
 	balanceCoins = Instance.new("TextLabel")
 	balanceCoins.Name = "Coins"
 	balanceCoins.BackgroundTransparency = 1
-	balanceCoins.Size = UDim2.fromScale(0.92, 0.55)
-	balanceCoins.LayoutOrder = 1
-	balanceCoins.Text = "0 Coins"
-	HudTheme.styleText(balanceCoins, "heading")
+	balanceCoins.AnchorPoint = Vector2.new(0, 0)
+	balanceCoins.Position = UDim2.new(0, 34, 0, 0)
+	balanceCoins.Size = UDim2.new(1, -34, 0, 16)
+	balanceCoins.Font = HudTheme.Font.heading -- FredokaOne bold
+	balanceCoins.Text = "0"
+	balanceCoins.TextColor3 = HudTheme.Color.textPrimary
+	balanceCoins.TextScaled = true
+	balanceCoins.TextXAlignment = Enum.TextXAlignment.Left
+	balanceCoins.TextYAlignment = Enum.TextYAlignment.Bottom
+	balanceCoins.ZIndex = 3
 	balanceCoins.Parent = handle.panel
+
+	local coinsSub = Instance.new("TextLabel")
+	coinsSub.Name = "CoinsSub"
+	coinsSub.BackgroundTransparency = 1
+	coinsSub.AnchorPoint = Vector2.new(0, 0)
+	coinsSub.Position = UDim2.new(0, 34, 0, 17)
+	coinsSub.Size = UDim2.new(1, -34, 0, 8)
+	coinsSub.Font = HudTheme.Font.body
+	coinsSub.Text = "COINS"
+	coinsSub.TextColor3 = Color3.fromRGB(150, 160, 175) -- muted gray
+	coinsSub.TextScaled = true
+	coinsSub.TextXAlignment = Enum.TextXAlignment.Left
+	coinsSub.ZIndex = 3
+	coinsSub.Parent = handle.panel
+
+	-- ---- Row 2: cyan level badge + XP progress track/fill ----
+	local badge = Instance.new("Frame")
+	badge.Name = "LevelBadge"
+	badge.AnchorPoint = Vector2.new(0, 1)
+	badge.Position = UDim2.new(0, 0, 1, 0)
+	badge.Size = UDim2.fromOffset(42, 18)
+	badge.BackgroundColor3 = Color3.fromRGB(57, 214, 224) -- cyan
+	badge.BorderSizePixel = 0
+	badge.ZIndex = 3
+	local badgeCorner = Instance.new("UICorner")
+	badgeCorner.CornerRadius = UDim.new(0, 7)
+	badgeCorner.Parent = badge
+	badge.Parent = handle.panel
 
 	balanceLevel = Instance.new("TextLabel")
 	balanceLevel.Name = "Level"
 	balanceLevel.BackgroundTransparency = 1
-	balanceLevel.Size = UDim2.fromScale(0.92, 0.40)
-	balanceLevel.LayoutOrder = 2
-	balanceLevel.Text = "Level 1"
-	HudTheme.styleText(balanceLevel, "body")
-	balanceLevel.Parent = handle.panel
+	balanceLevel.Size = UDim2.fromScale(1, 1)
+	balanceLevel.Font = HudTheme.Font.heading
+	balanceLevel.Text = "LV 1"
+	balanceLevel.TextColor3 = Color3.fromRGB(8, 34, 42) -- dark on cyan
+	balanceLevel.TextScaled = true
+	balanceLevel.ZIndex = 4
+	balanceLevel.Parent = badge
+	local badgePad = Instance.new("UIPadding")
+	badgePad.PaddingTop = UDim.new(0, 3)
+	badgePad.PaddingBottom = UDim.new(0, 3)
+	badgePad.PaddingLeft = UDim.new(0, 5)
+	badgePad.PaddingRight = UDim.new(0, 5)
+	badgePad.Parent = balanceLevel
+
+	local xpTrack = Instance.new("Frame")
+	xpTrack.Name = "XpTrack"
+	xpTrack.AnchorPoint = Vector2.new(0, 1)
+	xpTrack.Position = UDim2.new(0, 50, 1, -4) -- centers the 10px track on the 18px badge
+	xpTrack.Size = UDim2.new(1, -50, 0, 10)
+	xpTrack.BackgroundColor3 = Color3.fromRGB(12, 16, 23)
+	xpTrack.BorderSizePixel = 0
+	xpTrack.ZIndex = 3
+	local xpTrackCorner = Instance.new("UICorner")
+	xpTrackCorner.CornerRadius = UDim.new(1, 0)
+	xpTrackCorner.Parent = xpTrack
+	xpTrack.Parent = handle.panel
+
+	balanceXpFill = Instance.new("Frame")
+	balanceXpFill.Name = "Fill"
+	balanceXpFill.AnchorPoint = Vector2.new(0, 0.5)
+	balanceXpFill.Position = UDim2.fromScale(0, 0.5)
+	balanceXpFill.Size = UDim2.fromScale(0, 1) -- width = clamped progress
+	balanceXpFill.BackgroundColor3 = Color3.new(1, 1, 1) -- gradient tints it
+	balanceXpFill.BorderSizePixel = 0
+	balanceXpFill.ZIndex = 4
+	local fillCorner = Instance.new("UICorner")
+	fillCorner.CornerRadius = UDim.new(1, 0)
+	fillCorner.Parent = balanceXpFill
+	local fillGrad = Instance.new("UIGradient")
+	fillGrad.Color = ColorSequence.new(Color3.fromRGB(57, 214, 224), Color3.fromRGB(127, 240, 247))
+	fillGrad.Parent = balanceXpFill
+	balanceXpFill.Parent = xpTrack
 
 	-- ===== End-of-round reward panel (center) =====
 	local panel = HudTheme.makePanel(gui, UDim2.fromScale(0.34, 0.22), "center", nil)
@@ -234,8 +388,9 @@ end
 
 local function applyView(view)
 	lastView = view
-	balanceCoins.Text = string.format("%d Coins", view.coins)
-	balanceLevel.Text = "Level " .. tostring(view.level)
+	balanceCoins.Text = withCommas(view.coins or 0)
+	balanceLevel.Text = "LV " .. tostring(view.level or 1)
+	balanceXpFill.Size = UDim2.fromScale(math.clamp(view.progress or 0, 0, 1), 1)
 end
 
 local function showReward(grant)
