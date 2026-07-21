@@ -17,6 +17,7 @@ function HudZoneModel.zones(vp)
 	local safeTop = math.max(MIN_TOP, (vp.insetTop or 0) + TOP_MARGIN)
 	return {
 		top      = { anchor = { x = 0.5, y = 0 },   position = { 0.5, 0, 0, safeTop }, yOffsetPx = safeTop },
+		topLeft  = { anchor = { x = 0,   y = 0 },   position = { 0, 14, 0, safeTop }, yOffsetPx = safeTop },
 		topTimer = { anchor = { x = 0.5, y = 0 },   position = { 0.5, 0, 0, safeTop + math.floor(vp.h * 0.02) } },
 		center   = { anchor = { x = 0.5, y = 0.5 }, position = { 0.5, 0, 0.40, 0 } },
 		notice   = { anchor = { x = 0.5, y = 0.5 }, position = { 0.5, 0, 0.62, 0 } },

@@ -21,6 +21,14 @@ do
 	print("zones: phone OK")
 end
 
+-- topLeft zone: anchored (0,0), clears the inset like `top`.
+do
+	local z = HudZoneModel.zones({ w = 1920, h = 1080, insetTop = 36 })
+	expect(z.topLeft and z.topLeft.anchor.x == 0 and z.topLeft.anchor.y == 0, "topLeft anchored top-left")
+	expect(z.topLeft.yOffsetPx >= 36 + 10, "topLeft clears the inset")
+	expect(z.topLeft.position[2] == 14, "topLeft x margin 14px")
+end
+
 -- Zero inset (Studio edit / desktop app): behaves like the old 14px placement.
 do
 	local z = HudZoneModel.zones({ w = 1920, h = 1080, insetTop = 0 })
@@ -31,7 +39,7 @@ end
 -- All named zones exist with anchors + positions.
 do
 	local z = HudZoneModel.zones({ w = 1280, h = 720, insetTop = 36 })
-	for _, key in ipairs({ "top", "topTimer", "center", "notice", "bottom" }) do
+	for _, key in ipairs({ "top", "topLeft", "topTimer", "center", "notice", "bottom" }) do
 		expect(z[key] and z[key].anchor and z[key].position, "zone " .. key .. " present")
 	end
 	print("zones: completeness OK")
