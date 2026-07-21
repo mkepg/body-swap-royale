@@ -46,7 +46,6 @@ local function rgb(r, g, b) return Color3.fromRGB(r, g, b) end
 
 local CYAN = rgb(57, 214, 224)         -- active tab / equipped accent (free Soul cyan)
 local GOLD = rgb(255, 201, 77)         -- coins + price + BUY
-local DARK_TEXT = rgb(20, 24, 31)
 local TAB_OFF_BG = rgb(35, 41, 54)     -- #232936
 local TAB_OFF_TEXT = rgb(136, 145, 163) -- #8891a3
 local CARD_BG = rgb(26, 31, 43)
@@ -60,6 +59,51 @@ local RARITY_COLOR = {
 	epic = rgb(176, 108, 240),
 	legendary = rgb(255, 201, 77),
 }
+
+-- ===== interaction + component palette (spec §6.2 polish pass) ==========
+local TWEEN_FAST = TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+
+-- close X (drawn bars, not a glyph)
+local CLOSE_BG = TAB_OFF_BG
+local CLOSE_BG_HOVER = rgb(232, 68, 58)
+local CLOSE_BG_PRESS = rgb(205, 52, 44)
+local CLOSE_BAR = rgb(231, 236, 245)
+local CLOSE_BAR_HOT = rgb(255, 255, 255)
+
+-- BUY (premium gold, raised key)
+local BUY_GRAD = ColorSequence.new({
+	ColorSequenceKeypoint.new(0, rgb(255, 224, 138)),
+	ColorSequenceKeypoint.new(0.5, rgb(255, 201, 77)),
+	ColorSequenceKeypoint.new(1, rgb(234, 169, 42)),
+})
+local BUY_TEXT = rgb(58, 38, 0)
+local BUY_HIGHLIGHT = rgb(255, 245, 210)
+local BUY_SHADOW = rgb(168, 126, 30)
+
+-- EQUIP (solid secondary key)
+local EQUIP_BG = rgb(44, 51, 66)
+local EQUIP_BG_HOVER = rgb(55, 64, 86)
+local EQUIP_SHADOW = rgb(26, 31, 41)
+
+-- tabs
+local TAB_ACTIVE_A = rgb(72, 226, 236)
+local TAB_ACTIVE_B = rgb(57, 214, 224)
+local TAB_ACTIVE_TEXT = rgb(6, 39, 43)
+local TAB_ACTIVE_SHADOW = rgb(31, 154, 162)
+local TAB_HOVER_BG = rgb(44, 52, 68)
+local TAB_HOVER_TEXT = rgb(194, 203, 219)
+local TAB_SHADOW_OFF = rgb(22, 26, 35)
+
+-- toggle
+local TOGGLE_GRAD_A = rgb(27, 33, 48)
+local TOGGLE_GRAD_B = rgb(17, 22, 31)
+
+-- legendary tier flourish
+local LEG_GRAD = ColorSequence.new({
+	ColorSequenceKeypoint.new(0, rgb(224, 169, 60)),
+	ColorSequenceKeypoint.new(0.5, rgb(255, 233, 168)),
+	ColorSequenceKeypoint.new(1, rgb(224, 169, 60)),
+})
 
 local TABS = {
 	{ kind = "halo_color", label = "COLORS" },
@@ -113,6 +157,46 @@ end
 
 local function eligible()
 	return phase ~= "Active" or eliminated
+end
+
+local function tweenTo(obj, props)
+	TweenService:Create(obj, TWEEN_FAST, props):Play()
+end
+
+-- Wire consistent hover (desktop) + press (desktop AND touch) feedback onto `btn`.
+-- opts = { hover=fn?, leave=fn?, press=fn?, release=fn? }.
+--   * hover/leave run on MouseEnter/MouseLeave -- desktop only; a harmless no-op on
+--     touch (those signals just don't fire there).
+--   * press/release run on MouseButton1Down/Up, which Roblox ALSO fires for touch taps
+--     on a GuiButton -- so one code path covers mouse and touch. We deliberately do NOT
+--     also listen to InputBegan/InputEnded, which would double-fire on touch.
+--   * A `pressed` flag guards re-entry (no double press/release), and MouseLeave
+--     releases a still-held press before running `leave`, so a press dragged off the
+--     button resets cleanly instead of sticking.
+-- All connections live on `btn`; when it is Destroyed (cards rebuild on tab switch)
+-- they die with it. `pressed` is per-call closure state, so nothing leaks module-level.
+local function wireInteraction(btn, opts)
+	local pressed = false
+	if opts.hover then
+		btn.MouseEnter:Connect(opts.hover)
+	end
+	btn.MouseButton1Down:Connect(function()
+		if pressed then return end
+		pressed = true
+		if opts.press then opts.press() end
+	end)
+	btn.MouseButton1Up:Connect(function()
+		if not pressed then return end
+		pressed = false
+		if opts.release then opts.release() end
+	end)
+	btn.MouseLeave:Connect(function()
+		if pressed then
+			pressed = false
+			if opts.release then opts.release() end
+		end
+		if opts.leave then opts.leave() end
+	end)
 end
 
 -- ===== coin chip =======================================================
@@ -273,20 +357,84 @@ local function makeCard(item, isDefault, order)
 	glow.Transparency = 0.2
 	glow.Parent = root
 
-	-- rarity chip top-left
-	if not isDefault then
-		local chip = Instance.new("Frame")
-		chip.AnchorPoint = Vector2.new(0, 0)
-		chip.Position = UDim2.fromScale(0.06, 0.06)
-		chip.Size = UDim2.fromScale(0.22, 0.1)
-		chip.BackgroundColor3 = RARITY_COLOR[item.rarity] or TAB_OFF_TEXT
-		chip.BorderSizePixel = 0
-		chip.ZIndex = 4
-		local cc = Instance.new("UICorner")
-		cc.CornerRadius = UDim.new(1, 0)
-		cc.Parent = chip
-		chip.Parent = root
+	-- tier presentation (spec §4): a thin top accent strip + a LABELED tier chip.
+	-- Both are kept separate from the equipped read (the cyan border UIStroke `glow`
+	-- below) so a tier accent and an equipped glow never visually fight -- the accent
+	-- is a top strip, the equipped state is the surrounding border.
+	local rarity = (not isDefault) and item.rarity or nil
+	local tierColor = (rarity and RARITY_COLOR[rarity]) or TAB_OFF_TEXT
+	local tierWord = rarity and string.upper(rarity) or "FREE"
+
+	-- (b) tier-colored top accent strip (inset from the rounded corners)
+	local tierAccent = Instance.new("Frame")
+	tierAccent.Name = "TierAccent"
+	tierAccent.AnchorPoint = Vector2.new(0.5, 0)
+	tierAccent.Position = UDim2.new(0.5, 0, 0, 4)
+	tierAccent.Size = UDim2.new(1, -16, 0, 4)
+	tierAccent.BackgroundColor3 = rarity and tierColor or rgb(70, 78, 96)
+	tierAccent.BackgroundTransparency = rarity and 0 or 0.45
+	tierAccent.BorderSizePixel = 0
+	tierAccent.ZIndex = 4
+	local taC = Instance.new("UICorner")
+	taC.CornerRadius = UDim.new(0, 2)
+	taC.Parent = tierAccent
+	tierAccent.Parent = root
+
+	-- (a) labeled tier chip -- the rarity WORD in a tinted capsule. The gradient (for
+	-- legendary) sits on this Frame; the word lives in a child TextLabel so the gradient
+	-- tints only the capsule fill, never the text.
+	local tierChip = Instance.new("Frame")
+	tierChip.Name = "TierChip"
+	tierChip.AnchorPoint = Vector2.new(0.5, 0)
+	tierChip.Position = UDim2.new(0.5, 0, 0, 11)
+	tierChip.Size = UDim2.fromScale(0.62, 0.14)
+	tierChip.BorderSizePixel = 0
+	tierChip.ZIndex = 4
+	local tcC = Instance.new("UICorner")
+	tcC.CornerRadius = UDim.new(1, 0)
+	tcC.Parent = tierChip
+	local tcStroke = Instance.new("UIStroke")
+	tcStroke.Thickness = 1
+	tcStroke.Parent = tierChip
+
+	local tierLabel = Instance.new("TextLabel")
+	tierLabel.Name = "TierLabel"
+	tierLabel.BackgroundTransparency = 1
+	tierLabel.AnchorPoint = Vector2.new(0.5, 0.5)
+	tierLabel.Position = UDim2.fromScale(0.5, 0.5)
+	tierLabel.Size = UDim2.fromScale(0.84, 0.72)
+	tierLabel.Text = tierWord
+	tierLabel.Font = HudTheme.Font.heading
+	tierLabel.TextScaled = true
+	tierLabel.TextStrokeTransparency = 1
+	tierLabel.ZIndex = 5
+	capText(tierLabel, 11)
+
+	if rarity == "legendary" then
+		-- legendary flourish: static gold gradient capsule + dark word
+		tierChip.BackgroundColor3 = Color3.new(1, 1, 1)
+		tierChip.BackgroundTransparency = 0.05
+		local lg = Instance.new("UIGradient")
+		lg.Color = LEG_GRAD
+		lg.Parent = tierChip
+		tcStroke.Color = rgb(150, 112, 36)
+		tcStroke.Transparency = 0.2
+		tierLabel.TextColor3 = rgb(58, 38, 0)
+	elseif rarity then
+		tierChip.BackgroundColor3 = tierColor
+		tierChip.BackgroundTransparency = 0.82
+		tcStroke.Color = tierColor
+		tcStroke.Transparency = 0.5
+		tierLabel.TextColor3 = tierColor
+	else -- default card: neutral gray "FREE"
+		tierChip.BackgroundColor3 = TAB_OFF_BG
+		tierChip.BackgroundTransparency = 0.25
+		tcStroke.Color = TAB_OFF_TEXT
+		tcStroke.Transparency = 0.6
+		tierLabel.TextColor3 = TAB_OFF_TEXT
 	end
+	tierLabel.Parent = tierChip
+	tierChip.Parent = root
 
 	-- preview (centered)
 	local previewPx = math.max(20, math.floor(L.cardH * 0.4))
@@ -309,6 +457,27 @@ local function makeCard(item, isDefault, order)
 	nameLabel.Parent = root
 
 	-- state row: a non-interactive label (price / EQUIPPED) + an action button (EQUIP / BUY)
+	-- cyan pill behind the EQUIPPED label (a clear equipped read); hidden in other states.
+	local statePill = Instance.new("Frame")
+	statePill.Name = "StatePill"
+	statePill.AnchorPoint = Vector2.new(0.5, 1)
+	statePill.Position = UDim2.fromScale(0.5, 0.97)
+	statePill.Size = UDim2.fromScale(0.62, 0.2)
+	statePill.BackgroundColor3 = CYAN
+	statePill.BackgroundTransparency = 0.8
+	statePill.BorderSizePixel = 0
+	statePill.Visible = false
+	statePill.ZIndex = 3
+	local spC = Instance.new("UICorner")
+	spC.CornerRadius = UDim.new(1, 0)
+	spC.Parent = statePill
+	local spS = Instance.new("UIStroke")
+	spS.Color = CYAN
+	spS.Transparency = 0.5
+	spS.Thickness = 1
+	spS.Parent = statePill
+	statePill.Parent = root
+
 	local stateText = Instance.new("TextLabel")
 	stateText.BackgroundTransparency = 1
 	stateText.AnchorPoint = Vector2.new(0.5, 1)
@@ -320,20 +489,61 @@ local function makeCard(item, isDefault, order)
 	capText(stateText, CAP_BODY)
 	stateText.Parent = root
 
+	-- action button (EQUIP / BUY) as a raised key: a darker "shadow" frame sits ~3px
+	-- below it; hover lifts 1px, press sinks onto the shadow (shadow hidden). Positions
+	-- are precomputed so hover/press only nudge the Y offset.
+	local ABTN_BASE = UDim2.new(0.5, 0, 0.97, 0)
+	local ABTN_HOVER = UDim2.new(0.5, 0, 0.97, -1)
+	local ABTN_PRESS = UDim2.new(0.5, 0, 0.97, 3)
+
+	local actionShadow = Instance.new("Frame")
+	actionShadow.Name = "ActionShadow"
+	actionShadow.AnchorPoint = Vector2.new(0.5, 1)
+	actionShadow.Position = UDim2.new(0.5, 0, 0.97, 3)
+	actionShadow.Size = UDim2.fromScale(0.86, 0.24)
+	actionShadow.BackgroundColor3 = BUY_SHADOW
+	actionShadow.BorderSizePixel = 0
+	actionShadow.Visible = false
+	actionShadow.ZIndex = 4
+	local asC = Instance.new("UICorner")
+	asC.CornerRadius = UDim.new(0, 10)
+	asC.Parent = actionShadow
+	actionShadow.Parent = root
+
 	local actionBtn = Instance.new("TextButton")
 	actionBtn.AutoButtonColor = false
 	actionBtn.AnchorPoint = Vector2.new(0.5, 1)
-	actionBtn.Position = UDim2.fromScale(0.5, 0.97)
+	actionBtn.Position = ABTN_BASE
 	actionBtn.Size = UDim2.fromScale(0.86, 0.24)
 	actionBtn.Text = ""
 	actionBtn.ZIndex = 5
 	actionBtn.Visible = false
 	actionBtn.BorderSizePixel = 0
+	actionBtn.BackgroundColor3 = EQUIP_BG
 	local abc = Instance.new("UICorner")
-	abc.CornerRadius = UDim.new(0, 8)
+	abc.CornerRadius = UDim.new(0, 10)
 	abc.Parent = actionBtn
-	HudTheme.styleText(actionBtn, "heading")
-	capText(actionBtn, CAP_BODY)
+	local actionScale = Instance.new("UIScale")
+	actionScale.Parent = actionBtn
+	-- gold gradient for BUY (toggled off for the flat EQUIP state); on the button, not
+	-- the label, so only the fill is tinted.
+	local actionGrad = Instance.new("UIGradient")
+	actionGrad.Rotation = 90
+	actionGrad.Color = BUY_GRAD
+	actionGrad.Enabled = false
+	actionGrad.Parent = actionBtn
+	-- text in a child label so the button's gradient never tints it
+	local actionText = Instance.new("TextLabel")
+	actionText.Name = "Label"
+	actionText.BackgroundTransparency = 1
+	actionText.AnchorPoint = Vector2.new(0.5, 0.5)
+	actionText.Position = UDim2.fromScale(0.5, 0.5)
+	actionText.Size = UDim2.fromScale(0.9, 0.7)
+	actionText.Text = ""
+	actionText.ZIndex = 6
+	local actionStroke = HudTheme.styleText(actionText, "heading")
+	capText(actionText, CAP_BODY)
+	actionText.Parent = actionBtn
 	actionBtn.Parent = root
 
 	local card = { frame = root, item = item, isDefault = isDefault }
@@ -353,30 +563,52 @@ local function makeCard(item, isDefault, order)
 
 		local isExpanded = (not isDefault) and expandedId == id
 
+		-- reset any lingering hover/press nudge before re-configuring the button
+		actionBtn.Position = ABTN_BASE
+		actionScale.Scale = 1
+
 		if st == "equipped" then
+			statePill.Visible = true
 			stateText.Visible = true
 			stateText.Text = "EQUIPPED"
 			stateText.TextColor3 = CYAN
 			actionBtn.Visible = false
+			actionShadow.Visible = false
 		elseif st == "owned" then
+			statePill.Visible = false
 			stateText.Visible = false
 			actionBtn.Visible = true
-			actionBtn.Text = "EQUIP"
-			actionBtn.TextColor3 = Color3.new(1, 1, 1)
-			actionBtn.BackgroundColor3 = TAB_OFF_BG
+			actionShadow.Visible = true
+			actionShadow.BackgroundColor3 = EQUIP_SHADOW
+			actionGrad.Enabled = false
+			actionBtn.BackgroundColor3 = EQUIP_BG
 			actionBtn.BackgroundTransparency = 0
+			actionText.Text = "EQUIP"
+			actionText.TextColor3 = Color3.new(1, 1, 1)
+			actionStroke.Color = HudTheme.Color.textStroke
+			actionStroke.Thickness = 2
+			actionStroke.Transparency = 0
 		elseif isExpanded then
+			statePill.Visible = false
 			stateText.Visible = false
 			actionBtn.Visible = true
-			actionBtn.Text = "BUY"
-			actionBtn.TextColor3 = DARK_TEXT
-			actionBtn.BackgroundColor3 = GOLD
+			actionShadow.Visible = true
+			actionShadow.BackgroundColor3 = BUY_SHADOW
+			actionGrad.Enabled = true
+			actionBtn.BackgroundColor3 = Color3.new(1, 1, 1)
 			actionBtn.BackgroundTransparency = 0
+			actionText.Text = "BUY  \u{25C8} " .. tostring(ShopModel.priceOf(item, Config.SHOP_PRICES))
+			actionText.TextColor3 = BUY_TEXT
+			actionStroke.Color = BUY_HIGHLIGHT
+			actionStroke.Thickness = 1
+			actionStroke.Transparency = 0.4
 		else -- buyable, collapsed
+			statePill.Visible = false
 			stateText.Visible = true
 			stateText.Text = "\u{25C8} " .. tostring(ShopModel.priceOf(item, Config.SHOP_PRICES))
 			stateText.TextColor3 = GOLD
 			actionBtn.Visible = false
+			actionShadow.Visible = false
 		end
 	end
 
@@ -426,6 +658,47 @@ local function makeCard(item, isDefault, order)
 			end
 		end
 	end)
+
+	-- hover/press feedback for the action button (state-aware: EQUIP swaps its bg,
+	-- BUY lifts + brightens). Cosmetic only -- the Activated buy/equip flow above is
+	-- untouched. State is re-read live so a card that changed EQUIP<->BUY under the
+	-- cursor animates correctly.
+	local function isEquipAction()
+		return cardStateOf(item, isDefault) == "owned"
+	end
+	local actionHover = false
+	wireInteraction(actionBtn, {
+		hover = function()
+			actionHover = true
+			if isEquipAction() then
+				tweenTo(actionBtn, { Position = ABTN_HOVER, BackgroundColor3 = EQUIP_BG_HOVER })
+			else
+				tweenTo(actionBtn, { Position = ABTN_HOVER })
+				tweenTo(actionScale, { Scale = 1.02 })
+			end
+		end,
+		leave = function()
+			actionHover = false
+			if isEquipAction() then
+				tweenTo(actionBtn, { Position = ABTN_BASE, BackgroundColor3 = EQUIP_BG })
+			else
+				tweenTo(actionBtn, { Position = ABTN_BASE })
+				tweenTo(actionScale, { Scale = 1 })
+			end
+		end,
+		press = function()
+			actionBtn.Position = ABTN_PRESS -- sink onto the shadow
+			actionScale.Scale = 1
+			actionShadow.Visible = false
+		end,
+		release = function()
+			actionBtn.Position = actionHover and ABTN_HOVER or ABTN_BASE
+			actionShadow.Visible = actionBtn.Visible
+			if actionHover and not isEquipAction() then
+				actionScale.Scale = 1.02
+			end
+		end,
+	})
 
 	card.refresh()
 	return card
@@ -477,12 +750,26 @@ local function rebuildCards()
 end
 
 -- ===== tabs ============================================================
+-- Active pill = cyan vertical gradient (white base * gradient) + dark text + a soft
+-- cyan glow + a darker-cyan bottom shadow. Inactive = flat TAB_OFF_BG. Hover on an
+-- inactive pill (wired at build) only lightens it; the active pill ignores hover.
 local function paintTabs()
 	for _, tab in ipairs(TABS) do
 		local entry = tabPills[tab.kind]
 		local isActive = tab.kind == activeTab
-		entry.pill.BackgroundColor3 = isActive and CYAN or TAB_OFF_BG
-		entry.label.TextColor3 = isActive and DARK_TEXT or TAB_OFF_TEXT
+		if isActive then
+			entry.pill.BackgroundColor3 = Color3.new(1, 1, 1)
+			entry.gradient.Enabled = true
+			entry.stroke.Enabled = true
+			entry.shadow.BackgroundColor3 = TAB_ACTIVE_SHADOW
+			entry.label.TextColor3 = TAB_ACTIVE_TEXT
+		else
+			entry.pill.BackgroundColor3 = TAB_OFF_BG
+			entry.gradient.Enabled = false
+			entry.stroke.Enabled = false
+			entry.shadow.BackgroundColor3 = TAB_SHADOW_OFF
+			entry.label.TextColor3 = TAB_OFF_TEXT
+		end
 	end
 end
 
@@ -593,17 +880,23 @@ local function build()
 	toggleBtn.Name = "ShopToggle"
 	toggleBtn.Text = ""
 	toggleBtn.AutoButtonColor = false
-	toggleBtn.BackgroundColor3 = HudTheme.Color.panelDark
+	toggleBtn.BackgroundColor3 = Color3.new(1, 1, 1) -- white base tinted by the gradient
 	toggleBtn.BackgroundTransparency = 0.06
 	toggleBtn.BorderSizePixel = 0
 	toggleBtn.Visible = false
 	local tc = Instance.new("UICorner")
 	tc.CornerRadius = UDim.new(0.5, 0)
 	tc.Parent = toggleBtn
+	local toggleGrad = Instance.new("UIGradient")
+	toggleGrad.Rotation = 90
+	toggleGrad.Color = ColorSequence.new(TOGGLE_GRAD_A, TOGGLE_GRAD_B)
+	toggleGrad.Parent = toggleBtn
 	local ts = Instance.new("UIStroke")
 	ts.Thickness = 2.5
 	ts.Color = HudTheme.Color.panelStroke
 	ts.Parent = toggleBtn
+	local toggleScale = Instance.new("UIScale")
+	toggleScale.Parent = toggleBtn
 	-- coin-purse glyph: two stacked gold circles
 	for i, cfg in ipairs({ { s = 0.42, y = 0.36 }, { s = 0.5, y = 0.5 } }) do
 		local coin = Instance.new("Frame")
@@ -628,6 +921,25 @@ local function build()
 	HudTheme.styleText(shopLabel, "heading")
 	capText(shopLabel, CAP_BODY)
 	shopLabel.Parent = toggleBtn
+	local toggleHover = false
+	wireInteraction(toggleBtn, {
+		hover = function()
+			toggleHover = true
+			tweenTo(toggleScale, { Scale = 1.04 })
+			ts.Color = CYAN
+		end,
+		leave = function()
+			toggleHover = false
+			tweenTo(toggleScale, { Scale = 1 })
+			ts.Color = HudTheme.Color.panelStroke
+		end,
+		press = function()
+			toggleScale.Scale = 0.97
+		end,
+		release = function()
+			toggleScale.Scale = toggleHover and 1.04 or 1
+		end,
+	})
 	toggleBtn.Activated:Connect(openPanel)
 	toggleBtn.Parent = gui
 
@@ -648,25 +960,84 @@ local function build()
 	ps.Parent = panel
 	panel.Parent = gui
 
-	-- close X (top-right corner, 44px touch floor)
+	-- close X (top-right corner, 44px touch floor). The X is DRAWN from two rotated
+	-- bars, not a glyph -- FredokaOne has no U+2715, so a glyph renders as tofu.
 	closeBtn = Instance.new("TextButton")
 	closeBtn.Name = "Close"
 	closeBtn.AnchorPoint = Vector2.new(1, 0)
 	closeBtn.Position = UDim2.new(1, -6, 0, 6)
 	closeBtn.Size = UDim2.fromOffset(44, 44)
-	closeBtn.Text = "\u{2715}"
+	closeBtn.Text = ""
 	closeBtn.AutoButtonColor = false
-	closeBtn.BackgroundColor3 = TAB_OFF_BG
+	closeBtn.BackgroundColor3 = CLOSE_BG
 	closeBtn.BackgroundTransparency = 0.15
 	closeBtn.BorderSizePixel = 0
 	closeBtn.ZIndex = 6
 	local clc = Instance.new("UICorner")
 	clc.CornerRadius = UDim.new(0.5, 0)
 	clc.Parent = closeBtn
-	HudTheme.styleText(closeBtn, "heading")
-	capText(closeBtn, CAP_BODY)
+	local closeScale = Instance.new("UIScale")
+	closeScale.Parent = closeBtn
+	local closeBars = {}
+	for _, rot in ipairs({ 45, -45 }) do
+		local bar = Instance.new("Frame")
+		bar.Name = rot == 45 and "BarA" or "BarB"
+		bar.AnchorPoint = Vector2.new(0.5, 0.5)
+		bar.Position = UDim2.fromScale(0.5, 0.5)
+		bar.Size = UDim2.fromScale(0.46, 0.09) -- ~20x4px on the 44px button
+		bar.BackgroundColor3 = CLOSE_BAR
+		bar.BorderSizePixel = 0
+		bar.Rotation = rot
+		bar.ZIndex = 7
+		local bc = Instance.new("UICorner")
+		bc.CornerRadius = UDim.new(0, 2)
+		bc.Parent = bar
+		bar.Parent = closeBtn
+		closeBars[#closeBars + 1] = bar
+	end
 	closeBtn.Parent = panel
 	closeBtn.Activated:Connect(closePanel)
+	local function paintCloseBars(c)
+		for _, bar in ipairs(closeBars) do
+			bar.BackgroundColor3 = c
+		end
+	end
+	local function closeBase()
+		tweenTo(closeBtn, { BackgroundColor3 = CLOSE_BG })
+		tweenTo(closeScale, { Scale = 1 })
+		paintCloseBars(CLOSE_BAR)
+	end
+	local function closeHot()
+		tweenTo(closeBtn, { BackgroundColor3 = CLOSE_BG_HOVER })
+		tweenTo(closeScale, { Scale = 1.06 })
+		paintCloseBars(CLOSE_BAR_HOT)
+	end
+	local closeHover = false
+	wireInteraction(closeBtn, {
+		hover = function()
+			closeHover = true
+			closeHot()
+		end,
+		leave = function()
+			closeHover = false
+			closeBase()
+		end,
+		press = function()
+			closeBtn.BackgroundColor3 = CLOSE_BG_PRESS
+			closeScale.Scale = 0.96
+			paintCloseBars(CLOSE_BAR_HOT)
+		end,
+		release = function()
+			-- If still hovering (desktop), settle into the hover look; otherwise (a
+			-- touch tap, where MouseEnter/Leave don't fire) settle straight to base so
+			-- the persistent close button never gets stuck red/enlarged on reopen.
+			if closeHover then
+				closeHot()
+			else
+				closeBase()
+			end
+		end,
+	})
 
 	-- header row: title + coin chip
 	headerRow = Instance.new("Frame")
@@ -749,8 +1120,42 @@ local function build()
 		pill.BorderSizePixel = 0
 		pill.ZIndex = 3
 		local pcc = Instance.new("UICorner")
-		pcc.CornerRadius = UDim.new(0, 8)
+		pcc.CornerRadius = UDim.new(0, 11)
 		pcc.Parent = pill
+
+		-- bottom shadow for a raised-key read. A CHILD (not a layout sibling) offset 2px
+		-- down at a lower ZIndex, so UIListLayout ignores it and it peeks below the pill.
+		local pshadow = Instance.new("Frame")
+		pshadow.Name = "Shadow"
+		pshadow.AnchorPoint = Vector2.new(0.5, 0.5)
+		pshadow.Position = UDim2.new(0.5, 0, 0.5, 2)
+		pshadow.Size = UDim2.fromScale(1, 1)
+		pshadow.BackgroundColor3 = TAB_SHADOW_OFF
+		pshadow.BorderSizePixel = 0
+		pshadow.ZIndex = 2
+		local psc = Instance.new("UICorner")
+		psc.CornerRadius = UDim.new(0, 11)
+		psc.Parent = pshadow
+		pshadow.Parent = pill
+
+		-- cyan vertical gradient (active only; toggled by paintTabs)
+		local pgrad = Instance.new("UIGradient")
+		pgrad.Rotation = 90
+		pgrad.Color = ColorSequence.new(TAB_ACTIVE_A, TAB_ACTIVE_B)
+		pgrad.Enabled = false
+		pgrad.Parent = pill
+
+		-- soft cyan glow (active only)
+		local pstroke = Instance.new("UIStroke")
+		pstroke.Thickness = 1.5
+		pstroke.Color = TAB_ACTIVE_B
+		pstroke.Transparency = 0.35
+		pstroke.Enabled = false
+		pstroke.Parent = pill
+
+		local pscale = Instance.new("UIScale")
+		pscale.Parent = pill
+
 		local plabel = Instance.new("TextLabel")
 		plabel.BackgroundTransparency = 1
 		plabel.Size = UDim2.fromScale(0.9, 0.7)
@@ -767,7 +1172,25 @@ local function build()
 			selectTab(tab.kind)
 		end)
 		pill.Parent = tabsRow
-		tabPills[tab.kind] = { pill = pill, label = plabel }
+		tabPills[tab.kind] = { pill = pill, label = plabel, gradient = pgrad, shadow = pshadow, stroke = pstroke }
+		wireInteraction(pill, {
+			hover = function()
+				if activeTab == tab.kind then return end -- active pill ignores hover
+				pill.BackgroundColor3 = TAB_HOVER_BG
+				plabel.TextColor3 = TAB_HOVER_TEXT
+			end,
+			leave = function()
+				if activeTab == tab.kind then return end
+				pill.BackgroundColor3 = TAB_OFF_BG
+				plabel.TextColor3 = TAB_OFF_TEXT
+			end,
+			press = function()
+				pscale.Scale = 0.97
+			end,
+			release = function()
+				pscale.Scale = 1
+			end,
+		})
 	end
 	paintTabs()
 
