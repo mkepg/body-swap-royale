@@ -10,7 +10,9 @@
 	  styleKey: "classic"|"ring"|"pulse"|"orbit"|"eclipse"|"seraph" (unknown -> classic)
 	  colorSpec: { fill = Color3, luminous = Color3, anim = table? } -- PRE-RESOLVED
 	  handle: { setColors(fill, luminous), destroy() }
-	SoulStyles.buildPreview(item, px) -> Frame  (same constructions for shop cards; Task 9 consumes)
+	SoulStyles.buildPreview(item, px, ctx?) -> Frame  (shop cards; renders the RESOLVED
+	  composite: color card = this color x equipped style; style card = this style x equipped
+	  color. ctx = { colorSpec = <resolved colorSpec or nil>, styleKey = <equipped styleKey or nil> })
 	SoulStyles.start() -- binds the shared animator (idempotent)
 
 	NOTE: the identity/style-preview color below is the free Soul cyan. Aurora's
@@ -204,11 +206,18 @@ end
 
 function BUILDERS.ring(root, state, ticks, ctx)
 	local px = state.sizePx
+	-- Softened underglow (0.80) so the middle reads EMPTY, not a dark orb.
 	local under = circle(root, 1.20, state.luminous, 1)
-	under.BackgroundTransparency = 0.72
+	under.BackgroundTransparency = 0.80
+	-- Hollow annulus (transparent center) + a thin fill-colored stroke, thinner than before.
 	local annulus = circle(root, 1.0, state.fill, 2)
 	annulus.BackgroundTransparency = 1
-	local ann = makeStroke(annulus, px * 0.18, state.fill) -- 18% of billboard px
+	local ann = makeStroke(annulus, px * 0.15, state.fill) -- 15% of billboard px
+	-- Crisp BRIGHT inner accent: a slightly-smaller ring in lightened fill (55% -> white),
+	-- giving the halo a clean double edge around its empty middle.
+	local accent = circle(root, 0.84, state.fill, 3)
+	accent.BackgroundTransparency = 1
+	local accentStroke = makeStroke(accent, 1.5, state.fill:Lerp(WHITE, 0.55))
 	local rim, rimStroke = makeFlashRim(root, state) -- flash colors (Stormcloud) pulse here
 
 	ctx.fillTargets = { strokeTarget(ann) }
@@ -217,6 +226,7 @@ function BUILDERS.ring(root, state, ticks, ctx)
 	ctx.applyColors = function()
 		under.BackgroundColor3 = state.luminous
 		ann.Color = state.fill
+		accentStroke.Color = state.fill:Lerp(WHITE, 0.55)
 		if rim then
 			rimStroke.Color = state.luminous
 		end
@@ -292,19 +302,34 @@ end
 
 function BUILDERS.eclipse(root, state, ticks, ctx)
 	local px = state.sizePx
-	local glow = circle(root, 1.34, state.luminous, 0)
-	glow.BackgroundTransparency = 0.82
+	-- Breathing outer aura (ZIndex 0, behind everything): a luminous halo the animator
+	-- gently pulses -- Eclipse's living glow, which Ring lacks entirely.
+	local aura = circle(root, 1.50, state.luminous, 0)
+	aura.BackgroundTransparency = 0.55
+	-- Solid, OPAQUE dark orb (t=0) + a faint lighter core for a subtle radial 3D read.
 	local disc = circle(root, 1.0, ECLIPSE_DISC, 1)
-	local corona = makeStroke(disc, px * 0.14, state.luminous) -- 14% of billboard px
+	local core = circle(root, 0.40, Color3.fromRGB(60, 42, 96), 2)
+	core.BackgroundTransparency = 0.90
+	-- Blazing luminous corona, thicker than before so the orb reads as eclipsed.
+	local corona = makeStroke(disc, px * 0.17, state.luminous) -- 17% of billboard px
 
-	-- The corona (luminous) is eclipse's only colored element, so the flat color
+	-- Aura breathe: gentle 2.4s sine pulse, ALWAYS on (independent of the color anim),
+	-- so every Eclipse halo lives even with a static color.
+	ticks[#ticks + 1] = function(now)
+		local p = (math.sin(now / 2.4 * math.pi * 2) + 1) * 0.5 -- 0..1 over 2.4s
+		local s = 1.40 + 0.20 * p -- 1.40 -> 1.60 scale
+		aura.Size = UDim2.fromScale(s, s)
+		aura.BackgroundTransparency = 0.50 + 0.15 * p -- 0.50 -> 0.65
+	end
+
+	-- The corona (luminous) is eclipse's only wearer-colored element, so the flat color
 	-- anim rides it -- base = luminous so Void-type keeps its bright ring.
 	ctx.fillTargets = { strokeTarget(corona) }
 	ctx.baseKey = "luminousRgb"
 	ctx.gradientTarget = disc -- gradient here tints the corona stroke
 	ctx.rimStroke = corona
 	ctx.applyColors = function()
-		glow.BackgroundColor3 = state.luminous
+		aura.BackgroundColor3 = state.luminous
 		disc.BackgroundColor3 = ECLIPSE_DISC
 		corona.Color = state.luminous
 	end
@@ -524,10 +549,15 @@ function SoulStyles.build(parent, styleKey, colorSpec, sizePx, isMine)
 	return handle
 end
 
--- Shop-card preview: same constructions, no billboard. halo_color renders Classic
--- in that color; halo_style renders its frame in free identity cyan; anything else
--- (trails handled elsewhere) falls back to an identity Classic dot so this never errors.
-function SoulStyles.buildPreview(item, px)
+-- Shop-card preview: same constructions, no billboard. Renders the RESOLVED COMPOSITE
+-- so a card matches what the avatar wears. `ctx` (optional) = { colorSpec?, styleKey? }:
+--   halo_color -> this color composed with the equipped STYLE (ctx.styleKey or classic)
+--   halo_style -> this style composed with the equipped COLOR (ctx.colorSpec or identity cyan)
+--   else (Default card / trails handled elsewhere / unknown) -> identity Classic dot; never errors.
+-- ctx.colorSpec shape = { fill, luminous, fillRgb, luminousRgb, anim? } -- what build consumes.
+-- Backwards-compatible: ctx nil -> style previews in identity cyan, color previews as Classic.
+function SoulStyles.buildPreview(item, px, ctx)
+	ctx = ctx or {}
 	local styleKey, colorSpec
 	if item.kind == "halo_color" then
 		local fillRgb = item.fill
@@ -539,10 +569,10 @@ function SoulStyles.buildPreview(item, px)
 			luminousRgb = lumRgb,
 			anim = item.anim,
 		}
-		styleKey = "classic"
+		styleKey = ctx.styleKey or "classic"
 	elseif item.kind == "halo_style" then
 		styleKey = item.styleKey
-		colorSpec = { fill = IDENTITY, luminous = IDENTITY }
+		colorSpec = ctx.colorSpec or { fill = IDENTITY, luminous = IDENTITY }
 	else
 		styleKey = "classic"
 		colorSpec = { fill = IDENTITY, luminous = IDENTITY }
@@ -550,13 +580,13 @@ function SoulStyles.buildPreview(item, px)
 
 	local state = makeState(colorSpec, px)
 	local root = makeRoot(nil, UDim2.fromOffset(px, px))
-	local ctx = construct(root, styleKey, state)
+	local built = construct(root, styleKey, state)
 
-	if #ctx.ticks > 0 then
+	if #built.ticks > 0 then
 		local handle = { gui = root, _dead = false, _seen = false }
 		handle._animate = function(now)
-			for i = 1, #ctx.ticks do
-				ctx.ticks[i](now)
+			for i = 1, #built.ticks do
+				built.ticks[i](now)
 			end
 		end
 		registerHandle(handle)
