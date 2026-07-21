@@ -168,7 +168,18 @@ function EconomyService.onShopRequest(player, payload)
 	if not withinRate(player) then
 		return
 	end
-	if type(payload) ~= "table" or type(payload.itemId) ~= "string"
+	if type(payload) ~= "table" then
+		return
+	end
+	if payload.action == "sync" then
+		-- Re-push the current profile so a client that missed the one-time join
+		-- push (connected its handler late) can resync on demand. No mutation.
+		if profiles[player] and persisted[player] then
+			pushProfile(player)
+		end
+		return
+	end
+	if type(payload.itemId) ~= "string"
 		or #payload.itemId > 64
 		or (payload.action ~= "buy" and payload.action ~= "equip") then
 		return
