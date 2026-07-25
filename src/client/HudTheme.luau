@@ -143,6 +143,44 @@ function HudTheme.styleText(label, fontKey)
 	return s
 end
 
+-- The gold coin "medallion" currency token -- ONE source so the balance readout,
+-- the shop header, and shop prices all render the identical coin. Returns an
+-- unparented sizePx-square Frame; the caller parents + positions it. Facet/ring
+-- scale with sizePx so it reads at 14px (a price) or 26px (the readout).
+function HudTheme.makeCoinMedallion(sizePx)
+	local med = Instance.new("Frame")
+	med.Name = "CoinMedallion"
+	med.Size = UDim2.fromOffset(sizePx, sizePx)
+	med.BackgroundColor3 = Color3.new(1, 1, 1)
+	med.BorderSizePixel = 0
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(1, 0)
+	corner.Parent = med
+	local grad = Instance.new("UIGradient")
+	grad.Color = ColorSequence.new(Color3.fromRGB(255, 224, 138), Color3.fromRGB(201, 154, 46))
+	grad.Rotation = 45
+	grad.Parent = med
+	local ring = Instance.new("UIStroke")
+	ring.Color = Color3.fromRGB(255, 255, 255)
+	ring.Transparency = 0.6
+	ring.Thickness = math.max(1, sizePx * 0.058)
+	ring.Parent = med
+	local facet = Instance.new("Frame")
+	facet.Name = "Facet"
+	facet.AnchorPoint = Vector2.new(0.5, 0.5)
+	facet.Position = UDim2.fromScale(0.5, 0.5)
+	facet.Size = UDim2.fromOffset(math.floor(sizePx * 0.35 + 0.5), math.floor(sizePx * 0.35 + 0.5))
+	facet.Rotation = 45
+	facet.BackgroundColor3 = Color3.fromRGB(150, 104, 40)
+	facet.BorderSizePixel = 0
+	facet.ZIndex = med.ZIndex + 1
+	local fc = Instance.new("UICorner")
+	fc.CornerRadius = UDim.new(0, math.max(1, math.floor(sizePx * 0.08 + 0.5)))
+	fc.Parent = facet
+	facet.Parent = med
+	return med
+end
+
 -- Build a chunky themed panel (root > shadow + panel) in `parent`, sized `size`,
 -- placed in `zoneKey` and capped by `capKey`. Parent your content into `.panel`;
 -- recolor via setPanelAccent/setPanelFlat; pop it in via popIn(handle.root).
