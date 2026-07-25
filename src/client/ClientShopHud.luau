@@ -37,7 +37,6 @@ local ShopResult = Remotes.get("ShopResult")
 local ProfileUpdated = Remotes.get("ProfileUpdated")
 local RoundStateChanged = Remotes.get("RoundStateChanged")
 local EliminationEvent = Remotes.get("EliminationEvent")
-local SoulMap = Remotes.get("SoulMap") -- tracks the local player's resolved soul color (#4 visual)
 
 local ClientShopHud = {}
 local player = Players.LocalPlayer
@@ -144,7 +143,7 @@ local eliminated = false                             -- self, this round
 local expandedId = nil                               -- itemId currently expanded to BUY, or nil
 local built = false                                  -- true once build() has created every UI ref
 local buildGen = 0                                   -- bumped each rebuildCards; guards the staggered reveal
-local localSoulColor = rgb(57, 214, 224)             -- local player's resolved soul color (SoulMap); identity cyan until first broadcast
+local localSoulColor = rgb(57, 214, 224)             -- local player's resolved soul color (LocalPlayer "SoulColor" attribute); identity cyan until first published
 
 -- built once
 local gui, toggleBtn, panel, closeBtn, titleLabel, coinChip, coinChipCount, coinChipBase, coinChipMed
@@ -1626,21 +1625,18 @@ local function bindViewport()
 	end
 end
 
--- Track the local player's RESOLVED soul color from SoulMap (spec §6): find our body by its
--- ControllerUserId attribute and mirror entry.color. That's the identity color the flat
+-- Track the local player's RESOLVED soul color via the LocalPlayer "SoulColor" attribute
+-- (spec §6): SoulController publishes it as soon as it resolves our body from the SoulMap
+-- broadcast, so reading the attribute here is race-free (no dependence on this listener
+-- having connected before the one-shot broadcast fires). That's the identity color the flat
 -- previews use when no halo_color is equipped. A change while the panel is open (a lobby
 -- swap) rebuilds only the identity-colored previews so they stay truthful.
-local function onSoulMap(list)
-	for _, entry in ipairs(list) do
-		local body = entry.body
-		if body and body:GetAttribute("ControllerUserId") == player.UserId then
-			if entry.color and entry.color ~= localSoulColor then
-				localSoulColor = entry.color
-				if built and panelOpen and equipped.halo_color == nil then
-					rebuildCards() -- only identity-colored previews depend on this color
-				end
-			end
-			return
+local function onSoulColorAttribute()
+	local c = player:GetAttribute("SoulColor")
+	if c and c ~= localSoulColor then
+		localSoulColor = c
+		if built and panelOpen and equipped.halo_color == nil then
+			rebuildCards() -- only identity-colored previews depend on this color
 		end
 	end
 end
@@ -1651,7 +1647,9 @@ function ClientShopHud.start()
 	-- only writes the state mirrors until `built` is true, so an early push is safe.
 	ProfileUpdated.OnClientEvent:Connect(applyProfile)
 	-- Track our resolved soul color for the identity-colored composite previews (spec §6).
-	SoulMap.OnClientEvent:Connect(onSoulMap)
+	-- Seed from whatever SoulController has already published, then stay live.
+	onSoulColorAttribute()
+	player:GetAttributeChangedSignal("SoulColor"):Connect(onSoulColorAttribute)
 
 	SoulStyles.start() -- ensure the shared preview animator is running (idempotent)
 	build()

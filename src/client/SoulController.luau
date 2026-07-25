@@ -25,7 +25,8 @@ local SoulController = {}
 local myBody = nil
 local halos = {} -- [body] = { handle, gui, styleKey, colorId, isMine }
 local trails = {} -- [body] = { trailKey, lumColor, trails, attachments, animHandle? }
-local myUserId = game:GetService("Players").LocalPlayer.UserId
+local localPlayer = game:GetService("Players").LocalPlayer
+local myUserId = localPlayer.UserId
 
 local SIZE_MINE = 42
 local SIZE_OTHER = 24
@@ -339,6 +340,13 @@ local function reconcile(list)
 			local colorSpec = colorSpecFor(entry)
 			updateHalo(body, entry, colorSpec, isMine)
 			updateTrail(body, entry, colorSpec.luminous)
+			-- Publish the local resolved soul color so other client UIs (the Soul Shop
+			-- previews) can read it directly, without racing the one-shot SoulMap broadcast.
+			if body:GetAttribute("ControllerUserId") == myUserId then
+				if localPlayer:GetAttribute("SoulColor") ~= entry.color then
+					localPlayer:SetAttribute("SoulColor", entry.color)
+				end
+			end
 		end
 	end
 	-- Drop halos AND trails for bodies no longer in the map.
