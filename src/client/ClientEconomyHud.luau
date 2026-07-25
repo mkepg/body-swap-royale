@@ -113,45 +113,12 @@ local function build()
 	pad.PaddingBottom = UDim.new(0, 5)
 	pad.Parent = handle.panel
 
-	-- ---- Row 1: gold coin medallion + amount + COINS sublabel ----
-	local medallion = Instance.new("Frame")
-	medallion.Name = "CoinMedallion"
+	-- ---- Row 1: gold coin medallion (shared token) + amount + COINS sublabel ----
+	local medallion = HudTheme.makeCoinMedallion(26)
 	medallion.AnchorPoint = Vector2.new(0, 0)
 	medallion.Position = UDim2.new(0, 0, 0, 0)
-	medallion.Size = UDim2.fromOffset(26, 26)
-	medallion.BackgroundColor3 = Color3.new(1, 1, 1) -- gradient tints it
-	medallion.BorderSizePixel = 0
 	medallion.ZIndex = 3
-	local medCorner = Instance.new("UICorner")
-	medCorner.CornerRadius = UDim.new(1, 0) -- circle
-	medCorner.Parent = medallion
-	local medGrad = Instance.new("UIGradient")
-	medGrad.Color = ColorSequence.new(Color3.fromRGB(255, 224, 138), Color3.fromRGB(201, 154, 46))
-	medGrad.Rotation = 45 -- diagonal sheen fakes a radial gold
-	medGrad.Parent = medallion
-	local medRing = Instance.new("UIStroke")
-	medRing.Color = Color3.fromRGB(255, 255, 255)
-	medRing.Transparency = 0.6
-	medRing.Thickness = 1.5
-	medRing.Parent = medallion
 	medallion.Parent = handle.panel
-
-	-- Diamond facet mark. FredokaOne's glyph coverage for U+25C8 can't be verified
-	-- without Studio, so we draw a font-independent rotated diamond Frame instead --
-	-- guaranteed to render on every device/font fallback.
-	local facet = Instance.new("Frame")
-	facet.Name = "Facet"
-	facet.AnchorPoint = Vector2.new(0.5, 0.5)
-	facet.Position = UDim2.fromScale(0.5, 0.5)
-	facet.Size = UDim2.fromOffset(9, 9)
-	facet.Rotation = 45
-	facet.BackgroundColor3 = Color3.fromRGB(150, 104, 40) -- dim gold-brown
-	facet.BorderSizePixel = 0
-	facet.ZIndex = 4
-	local facetCorner = Instance.new("UICorner")
-	facetCorner.CornerRadius = UDim.new(0, 2)
-	facetCorner.Parent = facet
-	facet.Parent = medallion
 
 	balanceCoins = Instance.new("TextLabel")
 	balanceCoins.Name = "Coins"
