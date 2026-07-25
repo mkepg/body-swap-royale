@@ -37,12 +37,30 @@ local ShopResult = Remotes.get("ShopResult")
 local ProfileUpdated = Remotes.get("ProfileUpdated")
 local RoundStateChanged = Remotes.get("RoundStateChanged")
 local EliminationEvent = Remotes.get("EliminationEvent")
+local SoulMap = Remotes.get("SoulMap") -- tracks the local player's resolved soul color (#4 visual)
 
 local ClientShopHud = {}
 local player = Players.LocalPlayer
 
 -- ===== style constants (spec §6.2 / §7) ================================
 local function rgb(r, g, b) return Color3.fromRGB(r, g, b) end
+
+-- Pure thousands separator: 7426 -> "7,426" (copied from ClientEconomyHud so the shop
+-- reads the balance in the SAME format as the readout). Integer-floored; sign preserved.
+local function withCommas(n)
+	n = math.floor(n or 0)
+	local neg = n < 0
+	local s = tostring(math.abs(n))
+	local out, count = "", 0
+	for i = #s, 1, -1 do
+		out = s:sub(i, i) .. out
+		count += 1
+		if count % 3 == 0 and i > 1 then
+			out = "," .. out
+		end
+	end
+	return (neg and "-" or "") .. out
+end
 
 local CYAN = rgb(57, 214, 224)         -- active tab / equipped accent (free Soul cyan)
 local GOLD = rgb(255, 201, 77)         -- coins + price + BUY
@@ -59,6 +77,8 @@ local RARITY_COLOR = {
 	epic = rgb(176, 108, 240),
 	legendary = rgb(255, 201, 77),
 }
+local FREE_TIER = rgb(139, 147, 166) -- neutral gray for the Default card's "FREE" pill (spec §3)
+local PILL_BG = rgb(10, 13, 20)      -- dark translucent capsule behind the corner tier pill (spec §3)
 
 -- ===== interaction + component palette (spec §6.2 polish pass) ==========
 local TWEEN_FAST = TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
@@ -98,13 +118,6 @@ local TAB_SHADOW_OFF = rgb(22, 26, 35)
 local TOGGLE_GRAD_A = rgb(27, 33, 48)
 local TOGGLE_GRAD_B = rgb(17, 22, 31)
 
--- legendary tier flourish
-local LEG_GRAD = ColorSequence.new({
-	ColorSequenceKeypoint.new(0, rgb(224, 169, 60)),
-	ColorSequenceKeypoint.new(0.5, rgb(255, 233, 168)),
-	ColorSequenceKeypoint.new(1, rgb(224, 169, 60)),
-})
-
 local TABS = {
 	{ kind = "halo_color", label = "COLORS" },
 	{ kind = "halo_style", label = "STYLES" },
@@ -129,10 +142,13 @@ local panelOpen = false
 local phase = nil                                    -- from RoundStateChanged
 local eliminated = false                             -- self, this round
 local expandedId = nil                               -- itemId currently expanded to BUY, or nil
+local built = false                                  -- true once build() has created every UI ref
+local buildGen = 0                                   -- bumped each rebuildCards; guards the staggered reveal
+local localSoulColor = rgb(57, 214, 224)             -- local player's resolved soul color (SoulMap); identity cyan until first broadcast
 
 -- built once
-local gui, toggleBtn, panel, closeBtn, titleLabel, coinChip, coinChipCount, coinChipBase
-local tabsRow, headerRow, scroll, grid, hintLabel
+local gui, toggleBtn, panel, closeBtn, titleLabel, coinChip, coinChipCount, coinChipBase, coinChipMed
+local tabsRow, headerRow, scroll, grid, hintBox
 local tabPills = {}                                  -- [kind] = { pill, label }
 local textCaps = {}                                  -- { {constraint, cap} } re-scaled on relayout
 local currentCards = {}                              -- array of card tables for the active tab
@@ -205,7 +221,7 @@ end
 -- balance mirror.
 local function setCoinText(n)
 	displayedCoins = math.max(0, math.floor(n + 0.5))
-	coinChipCount.Text = tostring(displayedCoins)
+	coinChipCount.Text = withCommas(displayedCoins) -- thousands separator, matching the balance readout (§4)
 end
 
 -- Tick the displayed coin count from the value CURRENTLY on screen to `target`
@@ -280,14 +296,116 @@ local function buildTrailRibbon(item, px)
 	return root
 end
 
--- Returns the preview Frame (SoulStyles handle for color/style; ribbon for trails;
--- identity Classic for the free Default card). Cleanup contract: SoulStyles.buildPreview
--- returns the animator root Frame -- destroying it (via destroying the card subtree on
--- rebuild) makes the shared animator drop the handle next Heartbeat, so simply
--- :Destroy()-ing the card is the full teardown; no explicit handle bookkeeping needed.
-local function buildPreview(item, px)
+-- The SHARED gold coin token (spec §4): HudTheme.makeCoinMedallion, re-parented at a
+-- given ZIndex. Under Sibling ZIndexBehavior the facet must ride ABOVE the disc, so we
+-- bump both together (makeCoinMedallion pins the facet at disc+1 for the default ZIndex).
+local function coinToken(px, z)
+	local med = HudTheme.makeCoinMedallion(px)
+	med.ZIndex = z
+	local facet = med:FindFirstChild("Facet")
+	if facet then
+		facet.ZIndex = z + 1
+	end
+	return med
+end
+
+-- Default TRAILS card (spec §7, Option A): a "no trail" mock -- a faint dashed line +
+-- a dim runner dot. Deliberately NOT a Soul halo, so it reads as "trail off".
+local function buildNoTrail(px)
+	local root = Instance.new("Frame")
+	root.Size = UDim2.fromOffset(px, px)
+	root.BackgroundTransparency = 1
+	local dashes, dashW, gap = 4, 0.13, 0.08
+	local total = dashes * dashW + (dashes - 1) * gap
+	local startX = 0.5 - total / 2
+	for i = 1, dashes do
+		local dash = Instance.new("Frame")
+		dash.AnchorPoint = Vector2.new(0, 0.5)
+		dash.Position = UDim2.fromScale(startX + (i - 1) * (dashW + gap), 0.5)
+		dash.Size = UDim2.fromScale(dashW, 0.05)
+		dash.BackgroundColor3 = rgb(139, 147, 166)
+		dash.BackgroundTransparency = 0.4
+		dash.BorderSizePixel = 0
+		dash.ZIndex = 3
+		local dc = Instance.new("UICorner")
+		dc.CornerRadius = UDim.new(1, 0)
+		dc.Parent = dash
+		dash.Parent = root
+	end
+	-- dim gray runner circle at the trailing (left) end of the ghosted wake
+	local runner = Instance.new("Frame")
+	runner.AnchorPoint = Vector2.new(0.5, 0.5)
+	runner.Position = UDim2.fromScale(startX, 0.5)
+	runner.Size = UDim2.fromScale(0.2, 0.2)
+	runner.BackgroundColor3 = rgb(58, 65, 80)
+	runner.BorderSizePixel = 0
+	runner.ZIndex = 4
+	local rc = Instance.new("UICorner")
+	rc.CornerRadius = UDim.new(0.5, 0)
+	rc.Parent = runner
+	runner.Parent = root
+	return root
+end
+
+-- The player's CURRENT resolved halo COLOR spec (spec §6): the equipped halo_color item's
+-- spec, else a flat spec from the SoulMap-tracked identity color. Shape = what SoulStyles
+-- consumes: { fill, luminous, fillRgb, luminousRgb, anim? }.
+local function currentColorSpec()
+	local id = equipped.halo_color
+	if id then
+		local item = ShopCatalog.byId(id)
+		if item and item.kind == "halo_color" then
+			local lum = ShopCatalog.luminousOf(item)
+			return {
+				fill = Color3.fromRGB(item.fill.r, item.fill.g, item.fill.b),
+				luminous = Color3.fromRGB(lum.r, lum.g, lum.b),
+				fillRgb = item.fill,
+				luminousRgb = lum,
+				anim = item.anim,
+			}
+		end
+	end
+	local c = localSoulColor
+	local rgbTab = { r = c.R * 255, g = c.G * 255, b = c.B * 255 }
+	return { fill = c, luminous = c, fillRgb = rgbTab, luminousRgb = rgbTab, anim = nil }
+end
+
+-- The player's CURRENT equipped style FRAME key (spec §6), or nil for classic.
+local function currentStyleKey()
+	local id = equipped.halo_style
+	if id then
+		local item = ShopCatalog.byId(id)
+		return item and item.styleKey or nil
+	end
+	return nil
+end
+
+-- Build a card preview as the RESOLVED COMPOSITE (spec §6): the item shown exactly as it
+-- would look on the avatar -- color cards composed with the equipped STYLE, style cards
+-- composed with the equipped COLOR, so an equipped card matches the on-body halo. Trails
+-- keep their static ribbon mock; the Default TRAILS card is the "no trail" mock (§7).
+-- Cleanup contract unchanged: SoulStyles.buildPreview returns the animator root Frame --
+-- destroying the card subtree makes the shared animator drop the handle next Heartbeat.
+local function buildCardPreview(item, isDefault, px)
+	if isDefault then
+		if activeTab == "trail" then
+			return buildNoTrail(px) -- (#7) "no trail" mock, not a halo
+		elseif activeTab == "halo_style" then
+			-- classic style, in the player's CURRENT color
+			return SoulStyles.buildPreview({ kind = "halo_style", styleKey = "classic" }, px, { colorSpec = currentColorSpec() })
+		else
+			-- free assigned color, composed with the equipped STYLE
+			local c = localSoulColor
+			local rgbTab = { r = c.R * 255, g = c.G * 255, b = c.B * 255 }
+			return SoulStyles.buildPreview({ kind = "halo_color", fill = rgbTab, luminous = rgbTab }, px, { styleKey = currentStyleKey() })
+		end
+	end
 	if item.kind == "trail" then
 		return buildTrailRibbon(item, px)
+	elseif item.kind == "halo_color" then
+		return SoulStyles.buildPreview(item, px, { styleKey = currentStyleKey() }) -- this color x equipped style
+	elseif item.kind == "halo_style" then
+		return SoulStyles.buildPreview(item, px, { colorSpec = currentColorSpec() }) -- this style x current color
 	end
 	return SoulStyles.buildPreview(item, px)
 end
@@ -357,88 +475,92 @@ local function makeCard(item, isDefault, order)
 	glow.Transparency = 0.2
 	glow.Parent = root
 
-	-- tier presentation (spec §4): a thin top accent strip + a LABELED tier chip.
-	-- Both are kept separate from the equipped read (the cyan border UIStroke `glow`
-	-- below) so a tier accent and an equipped glow never visually fight -- the accent
-	-- is a top strip, the equipped state is the surrounding border.
+	-- tier presentation (spec §2/§3): NO top accent strip. A clean top-LEFT corner pill --
+	-- a small tier-colored dot + the rarity WORD in a dark translucent capsule (the Default
+	-- card gets a neutral gray "FREE"). The equipped read stays the surrounding cyan border
+	-- (`glow`), so tier and equipped state never fight.
 	local rarity = (not isDefault) and item.rarity or nil
-	local tierColor = (rarity and RARITY_COLOR[rarity]) or TAB_OFF_TEXT
+	local isLegendary = rarity == "legendary"
+	local tierColor = (rarity and RARITY_COLOR[rarity]) or FREE_TIER
 	local tierWord = rarity and string.upper(rarity) or "FREE"
 
-	-- (b) tier-colored top accent strip (inset from the rounded corners)
-	local tierAccent = Instance.new("Frame")
-	tierAccent.Name = "TierAccent"
-	tierAccent.AnchorPoint = Vector2.new(0.5, 0)
-	tierAccent.Position = UDim2.new(0.5, 0, 0, 4)
-	tierAccent.Size = UDim2.new(1, -16, 0, 4)
-	tierAccent.BackgroundColor3 = rarity and tierColor or rgb(70, 78, 96)
-	tierAccent.BackgroundTransparency = rarity and 0 or 0.45
-	tierAccent.BorderSizePixel = 0
-	tierAccent.ZIndex = 4
-	local taC = Instance.new("UICorner")
-	taC.CornerRadius = UDim.new(0, 2)
-	taC.Parent = tierAccent
-	tierAccent.Parent = root
+	local pillH = math.max(15, math.floor(L.cardH * 0.15))
+	local pillTextSize = math.clamp(math.floor(pillH * 0.66), 9, 13)
 
-	-- (a) labeled tier chip -- the rarity WORD in a tinted capsule. The gradient (for
-	-- legendary) sits on this Frame; the word lives in a child TextLabel so the gradient
-	-- tints only the capsule fill, never the text.
-	local tierChip = Instance.new("Frame")
-	tierChip.Name = "TierChip"
-	tierChip.AnchorPoint = Vector2.new(0.5, 0)
-	tierChip.Position = UDim2.new(0.5, 0, 0, 11)
-	tierChip.Size = UDim2.fromScale(0.62, 0.14)
-	tierChip.BorderSizePixel = 0
-	tierChip.ZIndex = 4
-	local tcC = Instance.new("UICorner")
-	tcC.CornerRadius = UDim.new(1, 0)
-	tcC.Parent = tierChip
-	local tcStroke = Instance.new("UIStroke")
-	tcStroke.Thickness = 1
-	tcStroke.Parent = tierChip
+	local tierPill = Instance.new("Frame")
+	tierPill.Name = "TierPill"
+	tierPill.AnchorPoint = Vector2.new(0, 0)
+	tierPill.Position = UDim2.fromOffset(8, 8)
+	tierPill.Size = UDim2.fromOffset(0, pillH)
+	tierPill.AutomaticSize = Enum.AutomaticSize.X -- hug the dot + word
+	tierPill.BackgroundColor3 = PILL_BG
+	tierPill.BackgroundTransparency = 0.3
+	tierPill.BorderSizePixel = 0
+	tierPill.ZIndex = 5 -- above the preview
+	local tpC = Instance.new("UICorner")
+	tpC.CornerRadius = UDim.new(0, 8)
+	tpC.Parent = tierPill
+	local tpPad = Instance.new("UIPadding")
+	tpPad.PaddingLeft = UDim.new(0, 6)
+	tpPad.PaddingRight = UDim.new(0, 8)
+	tpPad.Parent = tierPill
+	local tpList = Instance.new("UIListLayout")
+	tpList.FillDirection = Enum.FillDirection.Horizontal
+	tpList.VerticalAlignment = Enum.VerticalAlignment.Center
+	tpList.HorizontalAlignment = Enum.HorizontalAlignment.Left
+	tpList.Padding = UDim.new(0, 5)
+	tpList.SortOrder = Enum.SortOrder.LayoutOrder
+	tpList.Parent = tierPill
+	if isLegendary then
+		-- legendary flourish: a faint gold rim on the (still dark, consistent) capsule
+		local legRim = Instance.new("UIStroke")
+		legRim.Color = GOLD
+		legRim.Transparency = 0.35
+		legRim.Thickness = 1
+		legRim.Parent = tierPill
+	end
+
+	local tierDot = Instance.new("Frame")
+	tierDot.Name = "Dot"
+	tierDot.LayoutOrder = 1
+	tierDot.Size = UDim2.fromOffset(6, 6)
+	tierDot.BackgroundColor3 = tierColor
+	tierDot.BorderSizePixel = 0
+	tierDot.ZIndex = 6
+	local tdC = Instance.new("UICorner")
+	tdC.CornerRadius = UDim.new(0.5, 0)
+	tdC.Parent = tierDot
+	local tdGlow = Instance.new("UIStroke") -- faint tier-colored glow
+	tdGlow.Color = tierColor
+	tdGlow.Transparency = 0.4
+	tdGlow.Thickness = 1
+	tdGlow.Parent = tierDot
+	tierDot.Parent = tierPill
 
 	local tierLabel = Instance.new("TextLabel")
-	tierLabel.Name = "TierLabel"
+	tierLabel.Name = "TierWord"
+	tierLabel.LayoutOrder = 2
+	tierLabel.AutomaticSize = Enum.AutomaticSize.X
+	tierLabel.Size = UDim2.fromOffset(0, pillH)
 	tierLabel.BackgroundTransparency = 1
-	tierLabel.AnchorPoint = Vector2.new(0.5, 0.5)
-	tierLabel.Position = UDim2.fromScale(0.5, 0.5)
-	tierLabel.Size = UDim2.fromScale(0.84, 0.72)
 	tierLabel.Text = tierWord
 	tierLabel.Font = HudTheme.Font.heading
-	tierLabel.TextScaled = true
+	tierLabel.TextColor3 = tierColor
+	tierLabel.TextSize = pillTextSize
 	tierLabel.TextStrokeTransparency = 1
-	tierLabel.ZIndex = 5
-	capText(tierLabel, 11)
+	tierLabel.ZIndex = 6
+	tierLabel.Parent = tierPill
+	tierPill.Parent = root
 
-	if rarity == "legendary" then
-		-- legendary flourish: static gold gradient capsule + dark word
-		tierChip.BackgroundColor3 = Color3.new(1, 1, 1)
-		tierChip.BackgroundTransparency = 0.05
-		local lg = Instance.new("UIGradient")
-		lg.Color = LEG_GRAD
-		lg.Parent = tierChip
-		tcStroke.Color = rgb(150, 112, 36)
-		tcStroke.Transparency = 0.2
-		tierLabel.TextColor3 = rgb(58, 38, 0)
-	elseif rarity then
-		tierChip.BackgroundColor3 = tierColor
-		tierChip.BackgroundTransparency = 0.82
-		tcStroke.Color = tierColor
-		tcStroke.Transparency = 0.5
-		tierLabel.TextColor3 = tierColor
-	else -- default card: neutral gray "FREE"
-		tierChip.BackgroundColor3 = TAB_OFF_BG
-		tierChip.BackgroundTransparency = 0.25
-		tcStroke.Color = TAB_OFF_TEXT
-		tcStroke.Transparency = 0.6
-		tierLabel.TextColor3 = TAB_OFF_TEXT
-	end
-	tierLabel.Parent = tierChip
-	tierChip.Parent = root
+	-- sizing for the shared coin token (spec §4): mini medallion for prices, and a fixed
+	-- button/price text size so the "[coin] 900" rows lay out crisply next to the token.
+	local price = isDefault and 0 or ShopModel.priceOf(item, Config.SHOP_PRICES)
+	local miniMed = math.clamp(math.floor(L.cardH * 0.12), 12, 16)
+	local btnTextSize = math.clamp(math.floor(L.cardH * 0.14), 12, 16)
 
-	-- preview (centered)
+	-- preview (centered) -- the RESOLVED composite so an equipped card matches the on-body halo
 	local previewPx = math.max(20, math.floor(L.cardH * 0.4))
-	local preview = buildPreview(isDefault and { kind = "default" } or item, previewPx)
+	local preview = buildCardPreview(item, isDefault, previewPx)
 	preview.AnchorPoint = Vector2.new(0.5, 0.5)
 	preview.Position = UDim2.fromScale(0.5, 0.4)
 	preview.ZIndex = 3
@@ -489,6 +611,45 @@ local function makeCard(item, isDefault, order)
 	capText(stateText, CAP_BODY)
 	stateText.Parent = root
 
+	-- collapsed BUYABLE price (spec §4): the SHARED coin medallion + the number, centered --
+	-- the real currency token, no glyph. stateText now renders ONLY the EQUIPPED word.
+	local priceRow = Instance.new("Frame")
+	priceRow.Name = "PriceRow"
+	priceRow.AnchorPoint = Vector2.new(0.5, 1)
+	priceRow.Position = UDim2.fromScale(0.5, 0.97)
+	priceRow.Size = UDim2.fromScale(0.92, 0.2)
+	priceRow.BackgroundTransparency = 1
+	priceRow.Visible = false
+	priceRow.ZIndex = 4
+	local prList = Instance.new("UIListLayout")
+	prList.FillDirection = Enum.FillDirection.Horizontal
+	prList.HorizontalAlignment = Enum.HorizontalAlignment.Center
+	prList.VerticalAlignment = Enum.VerticalAlignment.Center
+	prList.Padding = UDim.new(0, 4)
+	prList.SortOrder = Enum.SortOrder.LayoutOrder
+	prList.Parent = priceRow
+	local priceMed = coinToken(miniMed, 4)
+	priceMed.LayoutOrder = 1
+	priceMed.Parent = priceRow
+	local priceNum = Instance.new("TextLabel")
+	priceNum.Name = "Price"
+	priceNum.LayoutOrder = 2
+	priceNum.BackgroundTransparency = 1
+	priceNum.AutomaticSize = Enum.AutomaticSize.X
+	priceNum.Size = UDim2.fromOffset(0, miniMed + 4)
+	priceNum.Text = withCommas(price)
+	priceNum.Font = HudTheme.Font.heading
+	priceNum.TextColor3 = GOLD
+	priceNum.TextSize = btnTextSize
+	priceNum.TextStrokeTransparency = 1
+	priceNum.ZIndex = 4
+	local priceStroke = Instance.new("UIStroke")
+	priceStroke.Thickness = HudTheme.TextStrokeThickness
+	priceStroke.Color = HudTheme.Color.textStroke
+	priceStroke.Parent = priceNum
+	priceNum.Parent = priceRow
+	priceRow.Parent = root
+
 	-- action button (EQUIP / BUY) as a raised key: a darker "shadow" frame sits ~3px
 	-- below it; hover lifts 1px, press sinks onto the shadow (shadow hidden). Positions
 	-- are precomputed so hover/press only nudge the Y offset.
@@ -526,24 +687,76 @@ local function makeCard(item, isDefault, order)
 	local actionScale = Instance.new("UIScale")
 	actionScale.Parent = actionBtn
 	-- gold gradient for BUY (toggled off for the flat EQUIP state); on the button, not
-	-- the label, so only the fill is tinted.
+	-- its content, so only the fill is tinted (children keep their own colors/tokens).
 	local actionGrad = Instance.new("UIGradient")
 	actionGrad.Rotation = 90
 	actionGrad.Color = BUY_GRAD
 	actionGrad.Enabled = false
 	actionGrad.Parent = actionBtn
-	-- text in a child label so the button's gradient never tints it
+
+	-- button content row (spec §4): the WORD (EQUIP / BUY) + optional coin medallion + the
+	-- price number. A transparent list-laid frame so the button gradient never tints them.
+	local actionContent = Instance.new("Frame")
+	actionContent.Name = "Content"
+	actionContent.BackgroundTransparency = 1
+	actionContent.AnchorPoint = Vector2.new(0.5, 0.5)
+	actionContent.Position = UDim2.fromScale(0.5, 0.5)
+	actionContent.Size = UDim2.fromScale(0.92, 0.74)
+	actionContent.ZIndex = 6
+	local acList = Instance.new("UIListLayout")
+	acList.FillDirection = Enum.FillDirection.Horizontal
+	acList.HorizontalAlignment = Enum.HorizontalAlignment.Center
+	acList.VerticalAlignment = Enum.VerticalAlignment.Center
+	acList.Padding = UDim.new(0, 3)
+	acList.SortOrder = Enum.SortOrder.LayoutOrder
+	acList.Parent = actionContent
+	actionContent.Parent = actionBtn
+
 	local actionText = Instance.new("TextLabel")
 	actionText.Name = "Label"
+	actionText.LayoutOrder = 1
 	actionText.BackgroundTransparency = 1
-	actionText.AnchorPoint = Vector2.new(0.5, 0.5)
-	actionText.Position = UDim2.fromScale(0.5, 0.5)
-	actionText.Size = UDim2.fromScale(0.9, 0.7)
+	actionText.AutomaticSize = Enum.AutomaticSize.X
+	actionText.Size = UDim2.fromOffset(0, math.floor(btnTextSize * 1.3))
 	actionText.Text = ""
+	actionText.Font = HudTheme.Font.heading
+	actionText.TextSize = btnTextSize
+	actionText.TextStrokeTransparency = 1
 	actionText.ZIndex = 6
-	local actionStroke = HudTheme.styleText(actionText, "heading")
-	capText(actionText, CAP_BODY)
-	actionText.Parent = actionBtn
+	local actionStroke = Instance.new("UIStroke")
+	actionStroke.Thickness = HudTheme.TextStrokeThickness
+	actionStroke.Color = HudTheme.Color.textStroke
+	actionStroke.Parent = actionText
+	actionText.Parent = actionContent
+
+	-- BUY-only: the shared coin medallion + number (hidden for EQUIP; UIListLayout skips
+	-- non-visible children, so "EQUIP" stays centered alone).
+	local buyMed = coinToken(miniMed, 6)
+	buyMed.Name = "BuyMed"
+	buyMed.LayoutOrder = 2
+	buyMed.Visible = false
+	buyMed.Parent = actionContent
+
+	local buyNum = Instance.new("TextLabel")
+	buyNum.Name = "BuyPrice"
+	buyNum.LayoutOrder = 3
+	buyNum.BackgroundTransparency = 1
+	buyNum.AutomaticSize = Enum.AutomaticSize.X
+	buyNum.Size = UDim2.fromOffset(0, math.floor(btnTextSize * 1.3))
+	buyNum.Text = withCommas(price)
+	buyNum.Font = HudTheme.Font.heading
+	buyNum.TextColor3 = BUY_TEXT
+	buyNum.TextSize = btnTextSize
+	buyNum.TextStrokeTransparency = 1
+	buyNum.Visible = false
+	buyNum.ZIndex = 6
+	local buyNumStroke = Instance.new("UIStroke")
+	buyNumStroke.Thickness = 1
+	buyNumStroke.Color = BUY_HIGHLIGHT
+	buyNumStroke.Transparency = 0.4
+	buyNumStroke.Parent = buyNum
+	buyNum.Parent = actionContent
+
 	actionBtn.Parent = root
 
 	local card = { frame = root, item = item, isDefault = isDefault }
@@ -570,6 +783,7 @@ local function makeCard(item, isDefault, order)
 		if st == "equipped" then
 			statePill.Visible = true
 			stateText.Visible = true
+			priceRow.Visible = false
 			stateText.Text = "EQUIPPED"
 			stateText.TextColor3 = CYAN
 			actionBtn.Visible = false
@@ -577,6 +791,7 @@ local function makeCard(item, isDefault, order)
 		elseif st == "owned" then
 			statePill.Visible = false
 			stateText.Visible = false
+			priceRow.Visible = false
 			actionBtn.Visible = true
 			actionShadow.Visible = true
 			actionShadow.BackgroundColor3 = EQUIP_SHADOW
@@ -588,25 +803,29 @@ local function makeCard(item, isDefault, order)
 			actionStroke.Color = HudTheme.Color.textStroke
 			actionStroke.Thickness = 2
 			actionStroke.Transparency = 0
+			buyMed.Visible = false
+			buyNum.Visible = false
 		elseif isExpanded then
 			statePill.Visible = false
 			stateText.Visible = false
+			priceRow.Visible = false
 			actionBtn.Visible = true
 			actionShadow.Visible = true
 			actionShadow.BackgroundColor3 = BUY_SHADOW
 			actionGrad.Enabled = true
 			actionBtn.BackgroundColor3 = Color3.new(1, 1, 1)
 			actionBtn.BackgroundTransparency = 0
-			actionText.Text = "BUY  \u{25C8} " .. tostring(ShopModel.priceOf(item, Config.SHOP_PRICES))
+			actionText.Text = "BUY"
 			actionText.TextColor3 = BUY_TEXT
 			actionStroke.Color = BUY_HIGHLIGHT
 			actionStroke.Thickness = 1
 			actionStroke.Transparency = 0.4
+			buyMed.Visible = true -- shared coin token + number, not a glyph
+			buyNum.Visible = true
 		else -- buyable, collapsed
 			statePill.Visible = false
-			stateText.Visible = true
-			stateText.Text = "\u{25C8} " .. tostring(ShopModel.priceOf(item, Config.SHOP_PRICES))
-			stateText.TextColor3 = GOLD
+			stateText.Visible = false
+			priceRow.Visible = true -- [coin] 900
 			actionBtn.Visible = false
 			actionShadow.Visible = false
 		end
@@ -620,6 +839,18 @@ local function makeCard(item, isDefault, order)
 	end
 
 	card.pop = function()
+		HudTheme.popIn(root)
+	end
+
+	-- staggered reveal (spec §8): prep hides the card at scale 0 IMMEDIATELY (so it never
+	-- flashes in at full size before its delayed turn); reveal pops it 0->1. Both share the
+	-- card's own UIScale, so the buy `pop` above never collides with the reveal.
+	card.prepReveal = function()
+		local scale = root:FindFirstChildOfClass("UIScale") or Instance.new("UIScale")
+		scale.Scale = 0
+		scale.Parent = root
+	end
+	card.reveal = function()
 		HudTheme.popIn(root)
 	end
 
@@ -735,6 +966,11 @@ end
 
 local function rebuildCards()
 	clearCards()
+	-- bump the build generation so an in-flight staggered reveal from a PREVIOUS build
+	-- (e.g. a fast tab-switch) can't un-hide cards that no longer belong to this grid.
+	buildGen += 1
+	local gen = buildGen
+
 	-- first cell: the free Default card for this tab
 	local def = makeCard({ kind = "default" }, true, 0)
 	def.frame.Parent = scroll
@@ -746,6 +982,20 @@ local function rebuildCards()
 		card.frame.Parent = scroll
 		currentCards[#currentCards + 1] = card
 		cardsById[item.id] = card
+	end
+
+	-- staggered reveal (spec §8): hide every card NOW, then pop them in on a short
+	-- incremental delay (capped at 0.3s total so it stays quick). The gen guard drops any
+	-- delayed reveal whose build has been superseded, so a rapid tab-switch never strands a
+	-- card at scale 0. Bounded task.delays -- no persistent RunService loop.
+	for i, card in ipairs(currentCards) do
+		card.prepReveal()
+		task.delay(math.min((i - 1) * 0.03, 0.3), function()
+			if buildGen ~= gen then
+				return
+			end
+			card.reveal()
+		end)
 	end
 end
 
@@ -801,9 +1051,28 @@ local function placeToggle()
 	end
 end
 
+-- (Re)build the header coin medallion at a size derived from the live header height, so
+-- the SHARED coin token (spec §4) stays crisp across viewports. Cheap: one small Frame.
+local function rebuildCoinChipMedallion()
+	if not coinChip then
+		return
+	end
+	if coinChipMed then
+		coinChipMed:Destroy()
+	end
+	local medPx = math.max(16, math.floor((L and L.headerH or 46) * 0.5))
+	local med = coinToken(medPx, 4)
+	med.Name = "CoinMed"
+	med.AnchorPoint = Vector2.new(0, 0.5)
+	med.Position = UDim2.new(0, math.floor(medPx * 0.4), 0.5, 0)
+	med.Parent = coinChip
+	coinChipMed = med
+end
+
 local function applyLayout()
 	L = ShopLayoutModel.layout(currentViewport())
 	placeToggle()
+	rebuildCoinChipMedallion()
 
 	-- panel geometry
 	local top = L.panelTopPx
@@ -871,7 +1140,8 @@ local function build()
 	gui.IgnoreGuiInset = true
 	gui.ResetOnSpawn = false
 	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-	gui.DisplayOrder = HudTheme.DisplayOrder.bookend - 1
+	-- the shop is a foreground panel -- always above the round banner (#1)
+	gui.DisplayOrder = HudTheme.DisplayOrder.bookend + 5
 	gui.Parent = player:WaitForChild("PlayerGui")
 
 	-- ===== toggle button (bottom-right; clear of ClientEconomyHud's top-left/center) =====
@@ -1071,18 +1341,9 @@ local function build()
 	ccc.Parent = coinChip
 	coinChip.Parent = headerRow
 
-	local coinDot = Instance.new("Frame")
-	coinDot.AnchorPoint = Vector2.new(0, 0.5)
-	coinDot.Position = UDim2.fromScale(0.06, 0.5)
-	coinDot.Size = UDim2.fromScale(0.5, 0.62)
-	coinDot.SizeConstraint = Enum.SizeConstraint.RelativeYY
-	coinDot.BackgroundColor3 = GOLD
-	coinDot.BorderSizePixel = 0
-	coinDot.ZIndex = 4
-	local cdc = Instance.new("UICorner")
-	cdc.CornerRadius = UDim.new(0.5, 0)
-	cdc.Parent = coinDot
-	coinDot.Parent = coinChip
+	-- the gold coin glyph is the SHARED HudTheme.makeCoinMedallion token (spec §4) -- the
+	-- SAME coin the balance readout uses. Built + resized by applyLayout (rebuildCoinChipMed)
+	-- so it stays crisp across viewports; the count label reads to its right.
 
 	coinChipCount = Instance.new("TextLabel")
 	coinChipCount.BackgroundTransparency = 1
@@ -1200,6 +1461,8 @@ local function build()
 	scroll.BackgroundTransparency = 1
 	scroll.BorderSizePixel = 0
 	scroll.ScrollBarThickness = 4
+	scroll.ScrollBarImageColor3 = rgb(70, 80, 100) -- thin, low-contrast bar consistent w/ the panel (§8)
+	scroll.ScrollBarImageTransparency = 0.35
 	scroll.ScrollingDirection = Enum.ScrollingDirection.Y
 	scroll.CanvasSize = UDim2.new()
 	scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
@@ -1212,28 +1475,71 @@ local function build()
 	grid.CellPadding = UDim2.fromOffset(GAP, GAP)
 	grid.Parent = scroll
 
-	-- profile-loading hint overlay (shown on profile_unavailable)
-	hintLabel = Instance.new("TextLabel")
-	hintLabel.Name = "Hint"
-	hintLabel.BackgroundTransparency = 1
-	hintLabel.AnchorPoint = Vector2.new(0.5, 0.5)
-	hintLabel.Position = UDim2.fromScale(0.5, 0.5)
-	hintLabel.Size = UDim2.fromScale(0.8, 0.1)
-	hintLabel.Text = "Profile loading\u{2026}"
-	hintLabel.Visible = false
-	hintLabel.ZIndex = 7
-	HudTheme.styleText(hintLabel, "heading")
-	capText(hintLabel, CAP_BODY)
-	hintLabel.Parent = panel
+	-- profile-loading hint (shown on profile_unavailable): an intentional centered pill,
+	-- not bare floating text (§8 empty/edge state).
+	hintBox = Instance.new("Frame")
+	hintBox.Name = "Hint"
+	hintBox.AnchorPoint = Vector2.new(0.5, 0.5)
+	hintBox.Position = UDim2.fromScale(0.5, 0.5)
+	hintBox.Size = UDim2.fromScale(0.66, 0.11)
+	hintBox.BackgroundColor3 = PILL_BG
+	hintBox.BackgroundTransparency = 0.2
+	hintBox.BorderSizePixel = 0
+	hintBox.Visible = false
+	hintBox.ZIndex = 7
+	local hbC = Instance.new("UICorner")
+	hbC.CornerRadius = UDim.new(0, 12)
+	hbC.Parent = hintBox
+	local hbS = Instance.new("UIStroke")
+	hbS.Color = HudTheme.Color.panelStroke
+	hbS.Transparency = 0.7
+	hbS.Thickness = 1.5
+	hbS.Parent = hintBox
+	local hintText = Instance.new("TextLabel")
+	hintText.Name = "Text"
+	hintText.BackgroundTransparency = 1
+	hintText.AnchorPoint = Vector2.new(0.5, 0.5)
+	hintText.Position = UDim2.fromScale(0.5, 0.5)
+	hintText.Size = UDim2.fromScale(0.86, 0.62)
+	hintText.Text = "Profile loading\u{2026}"
+	hintText.ZIndex = 8
+	HudTheme.styleText(hintText, "heading")
+	capText(hintText, CAP_BODY)
+	hintText.Parent = hintBox
+	hintBox.Parent = panel
 
+	built = true -- every UI ref now exists; applyProfile may safely touch the UI
 	applyLayout()
 end
 
 -- ===== remote handling =================================================
 local function applyProfile(view)
 	profileOk = true
-	hintLabel.Visible = false
 	coins = view.coins or 0
+
+	owned = {}
+	for _, id in ipairs(view.ownedItems or {}) do
+		owned[id] = true
+	end
+	-- detect an equipped-HALO change vs the previous mirror: a halo_color/halo_style change
+	-- alters the RESOLVED composite every card renders, so the previews must be rebuilt
+	-- (not merely restated). Trails don't touch halo previews. (#4 / spec §6)
+	local prev = equipped
+	equipped = {
+		halo_color = view.equipped and view.equipped.halo_color or nil,
+		halo_style = view.equipped and view.equipped.halo_style or nil,
+		trail = view.equipped and view.equipped.trail or nil,
+	}
+	local haloEquipChanged = prev.halo_color ~= equipped.halo_color or prev.halo_style ~= equipped.halo_style
+
+	-- The handler is connected BEFORE build() (spec §5) so the one-shot join push can't be
+	-- missed; until build finishes the UI refs don't exist, so only the state mirrors above
+	-- run -- build() reflects the current state when it completes, and the sync fire re-pushes.
+	if not built then
+		return
+	end
+
+	hintBox.Visible = false
 	-- Authoritative balance. While the panel is open, animate to it through the same
 	-- token'd path as a buy -- if it lands mid buy-tween toward the same balance the
 	-- tick continues smoothly (last-writer token, no snap). Hidden: snap and cancel.
@@ -1244,18 +1550,12 @@ local function applyProfile(view)
 		setCoinText(coins)
 	end
 
-	owned = {}
-	for _, id in ipairs(view.ownedItems or {}) do
-		owned[id] = true
-	end
-	equipped = {
-		halo_color = view.equipped and view.equipped.halo_color or nil,
-		halo_style = view.equipped and view.equipped.halo_style or nil,
-		trail = view.equipped and view.equipped.trail or nil,
-	}
-
 	if panelOpen then
-		refreshCardStates()
+		if haloEquipChanged then
+			rebuildCards() -- composite changed -> previews must reflect the new halo
+		else
+			refreshCardStates() -- pure coin/ownership update -> cheap restate, previews kept
+		end
 	end
 	updateToggleVisibility()
 end
@@ -1297,7 +1597,7 @@ local function applyResult(res)
 	elseif res.err == "profile_unavailable" then
 		profileOk = false
 		if panelOpen then
-			hintLabel.Visible = true
+			hintBox.Visible = true
 		end
 		updateToggleVisibility()
 	else
@@ -1326,11 +1626,36 @@ local function bindViewport()
 	end
 end
 
+-- Track the local player's RESOLVED soul color from SoulMap (spec §6): find our body by its
+-- ControllerUserId attribute and mirror entry.color. That's the identity color the flat
+-- previews use when no halo_color is equipped. A change while the panel is open (a lobby
+-- swap) rebuilds only the identity-colored previews so they stay truthful.
+local function onSoulMap(list)
+	for _, entry in ipairs(list) do
+		local body = entry.body
+		if body and body:GetAttribute("ControllerUserId") == player.UserId then
+			if entry.color and entry.color ~= localSoulColor then
+				localSoulColor = entry.color
+				if built and panelOpen and equipped.halo_color == nil then
+					rebuildCards() -- only identity-colored previews depend on this color
+				end
+			end
+			return
+		end
+	end
+end
+
 function ClientShopHud.start()
+	-- (#4 / spec §5) Connect the profile handler FIRST -- BEFORE the heavy build -- so the
+	-- one-shot join ProfileUpdated push can't slip past during a slow build. applyProfile
+	-- only writes the state mirrors until `built` is true, so an early push is safe.
+	ProfileUpdated.OnClientEvent:Connect(applyProfile)
+	-- Track our resolved soul color for the identity-colored composite previews (spec §6).
+	SoulMap.OnClientEvent:Connect(onSoulMap)
+
 	SoulStyles.start() -- ensure the shared preview animator is running (idempotent)
 	build()
 
-	ProfileUpdated.OnClientEvent:Connect(applyProfile)
 	ShopResult.OnClientEvent:Connect(applyResult)
 
 	RoundStateChanged.OnClientEvent:Connect(function(state)
@@ -1357,6 +1682,11 @@ function ClientShopHud.start()
 	end)
 	bindViewport()
 	updateToggleVisibility()
+
+	-- (#4 / spec §5) Handler now live -- ask the server to re-push the profile in case the
+	-- join push already fired before we connected (an idle lobby never re-pushes on its own).
+	-- Net: the shop always obtains current coins + equipped shortly after start.
+	ShopRequest:FireServer({ action = "sync" })
 end
 
 return ClientShopHud
