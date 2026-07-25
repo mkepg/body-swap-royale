@@ -4,6 +4,35 @@ All notable changes to this project are documented here.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2026-07-22]
+
+### Fixed / Changed
+- **Soul Shop round-2 polish (7 more items, live-verified).** All verified in-game
+  (Studio MCP: inspection + clicks + screenshots) on the green lune suite.
+  **(1) Shop above the banner** — `ShopHud.DisplayOrder = bookend + 5` so the panel
+  and its title are always the top-most layer. **(2) Tier accent strip removed**;
+  **(3) tier chip** moved to a clean top-left corner pill (tier-colored dot + word).
+  **(4) Equipped cosmetics now truthfully reflected + previews match the avatar.**
+  Root-caused in-game: the server applies each cosmetic category independently (no
+  leakage) and the client clears to classic correctly — the perceived bug was a
+  **stale shop mirror** (the shop missed the one-shot join `ProfileUpdated` push and
+  nothing re-pushed in an idle lobby, so it showed "Default equipped" + 0 coins while
+  the avatar showed the truly-equipped cosmetics). Fixed with a **`sync` ShopRequest
+  action** the shop fires on start (server re-pushes the profile) + connecting the
+  handler before the heavy build. Card **previews now render the resolved composite**
+  (a style card in the player's equipped color, a color card with the equipped style)
+  so the equipped item's card is pixel-identical to the on-body halo; the player's
+  assigned soul color is published by `SoulController` via a `LocalPlayer.SoulColor`
+  attribute the shop reads race-free (fixes previews rendering cyan instead of the
+  real assigned color). **(5) Ring vs Eclipse** made distinct — Ring is a crisp
+  bright hollow halo; Eclipse a solid dark orb with a thick blazing corona + a pulsing
+  outer aura (also distinct from a classic halo wearing the dark Void color).
+  **(6) Trails Default** now previews a "no trail" indicator (dashed line + dim
+  runner), not a halo. **Coin token unified** — a shared `HudTheme.makeCoinMedallion`
+  renders the identical gold medallion in the balance readout, shop header, and every
+  price; the `◈` glyph is gone everywhere. Plus a hierarchy/spacing pass, staggered
+  card reveal, and consistent hover/press states.
+
 ## [2026-07-21]
 
 ### Fixed / Changed
