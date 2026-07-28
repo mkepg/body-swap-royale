@@ -17,6 +17,8 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
 local Remotes = require(Shared:WaitForChild("Remotes"))
 local ShopCatalog = require(Shared:WaitForChild("ShopCatalog"))
+local TrailModel = require(Shared:WaitForChild("TrailModel"))
+local SoulAnimModel = require(Shared:WaitForChild("SoulAnimModel"))
 local SoulStyles = require(script.Parent:WaitForChild("SoulStyles"))
 local SoulMap = Remotes.get("SoulMap")
 local SetControlledBody = Remotes.get("SetControlledBody")
@@ -204,76 +206,113 @@ local function destroyTrail(trec)
 	end
 end
 
+-- A trail teleports with its body. Bodies are re-placed on round start (and swaps hand
+-- control between distant bodies), which without a cap draws one enormous streak across
+-- the arena for a full Lifetime. Cap the ribbon at a plausible sprint distance.
+local TRAIL_MAX_LENGTH = 26
+local WHITE = Color3.new(1, 1, 1)
+
+-- The shared flow ring (TrailModel.FLOW_RING) resolved against a wearer colour, as the
+-- {r,g,b} tables SoulAnimModel.scrollStops consumes. The shop card builds the identical
+-- ring from the identical constant, so the light streaming down a card is the light
+-- streaming down the equipped ribbon.
+local function flowRing(base)
+	local ring = {}
+	for i, lift in ipairs(TrailModel.FLOW_RING) do
+		local c = base:Lerp(WHITE, lift)
+		ring[i] = { r = c.R * 255, g = c.G * 255, b = c.B * 255 }
+	end
+	return ring
+end
+
+-- Build every Roblox Trail for `trailKey` from the shared TrailModel description -- the
+-- SAME description the shop card previews render, so the card and the body can no longer
+-- drift apart (they did: the cards used to be static rarity-tinted bars).
 local function buildTrail(body, trailKey, lumColor)
 	local part = trailAttachRoot(body)
 	if not part then
 		return nil
 	end
-	local trec = { trailKey = trailKey, lumColor = lumColor, trails = {}, attachments = {} }
+	local profile = TrailModel.profileOf(trailKey)
+	if not profile then
+		return nil -- unknown key (catalog/renderer drift) -> no trail, never an error
+	end
+	local trec = { trailKey = trailKey, lumColor = lumColor, trails = {}, attachments = {}, shimmer = {}, flow = {} }
 
-	-- One trail on a fresh attachment pair (vertical spread; optional X shoulder offset).
-	local function addTrail(spread, xOffset)
+	for _, s in ipairs(profile.world) do
 		local a0 = Instance.new("Attachment")
-		a0.Position = Vector3.new(xOffset or 0, spread / 2, 0)
+		a0.Position = Vector3.new(s.x or 0, s.spread / 2, 0)
 		a0.Parent = part
 		local a1 = Instance.new("Attachment")
-		a1.Position = Vector3.new(xOffset or 0, -spread / 2, 0)
+		a1.Position = Vector3.new(s.x or 0, -s.spread / 2, 0)
 		a1.Parent = part
 		trec.attachments[#trec.attachments + 1] = a0
 		trec.attachments[#trec.attachments + 1] = a1
+
+		local base = lumColor:Lerp(Color3.new(1, 1, 1), s.tint or 0)
 		local t = Instance.new("Trail")
 		t.Attachment0 = a0
 		t.Attachment1 = a1
 		t.FaceCamera = true
-		t.LightEmission = 0.6
-		t.Color = ColorSequence.new(lumColor)
+		t.Lifetime = s.lifetime
+		t.MinLength = 0 -- draw even on small movements, so idle drift still wisps
+		t.MaxLength = TRAIL_MAX_LENGTH
+		-- LightEmission is an ADDITIVE blend factor: pushed too high the ribbon blows out
+		-- to pure white and the wearer's soul colour -- the whole point of a trail here --
+		-- disappears. Verified in-game: 0.85 rendered every trail white on the dusk sky.
+		-- 0.35 keeps the glow while the colour survives against both sky and shadow.
+		t.LightEmission = 0.35
+		t.LightInfluence = 0
+		-- TAPER: the single biggest quality win. Untapered, every trail rendered as a
+		-- blunt rectangle with a hard trailing edge. The bead humps ride this curve too.
+		local kps = {}
+		for i, k in ipairs(TrailModel.widthKeypoints(s)) do
+			kps[i] = NumberSequenceKeypoint.new(k.at, k.scale)
+		end
+		t.WidthScale = NumberSequence.new(kps)
+		local tk = {}
+		for i, k in ipairs(TrailModel.transparencyKeypoints(s)) do
+			tk[i] = NumberSequenceKeypoint.new(k.at, k.transparency)
+		end
+		t.Transparency = NumberSequence.new(tk)
+		t.Color = ColorSequence.new(base) -- replaced every frame by the flow below
 		t.Parent = part
 		trec.trails[#trec.trails + 1] = t
-		return t
+		trec.flow[#trec.flow + 1] = { trail = t, ring = flowRing(base) }
+		if s.shimmer then
+			trec.shimmer[#trec.shimmer + 1] = { trail = t, phase = s.shimmer, headAlpha = s.headAlpha }
+		end
 	end
 
-	if trailKey == "wisp" then
-		local t = addTrail(0.35)
-		t.Lifetime = 0.45
-		t.Transparency = NumberSequence.new(0.35, 1)
-	elseif trailKey == "stream" then
-		local t = addTrail(1.4)
-		t.Lifetime = 0.8
-		t.Transparency = NumberSequence.new(0.25, 1)
-	elseif trailKey == "sparkline" then
-		local t = addTrail(0.9)
-		t.Lifetime = 0.6
-		t.Transparency = NumberSequence.new(0.3, 1)
-		t.WidthScale = NumberSequence.new({
-			NumberSequenceKeypoint.new(0, 1),
-			NumberSequenceKeypoint.new(0.25, 0.15),
-			NumberSequenceKeypoint.new(0.5, 1),
-			NumberSequenceKeypoint.new(0.75, 0.15),
-			NumberSequenceKeypoint.new(1, 1),
-		})
-	elseif trailKey == "comet" then
-		local core = addTrail(0.35)
-		core.Lifetime = 1.0
-		core.Color = ColorSequence.new(lumColor:Lerp(Color3.new(1, 1, 1), 0.75)) -- hot white-ish core
-		local sheath = addTrail(1.8)
-		sheath.Lifetime = 1.0
-		sheath.Transparency = NumberSequence.new(0.55, 1)
-	elseif trailKey == "meteor" then
-		local tA = addTrail(0.55, -0.8) -- twin wakes offset to the shoulders
-		local tB = addTrail(0.55, 0.8)
-		tA.Lifetime = 1.2
-		tB.Lifetime = 1.2
-		tA.Transparency = NumberSequence.new(0.25, 1)
-		tB.Transparency = NumberSequence.new(0.7, 1)
-		-- Alternate the two wakes' base transparency on a 1.1s cycle. NumberSequence
-		-- swaps only at the half-cycle crossing (not per frame) to keep it cheap.
-		local swapped = false
-		trec.animHandle = SoulStyles.registerAnimated(tA, function(now)
-			local firstHalf = (now % 1.1) < 0.55
-			if firstHalf ~= swapped then
-				swapped = firstHalf
-				tA.Transparency = NumberSequence.new(firstHalf and 0.25 or 0.7, 1)
-				tB.Transparency = NumberSequence.new(firstHalf and 0.7 or 0.25, 1)
+	-- ONE animator handle per wearer drives both effects:
+	--  * FLOW -- light streaming down every ribbon, from the shared ring scrolled by the
+	--    wrap-safe SoulAnimModel.scrollStops. This is what makes the equipped trail match
+	--    its shop card: the card runs the same ring at the same rate. `Trail.Color` runs
+	--    head(0) -> tail(1), the opposite of the card's gradient, so the phase is negated
+	--    to keep the light travelling the same way (away from the body) on both.
+	--  * SHIMMER -- Meteor's alternating twin-wake pulse, on a CONTINUOUS breathe rather
+	--    than the old hard half-cycle swap, which flipped both wakes in a single frame.
+	-- Cost: one ColorSequence per strand per frame per visible wearer (<= 3 each).
+	local flowSeconds = TrailModel.flowSeconds(trailKey)
+	if #trec.flow > 0 then
+		trec.animHandle = SoulStyles.registerAnimated(trec.flow[1].trail, function(now)
+			local p = (now % flowSeconds) / flowSeconds
+			for _, fl in ipairs(trec.flow) do
+				local kps = SoulAnimModel.scrollStops(fl.ring, -p)
+				local out = table.create(#kps)
+				for i = 1, #kps do
+					out[i] = ColorSequenceKeypoint.new(kps[i].at, Color3.fromRGB(kps[i].r, kps[i].g, kps[i].b))
+				end
+				fl.trail.Color = ColorSequence.new(out)
+			end
+			for _, sh in ipairs(trec.shimmer) do
+				local b = SoulAnimModel.breathe(now, 1.6, sh.phase)
+				local head = math.min(1, sh.headAlpha + 0.45 * (1 - b))
+				sh.trail.Transparency = NumberSequence.new({
+					NumberSequenceKeypoint.new(0, head),
+					NumberSequenceKeypoint.new(0.55, math.min(1, head + (1 - head) * 0.45)),
+					NumberSequenceKeypoint.new(1, 1),
+				})
 			end
 		end)
 	end
