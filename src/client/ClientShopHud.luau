@@ -26,6 +26,8 @@ local Config = require(Shared:WaitForChild("Config"))
 local ShopCatalog = require(Shared:WaitForChild("ShopCatalog"))
 local ShopModel = require(Shared:WaitForChild("ShopModel"))
 local ShopLayoutModel = require(Shared:WaitForChild("ShopLayoutModel"))
+local TrailModel = require(Shared:WaitForChild("TrailModel"))
+local SoulAnimModel = require(Shared:WaitForChild("SoulAnimModel"))
 local TouchJumpLayout = require(Shared:WaitForChild("TouchJumpLayout"))
 local Remotes = require(Shared:WaitForChild("Remotes"))
 
@@ -147,6 +149,7 @@ local localSoulColor = rgb(57, 214, 224)             -- local player's resolved 
 
 -- built once
 local gui, toggleBtn, panel, closeBtn, titleLabel, coinChip, coinChipCount, coinChipBase, coinChipMed
+local shopMarkHost, shopMark                          -- toggle's dedicated shop mark (rebuilt per viewport)
 local tabsRow, headerRow, scroll, grid, hintBox
 local tabPills = {}                                  -- [kind] = { pill, label }
 local textCaps = {}                                  -- { {constraint, cap} } re-scaled on relayout
@@ -261,69 +264,27 @@ local function shakeCoinChip()
 end
 
 -- ===== previews ========================================================
--- Trails have no SoulStyles.buildPreview -- a cheap static 3-frame gradient ribbon
--- mock in the item's rarity color reads as "a trail" without an animator handle.
-local function buildTrailRibbon(item, px)
-	local root = Instance.new("Frame")
-	root.Size = UDim2.fromOffset(px, px)
-	root.BackgroundTransparency = 1
-	local tint = RARITY_COLOR[item.rarity] or CYAN
-	for i = 1, 3 do
-		local ribbon = Instance.new("Frame")
-		ribbon.AnchorPoint = Vector2.new(0.5, 0.5)
-		ribbon.Position = UDim2.fromScale(0.5, 0.3 + (i - 1) * 0.2)
-		ribbon.Size = UDim2.fromScale(0.92, 0.16)
-		ribbon.BackgroundColor3 = Color3.new(1, 1, 1)
-		ribbon.BorderSizePixel = 0
-		ribbon.ZIndex = 3
-		local corner = Instance.new("UICorner")
-		corner.CornerRadius = UDim.new(1, 0)
-		corner.Parent = ribbon
-		local grad = Instance.new("UIGradient")
-		grad.Color = ColorSequence.new({
-			ColorSequenceKeypoint.new(0, tint),
-			ColorSequenceKeypoint.new(1, tint),
-		})
-		grad.Transparency = NumberSequence.new({
-			NumberSequenceKeypoint.new(0, 1),
-			NumberSequenceKeypoint.new(0.5, 0.2 + (i - 1) * 0.2),
-			NumberSequenceKeypoint.new(1, 1),
-		})
-		grad.Parent = ribbon
-		ribbon.Parent = root
-	end
-	return root
-end
-
--- The SHARED gold coin token (spec §4): HudTheme.makeCoinMedallion, re-parented at a
--- given ZIndex. Under Sibling ZIndexBehavior the facet must ride ABOVE the disc, so we
--- bump both together (makeCoinMedallion pins the facet at disc+1 for the default ZIndex).
-local function coinToken(px, z)
-	local med = HudTheme.makeCoinMedallion(px)
-	med.ZIndex = z
-	local facet = med:FindFirstChild("Facet")
-	if facet then
-		facet.ZIndex = z + 1
-	end
-	return med
-end
 
 -- Default TRAILS card (spec §7, Option A): a "no trail" mock -- a faint dashed line +
 -- a dim runner dot. Deliberately NOT a Soul halo, so it reads as "trail off".
-local function buildNoTrail(px)
+local function buildNoTrail(w, h)
 	local root = Instance.new("Frame")
-	root.Size = UDim2.fromOffset(px, px)
+	root.Size = UDim2.fromOffset(w, h)
 	root.BackgroundTransparency = 1
-	local dashes, dashW, gap = 4, 0.13, 0.08
-	local total = dashes * dashW + (dashes - 1) * gap
-	local startX = 0.5 - total / 2
-	for i = 1, dashes do
+	-- The same LINEAR wake vocabulary as the five live cards, but grey and STILL: a runner
+	-- with nothing streaming from it. Ghost dashes mark where the wake would be.
+	local DASHES = 6
+	local dashW = math.max(2, math.floor(w * 0.055 + 0.5))
+	local runnerPx = math.max(3, math.floor(h * 0.42 + 0.5))
+	local headX = 0.80
+	for i = 1, DASHES do
+		local u = i / DASHES
 		local dash = Instance.new("Frame")
-		dash.AnchorPoint = Vector2.new(0, 0.5)
-		dash.Position = UDim2.fromScale(startX + (i - 1) * (dashW + gap), 0.5)
-		dash.Size = UDim2.fromScale(dashW, 0.05)
-		dash.BackgroundColor3 = rgb(139, 147, 166)
-		dash.BackgroundTransparency = 0.4
+		dash.AnchorPoint = Vector2.new(0.5, 0.5)
+		dash.Position = UDim2.fromScale(headX - u * 0.62, 0.5)
+		dash.Size = UDim2.fromOffset(dashW, math.max(2, math.floor(h * 0.10 + 0.5)))
+		dash.BackgroundColor3 = rgb(96, 104, 122)
+		dash.BackgroundTransparency = 0.5 + 0.45 * u
 		dash.BorderSizePixel = 0
 		dash.ZIndex = 3
 		local dc = Instance.new("UICorner")
@@ -331,11 +292,10 @@ local function buildNoTrail(px)
 		dc.Parent = dash
 		dash.Parent = root
 	end
-	-- dim gray runner circle at the trailing (left) end of the ghosted wake
 	local runner = Instance.new("Frame")
 	runner.AnchorPoint = Vector2.new(0.5, 0.5)
-	runner.Position = UDim2.fromScale(startX, 0.5)
-	runner.Size = UDim2.fromScale(0.2, 0.2)
+	runner.Position = UDim2.fromScale(headX, 0.5)
+	runner.Size = UDim2.fromOffset(runnerPx, runnerPx)
 	runner.BackgroundColor3 = rgb(58, 65, 80)
 	runner.BorderSizePixel = 0
 	runner.ZIndex = 4
@@ -379,16 +339,126 @@ local function currentStyleKey()
 	return nil
 end
 
+-- The trail card preview (rebuilt 2026-07-26). It used to be three static bars tinted by
+-- RARITY, which made Soul Stream and Sparkline -- both Rare, both 900 coins -- pixel
+-- identical, and told the player nothing about what they'd actually wear.
+--
+-- Now it renders the SAME description the body wears (TrailModel): a live wake of
+-- shrinking, fading dots in the player's own soul colour, swept around an arc by ONE
+-- spinning carrier. One property write per frame per card, and the taper / bead pattern /
+-- strand count that distinguish the five trails are baked into the dot layout.
+-- The arc sweep is deliberately quick (1.25-2.0s per revolution): at a ~17px wake radius
+-- that clears ~1px/frame, the threshold below which rotation reads as stepping.
+local function buildTrailWake(item, w, h)
+	local root = Instance.new("Frame")
+	root.Size = UDim2.fromOffset(w, h)
+	root.BackgroundTransparency = 1
+	root.ClipsDescendants = true -- belt and braces: nothing may spill onto the tier chip
+
+	if not TrailModel.profileOf(item.trailKey) then
+		return root -- unknown key: an empty box, never an error
+	end
+	-- Trails inherit the wearer's LUMINOUS colour (spec §7), so the card shows the wake in
+	-- exactly the colour this player's body would trail.
+	local lum = currentColorSpec().luminous
+
+	-- The wake is PARKED, head near the right edge, and the light streams backward through
+	-- it. A wake that swept across and off-frame was truthful about travel but meant the
+	-- card showed only a fragment of the item at any given moment -- you'd catch Soul
+	-- Stream as a bare tail. Parked, the taper / beads / strand count are legible the whole
+	-- time, and the flowing highlight carries the direction. (The card is a spec sheet;
+	-- the body is where it travels.)
+	local wakePx = math.max(4, math.floor(TrailModel.previewWakeLen(item.trailKey) * w + 0.5))
+	local carrier = Instance.new("Frame")
+	carrier.Name = "Wake"
+	carrier.AnchorPoint = Vector2.new(1, 0.5) -- anchored at the HEAD (the runner)
+	carrier.Size = UDim2.fromOffset(wakePx, h)
+	carrier.Position = UDim2.new(0.92, 0, 0.5, 0)
+	carrier.BackgroundTransparency = 1
+	carrier.BorderSizePixel = 0
+	carrier.ZIndex = 3
+	carrier.Parent = root
+
+	-- Each strand is a small stack of head-anchored LONGITUDINAL bars (see TrailModel):
+	-- decreasing length, increasing thickness, so the silhouette tapers; each bar carries
+	-- the strand's fade gradient, so the wake dissolves smoothly toward the tail and a
+	-- beaded strand pinches out between humps. Roughly 3 frames per strand.
+	local WHITE = Color3.new(1, 1, 1)
+	local animated = {} -- [strandIndex] = { ring = {rgb...}, grads = { UIGradient, ... } }
+	for si, strand in ipairs(TrailModel.previewStrands(item.trailKey)) do
+		local base = lum:Lerp(WHITE, strand.tint)
+		local fadeKps = table.create(#strand.fade)
+		for i, f in ipairs(strand.fade) do
+			fadeKps[i] = NumberSequenceKeypoint.new(f.at, f.transparency)
+		end
+		local fadeSeq = NumberSequence.new(fadeKps)
+		-- The SHARED flow ring (TrailModel.FLOW_RING), resolved against this wearer colour
+		-- exactly as SoulController resolves it for the equipped ribbon.
+		local entry = { ring = {}, grads = {} }
+		for i, lift in ipairs(TrailModel.FLOW_RING) do
+			local c = base:Lerp(WHITE, lift)
+			entry.ring[i] = { r = c.R * 255, g = c.G * 255, b = c.B * 255 }
+		end
+		for bi, bar in ipairs(strand.bars) do
+			-- `strand.len` scales this strand against the card's longest wake, mirroring
+			-- how a shorter-lived world ribbon draws a shorter wake off the same body.
+			local barW = math.max(2, math.floor(bar.len * strand.len * wakePx + 0.5))
+			local barH = math.max(1, math.floor(bar.thick * strand.thick * h + 0.5))
+			local f = Instance.new("Frame")
+			f.Name = ("S%dB%d"):format(si, bi)
+			f.AnchorPoint = Vector2.new(1, 0.5) -- head-anchored, like the carrier
+			f.Position = UDim2.new(1, 0, 0.5 + strand.offset, 0)
+			f.Size = UDim2.fromOffset(barW, barH)
+			f.BackgroundColor3 = WHITE -- the gradient supplies the colour
+			f.BorderSizePixel = 0
+			f.ZIndex = 3 + si -- hot inner strands ride on top of the sheath
+			local c = Instance.new("UICorner")
+			c.CornerRadius = UDim.new(0.5, 0)
+			c.Parent = f
+			local grad = Instance.new("UIGradient")
+			grad.Transparency = fadeSeq -- static: the taper + bead signature
+			grad.Parent = f
+			entry.grads[#entry.grads + 1] = grad
+			f.Parent = carrier
+		end
+		animated[#animated + 1] = entry
+	end
+
+	-- Motion = light flowing BACKWARD down the wake, head to tail, via the seamless cyclic
+	-- scroll (SoulAnimModel.scrollStops -- the same wrap-safe machinery the halo colours
+	-- use, so it can never stall or pop). SoulController runs this identical ring at this
+	-- identical rate on the equipped ribbon, so the card and the body flow together. One
+	-- ColorSequence built per strand per frame (<= 3), reused across that strand's bars.
+	local flowSeconds = TrailModel.flowSeconds(item.trailKey)
+	SoulStyles.registerAnimated(root, function(now)
+		local p = (now % flowSeconds) / flowSeconds
+		for _, entry in ipairs(animated) do
+			local kps = SoulAnimModel.scrollStops(entry.ring, p)
+			local out = table.create(#kps)
+			for i = 1, #kps do
+				out[i] = ColorSequenceKeypoint.new(kps[i].at, Color3.fromRGB(kps[i].r, kps[i].g, kps[i].b))
+			end
+			local seq = ColorSequence.new(out)
+			for _, g in ipairs(entry.grads) do
+				g.Color = seq
+			end
+		end
+	end)
+	return root
+end
+
 -- Build a card preview as the RESOLVED COMPOSITE (spec §6): the item shown exactly as it
 -- would look on the avatar -- color cards composed with the equipped STYLE, style cards
 -- composed with the equipped COLOR, so an equipped card matches the on-body halo. Trails
 -- keep their static ribbon mock; the Default TRAILS card is the "no trail" mock (§7).
 -- Cleanup contract unchanged: SoulStyles.buildPreview returns the animator root Frame --
 -- destroying the card subtree makes the shared animator drop the handle next Heartbeat.
-local function buildCardPreview(item, isDefault, px)
+-- `wakeW`/`wakeH` are only used by the TRAIL tab: a wake is a long thin streak, so its
+-- preview box is a wide rectangle rather than the square the halo styles get.
+local function buildCardPreview(item, isDefault, px, wakeW, wakeH)
 	if isDefault then
 		if activeTab == "trail" then
-			return buildNoTrail(px) -- (#7) "no trail" mock, not a halo
+			return buildNoTrail(wakeW, wakeH) -- (#7) "no trail" mock, not a halo
 		elseif activeTab == "halo_style" then
 			-- classic style, in the player's CURRENT color
 			return SoulStyles.buildPreview({ kind = "halo_style", styleKey = "classic" }, px, { colorSpec = currentColorSpec() })
@@ -400,7 +470,7 @@ local function buildCardPreview(item, isDefault, px)
 		end
 	end
 	if item.kind == "trail" then
-		return buildTrailRibbon(item, px)
+		return buildTrailWake(item, wakeW, wakeH)
 	elseif item.kind == "halo_color" then
 		return SoulStyles.buildPreview(item, px, { styleKey = currentStyleKey() }) -- this color x equipped style
 	elseif item.kind == "halo_style" then
@@ -557,11 +627,24 @@ local function makeCard(item, isDefault, order)
 	local miniMed = math.clamp(math.floor(L.cardH * 0.12), 12, 16)
 	local btnTextSize = math.clamp(math.floor(L.cardH * 0.14), 12, 16)
 
-	-- preview (centered) -- the RESOLVED composite so an equipped card matches the on-body halo
+	-- Trail cards carry a one-line BEHAVIOUR descriptor under the name. The wake previews
+	-- are unmistakable now, but Soul Stream and Sparkline are both Rare at 900 coins, so
+	-- the descriptor is the belt-and-braces guarantee that no two cards read ambiguously.
+	-- Its presence shifts the preview/name up to make room; every other tab is untouched.
+	local behaviour = nil
+	if tabKind() == "trail" then
+		behaviour = isDefault and "No trail" or (TrailModel.profileOf(item.trailKey) or {}).behaviour
+	end
+
+	-- preview (centered) -- the RESOLVED composite so an equipped card matches the on-body halo.
+	-- Trails get a WIDE, short box (a wake is a streak, not a blob) sitting in the band
+	-- between the tier chip and the name; halos keep the square box.
 	local previewPx = math.max(20, math.floor(L.cardH * 0.4))
-	local preview = buildCardPreview(item, isDefault, previewPx)
+	local wakeW = math.max(40, math.floor(L.cardW * 0.84))
+	local wakeH = math.max(14, math.floor(L.cardH * 0.21))
+	local preview = buildCardPreview(item, isDefault, previewPx, wakeW, wakeH)
 	preview.AnchorPoint = Vector2.new(0.5, 0.5)
-	preview.Position = UDim2.fromScale(0.5, 0.4)
+	preview.Position = UDim2.fromScale(0.5, behaviour and 0.322 or 0.4)
 	preview.ZIndex = 3
 	preview.Parent = root
 
@@ -569,13 +652,32 @@ local function makeCard(item, isDefault, order)
 	local nameLabel = Instance.new("TextLabel")
 	nameLabel.BackgroundTransparency = 1
 	nameLabel.AnchorPoint = Vector2.new(0.5, 1)
-	nameLabel.Position = UDim2.fromScale(0.5, 0.72)
-	nameLabel.Size = UDim2.fromScale(0.92, 0.18)
+	nameLabel.Position = UDim2.fromScale(0.5, behaviour and 0.58 or 0.72)
+	nameLabel.Size = UDim2.fromScale(0.92, behaviour and 0.15 or 0.18)
 	nameLabel.Text = name
 	nameLabel.ZIndex = 4
 	HudTheme.styleText(nameLabel, "body")
 	capText(nameLabel, CAP_BODY)
 	nameLabel.Parent = root
+
+	if behaviour then
+		local sub = Instance.new("TextLabel")
+		sub.Name = "Behaviour"
+		sub.BackgroundTransparency = 1
+		sub.AnchorPoint = Vector2.new(0.5, 1)
+		-- Bottom edge clears the action button (which spans 0.73 -> 0.97, taller than the
+		-- collapsed price row) -- on the first pass EQUIP overlapped this line on Comet.
+		sub.Position = UDim2.fromScale(0.5, 0.71)
+		sub.Size = UDim2.fromScale(0.94, 0.11)
+		sub.Text = string.upper(behaviour)
+		sub.Font = HudTheme.Font.body
+		sub.TextColor3 = TAB_OFF_TEXT
+		sub.TextScaled = true
+		sub.TextStrokeTransparency = 1
+		sub.ZIndex = 4
+		capText(sub, 10)
+		sub.Parent = root
+	end
 
 	-- state row: a non-interactive label (price / EQUIPPED) + an action button (EQUIP / BUY)
 	-- cyan pill behind the EQUIPPED label (a clear equipped read); hidden in other states.
@@ -627,7 +729,7 @@ local function makeCard(item, isDefault, order)
 	prList.Padding = UDim.new(0, 4)
 	prList.SortOrder = Enum.SortOrder.LayoutOrder
 	prList.Parent = priceRow
-	local priceMed = coinToken(miniMed, 4)
+	local priceMed = HudTheme.makeCoinMedallion(miniMed, 4)
 	priceMed.LayoutOrder = 1
 	priceMed.Parent = priceRow
 	local priceNum = Instance.new("TextLabel")
@@ -730,7 +832,7 @@ local function makeCard(item, isDefault, order)
 
 	-- BUY-only: the shared coin medallion + number (hidden for EQUIP; UIListLayout skips
 	-- non-visible children, so "EQUIP" stays centered alone).
-	local buyMed = coinToken(miniMed, 6)
+	local buyMed = HudTheme.makeCoinMedallion(miniMed, 6)
 	buyMed.Name = "BuyMed"
 	buyMed.LayoutOrder = 2
 	buyMed.Visible = false
@@ -1041,6 +1143,21 @@ local function placeToggle()
 	local d = math.max(44, math.floor(56 * ts))
 	toggleBtn.Size = UDim2.fromOffset(d, d)
 	toggleBtn.AnchorPoint = Vector2.new(1, 1)
+
+	-- (Re)build the shop mark at a size derived from the live button diameter, so the
+	-- medallion facets/rims stay crisp instead of being scaled -- same contract as
+	-- rebuildCoinChipMedallion. 0.58 of the diameter leaves room for the SHOP label and
+	-- keeps the diagonal stack inside the circle.
+	if shopMarkHost then
+		local markPx = math.max(20, math.floor(d * 0.58))
+		shopMarkHost.Size = UDim2.fromOffset(markPx, markPx)
+		if shopMark then
+			shopMark:Destroy()
+		end
+		shopMark = HudTheme.makeShopMark(markPx)
+		shopMark.Parent = shopMarkHost
+	end
+
 	if UserInputService.TouchEnabled then
 		local j = TouchJumpLayout.compute(vp.w, vp.h, Config.TOUCH_JUMP_SCALE)
 		-- right edge aligned to jump's right edge; bottom 12px above jump's top edge
@@ -1060,7 +1177,7 @@ local function rebuildCoinChipMedallion()
 		coinChipMed:Destroy()
 	end
 	local medPx = math.max(16, math.floor((L and L.headerH or 46) * 0.5))
-	local med = coinToken(medPx, 4)
+	local med = HudTheme.makeCoinMedallion(medPx, 4)
 	med.Name = "CoinMed"
 	med.AnchorPoint = Vector2.new(0, 0.5)
 	med.Position = UDim2.new(0, math.floor(medPx * 0.4), 0.5, 0)
@@ -1166,27 +1283,25 @@ local function build()
 	ts.Parent = toggleBtn
 	local toggleScale = Instance.new("UIScale")
 	toggleScale.Parent = toggleBtn
-	-- coin-purse glyph: two stacked gold circles
-	for i, cfg in ipairs({ { s = 0.42, y = 0.36 }, { s = 0.5, y = 0.5 } }) do
-		local coin = Instance.new("Frame")
-		coin.AnchorPoint = Vector2.new(0.5, 0.5)
-		coin.Position = UDim2.fromScale(0.5, cfg.y)
-		coin.Size = UDim2.fromScale(cfg.s, cfg.s)
-		coin.BackgroundColor3 = i == 1 and rgb(255, 224, 138) or GOLD
-		coin.BorderSizePixel = 0
-		coin.ZIndex = 2
-		local cc = Instance.new("UICorner")
-		cc.CornerRadius = UDim.new(0.5, 0)
-		cc.Parent = coin
-		coin.Parent = toggleBtn
-	end
+	-- The DEDICATED shop mark (HudTheme.makeShopMark): the shared gold medallion token
+	-- stacked two-deep with the cyan soul spark. It replaces the old two flat gold circles,
+	-- which pre-dated the token and merged into a single amorphous blob at this size.
+	-- Sized + re-placed by placeToggle() so it tracks the button across viewports.
+	shopMarkHost = Instance.new("Frame")
+	shopMarkHost.Name = "MarkHost"
+	shopMarkHost.AnchorPoint = Vector2.new(0.5, 0.5)
+	shopMarkHost.Position = UDim2.fromScale(0.5, 0.42)
+	shopMarkHost.BackgroundTransparency = 1
+	shopMarkHost.ZIndex = 2
+	shopMarkHost.Parent = toggleBtn
+
 	local shopLabel = Instance.new("TextLabel")
 	shopLabel.BackgroundTransparency = 1
 	shopLabel.AnchorPoint = Vector2.new(0.5, 1)
-	shopLabel.Position = UDim2.fromScale(0.5, 0.98)
-	shopLabel.Size = UDim2.fromScale(0.9, 0.26)
+	shopLabel.Position = UDim2.fromScale(0.5, 0.99)
+	shopLabel.Size = UDim2.fromScale(0.9, 0.24)
 	shopLabel.Text = "SHOP"
-	shopLabel.ZIndex = 3
+	shopLabel.ZIndex = 9
 	HudTheme.styleText(shopLabel, "heading")
 	capText(shopLabel, CAP_BODY)
 	shopLabel.Parent = toggleBtn
@@ -1223,9 +1338,12 @@ local function build()
 	local pc = Instance.new("UICorner")
 	pc.CornerRadius = HudTheme.Radius
 	pc.Parent = panel
+	-- Border in the panel's OWN colour, not HudTheme's chunky white: the white outline read
+	-- as a hard sticker edge around the whole shop. Kept (rather than removed) so the
+	-- rounded corner still anti-aliases against the world behind it.
 	local ps = Instance.new("UIStroke")
 	ps.Thickness = 2.5
-	ps.Color = HudTheme.Color.panelStroke
+	ps.Color = HudTheme.Color.panelDark
 	ps.Parent = panel
 	panel.Parent = gui
 

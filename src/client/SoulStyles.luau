@@ -2,8 +2,15 @@
 	SoulStyles -- ONE construction + animation pipeline for every Soul halo, free
 	Classic included (spec §6.1). Builders return handles parented into the halo
 	BillboardGui; a single shared Heartbeat animator drives every animated element
-	(rotation, ripple, color anims via SoulAnimModel). Per-frame budget: <= 16
-	color writes + <= 3 property writes per visible halo (review §2.7 budget line).
+	(rotation, ripple, breathe, color anims via SoulAnimModel).
+
+	Per-frame budget: <= 16 color writes + <= 8 property writes per visible halo. The
+	property line was raised from 3 on 2026-07-26: EVERY style now carries a breathe (and
+	Seraph a per-shard twinkle), because at 24/42px billboard scale the geometric motion is
+	sub-pixel per frame -- measured 0.033 to 0.42 px/frame -- and cannot be perceptually
+	smooth on its own; transparency is the only channel that is size-independent. Worst
+	case is Seraph at 6 writes; frame time was indistinguishable from an
+	all-cards-destroyed control with all 16 shop previews live.
 
 	SoulStyles.build(parent, styleKey, colorSpec, sizePx, isMine) -> handle
 	  parent: the BillboardGui to fill
@@ -95,6 +102,21 @@ function SoulStyles.registerAnimated(guiRef, animateFn)
 	return h
 end
 
+-- ===== motion tempo =====================================================
+-- ONE tempo family so the six styles read as one set instead of six arbitrary loops
+-- (they used to be 1.6 / 2.4 / 3 / 6 / 2.4s, picked independently). Rates were also
+-- raised across the board: at 24 px every geometric animation here was moving well under
+-- one pixel per frame -- measured 0.033 px/frame (Eclipse aura) to 0.419 (Orbit) -- so
+-- continuous maths rasterised into visible steps. See SoulAnimModel.breathe.
+local TEMPO = {
+	breathe = 2.6, -- the slow glow every style carries (size-independent, always smooth)
+	ripple = 1.25, -- pulse's emitted ring (was 1.6)
+	spin = 1.8, -- orbit's revolution (was 3.0)
+	ringSpin = 3.6, -- seraph's shard ring (was 6.0)
+	twinkle = 2.2, -- seraph's staggered shard sparkle
+	aura = 2.0, -- eclipse's aura (was 2.4, and far too shallow)
+}
+
 -- ===== element helpers ==================================================
 local function clamp255(x)
 	return x < 0 and 0 or (x > 255 and 255 or x)
@@ -178,6 +200,15 @@ function BUILDERS.classic(root, state, ticks, ctx)
 	under.BackgroundTransparency = 0.72
 	local core = circle(root, 0.92, state.fill, 2)
 
+	-- Classic used to have NO motion whatsoever: with a non-animated colour the halo was a
+	-- completely frozen dot. It now breathes its underglow, so every soul reads as alive.
+	ticks[#ticks + 1] = function(now)
+		local b = SoulAnimModel.breathe(now, TEMPO.breathe)
+		under.BackgroundTransparency = 0.82 - 0.20 * b -- 0.82 -> 0.62
+		local s = 1.24 + 0.16 * b
+		under.Size = UDim2.fromScale(s, s)
+	end
+
 	-- Rim ring only where it reads: Void-type (luminous != fill, no anim) for the
 	-- glow halo, or a flash color which pulses the rim on/off.
 	local isFlash = state.anim ~= nil and state.anim.kind == "flash"
@@ -220,6 +251,18 @@ function BUILDERS.ring(root, state, ticks, ctx)
 	local accentStroke = makeStroke(accent, 1.5, state.fill:Lerp(WHITE, 0.55))
 	local rim, rimStroke = makeFlashRim(root, state) -- flash colors (Stormcloud) pulse here
 
+	-- Ring was the other completely static style. A ring is rotationally symmetric, so
+	-- spinning it would be invisible -- its life is an energy breathe instead: the
+	-- underglow swells while the bright inner accent pulses against it (counter-phased,
+	-- so the halo always has something moving).
+	ticks[#ticks + 1] = function(now)
+		local b = SoulAnimModel.breathe(now, TEMPO.breathe)
+		under.BackgroundTransparency = 0.88 - 0.20 * b
+		local s = 1.14 + 0.14 * b
+		under.Size = UDim2.fromScale(s, s)
+		accentStroke.Transparency = 0.55 - 0.55 * (1 - b) -- 0 -> 0.55, opposite the glow
+	end
+
 	ctx.fillTargets = { strokeTarget(ann) }
 	ctx.gradientTarget = annulus -- a UIGradient here tints the annulus stroke
 	ctx.rimStroke = rimStroke
@@ -243,11 +286,20 @@ function BUILDERS.pulse(root, state, ticks, ctx)
 	rip.Transparency = 0.2
 	local rim, rimStroke = makeFlashRim(root, state) -- flash colors (Stormcloud) pulse here
 
+	-- The ring EXPANDS linearly but fades in AND out (rippleFade), so it is invisible at
+	-- both ends of the loop -- the size reset at the wrap happens unseen. The old linear
+	-- fade snapped back to 0.2, popping the ring into view at 80% opacity every 1.6s.
+	-- Faster and wider than before (1.6s/0.72 span): at 24px the old ripple crept at
+	-- 0.18 px/frame, which reads as a stalled ring rather than an emitted one.
+	rip.Transparency = 1
 	ticks[#ticks + 1] = function(now)
-		local p = (now % 1.6) / 1.6 -- 1.6s loop
-		local s = 0.80 + 0.72 * p -- 0.80 -> 1.52
+		local p = (now % TEMPO.ripple) / TEMPO.ripple
+		local s = 0.78 + 0.94 * p -- 0.78 -> 1.72
 		ripple.Size = UDim2.fromScale(s, s)
-		rip.Transparency = 0.2 + 0.8 * p
+		rip.Transparency = SoulAnimModel.rippleFade(p, 0.15)
+		-- the core breathes underneath, so the halo lives between ripples too
+		local b = SoulAnimModel.breathe(now, TEMPO.breathe)
+		under.BackgroundTransparency = 0.80 - 0.16 * b
 	end
 
 	ctx.fillTargets = { bgTarget(core) }
@@ -282,8 +334,17 @@ function BUILDERS.orbit(root, state, ticks, ctx)
 	satR.Position = UDim2.fromScale(1, 0.5)
 	local rim, rimStroke = makeFlashRim(root, state) -- flash colors (Stormcloud) pulse here
 
+	-- Spin raised from 3.0s to 1.8s per revolution: at 24px the satellites travelled
+	-- 0.419 px/frame, below the threshold where rotation reads as motion rather than
+	-- stepping. The satellites also breathe out of phase with each other, which is smooth
+	-- at any pixel size and keeps the halo alive even when the spin is edge-on small.
 	ticks[#ticks + 1] = function(now)
-		carrier.Rotation = (now / 3 * 360) % 360 -- 360deg / 3s
+		carrier.Rotation = (now / TEMPO.spin * 360) % 360
+		local a = SoulAnimModel.breathe(now, TEMPO.breathe)
+		local b = SoulAnimModel.breathe(now, TEMPO.breathe, 0.5)
+		satL.BackgroundTransparency = 0.35 - 0.35 * a
+		satR.BackgroundTransparency = 0.35 - 0.35 * b
+		under.BackgroundTransparency = 0.80 - 0.16 * a
 	end
 
 	ctx.fillTargets = { bgTarget(core) }
@@ -313,13 +374,22 @@ function BUILDERS.eclipse(root, state, ticks, ctx)
 	-- Blazing luminous corona, thicker than before so the orb reads as eclipsed.
 	local corona = makeStroke(disc, px * 0.17, state.luminous) -- 17% of billboard px
 
-	-- Aura breathe: gentle 2.4s sine pulse, ALWAYS on (independent of the color anim),
-	-- so every Eclipse halo lives even with a static color.
+	-- Aura breathe, ALWAYS on (independent of the colour anim), so every Eclipse lives even
+	-- with a static colour. Amplitude roughly doubled and the period shortened: the old
+	-- 1.40->1.60 swing over 2.4s advanced the aura edge at 0.033 px/frame at 24px -- ONE
+	-- PIXEL EVERY 30 FRAMES -- and only 0.15 of transparency, so it looked frozen and then
+	-- ticked. This was the worst offender of the six styles.
+	-- A `flash` colour (Stormcloud) drives this same corona as its lightning rim, so we
+	-- leave the rim alone in that pairing rather than writing it twice per frame.
+	local coronaIsFlashRim = state.anim ~= nil and state.anim.kind == "flash"
 	ticks[#ticks + 1] = function(now)
-		local p = (math.sin(now / 2.4 * math.pi * 2) + 1) * 0.5 -- 0..1 over 2.4s
-		local s = 1.40 + 0.20 * p -- 1.40 -> 1.60 scale
+		local b = SoulAnimModel.breathe(now, TEMPO.aura)
+		local s = 1.30 + 0.44 * b -- 1.30 -> 1.74
 		aura.Size = UDim2.fromScale(s, s)
-		aura.BackgroundTransparency = 0.50 + 0.15 * p -- 0.50 -> 0.65
+		aura.BackgroundTransparency = 0.78 - 0.36 * b -- 0.78 -> 0.42
+		if not coronaIsFlashRim then
+			corona.Transparency = 0.20 - 0.20 * b -- the eclipse rim flares with the aura
+		end
 	end
 
 	-- The corona (luminous) is eclipse's only wearer-colored element, so the flat color
@@ -386,12 +456,25 @@ function BUILDERS.seraph(root, state, ticks, ctx)
 
 	local rim, rimStroke = makeFlashRim(root, state) -- flash colors (Stormcloud) pulse here
 
+	-- Same emit-and-dissolve ripple as pulse (see rippleFade): invisible at both ends of
+	-- the loop, so the size reset never blinks. Ring spin raised 6.0s -> 3.6s/rev (the
+	-- shards crawled at 0.183 px/frame at 24px), and each shard now twinkles on its OWN
+	-- phase -- a staggered sparkle that stays perfectly smooth at any pixel size, which is
+	-- what actually sells the legendary at billboard scale where the spin cannot.
+	rip.Transparency = 1
+	local shardPhase = {}
+	for i = 1, #shards do
+		shardPhase[i] = (i - 1) / #shards
+	end
 	ticks[#ticks + 1] = function(now)
-		local p = (now % 2.4) / 2.4 -- 2.4s ripple loop
-		local s = 0.34 + 0.56 * p -- 0.34 -> 0.90 (subtle; stays within the ring)
+		local p = (now % TEMPO.ripple) / TEMPO.ripple
+		local s = 0.34 + 0.62 * p -- 0.34 -> 0.96
 		ripple.Size = UDim2.fromScale(s, s)
-		rip.Transparency = 0.2 + 0.8 * p
-		carrier.Rotation = (now / 6 * 360) % 360 -- 360deg / 6s
+		rip.Transparency = SoulAnimModel.rippleFade(p, 0.2)
+		carrier.Rotation = (now / TEMPO.ringSpin * 360) % 360
+		for i = 1, #shards do
+			shards[i].BackgroundTransparency = 0.55 - 0.55 * SoulAnimModel.breathe(now, TEMPO.twinkle, shardPhase[i])
+		end
 	end
 
 	ctx.fillTargets = { bgTarget(core) }
@@ -414,14 +497,15 @@ end
 -- ===== color-animation binding ==========================================
 local FLAT_KINDS = { osc = true, flicker = true, steps = true, hue = true }
 
-local function stopsToSequence(stops)
-	local n = #stops
-	local kps = {}
-	for i, s in ipairs(stops) do
-		local at = n > 1 and (i - 1) / (n - 1) or 0
-		kps[i] = ColorSequenceKeypoint.new(at, Color3.fromRGB(s.r, s.g, s.b))
+-- The cyclic ring of `stops`, scrolled to phase `p`, as a ColorSequence. The pure
+-- SoulAnimModel.scrollStops owns the wrap math (and is lune-tested); this only converts.
+local function ringToSequence(ring, p)
+	local kps = SoulAnimModel.scrollStops(ring, p)
+	local out = table.create(#kps)
+	for i = 1, #kps do
+		out[i] = ColorSequenceKeypoint.new(kps[i].at, rgbToColor3(kps[i]))
 	end
-	return ColorSequence.new(kps)
+	return ColorSequence.new(out)
 end
 
 -- Bind the color anim to already-built elements. MUST run after ctx.applyColors()
@@ -443,34 +527,29 @@ local function bindColorAnim(state, ctx, ticks)
 			end
 		end
 
-	elseif kind == "sweep" and ctx.gradientTarget then
-		-- Whiten the fill element so the gradient shows true colors, not fill*grad.
+	elseif (kind == "sweep" or kind == "gradient") and ctx.gradientTarget then
+		-- Both kinds are the same thing: a CYCLIC ring of colors scrolling under the
+		-- element. We hold Offset at 0 and rebuild the ColorSequence each frame from the
+		-- pure scroll math, because scrolling via Offset clamps at the gradient's edges --
+		-- it stalls for most of the period and then jumps the full width in one frame
+		-- (Gilded read "laggy", Duskfall popped orange->purple every 7s). Rebuilding is
+		-- ONE property write per frame, the same budget the old Offset write cost.
+		--   sweep    -> a 2-stop ring (fill -> to -> fill): a highlight band on a diagonal
+		--   gradient -> the catalog's multi-stop ring, drifting vertically
+		-- Whiten the fill element first so the gradient shows true colors, not fill*grad.
 		for i = 1, #ctx.fillTargets do
 			ctx.fillTargets[i](WHITE)
 		end
+		local ring = kind == "sweep" and { state.fillRgb, anim.to } or anim.stops
 		local grad = Instance.new("UIGradient")
-		grad.Rotation = 25
-		local to = anim.to
-		grad.Color = ColorSequence.new({
-			ColorSequenceKeypoint.new(0, state.fill),
-			ColorSequenceKeypoint.new(0.5, Color3.fromRGB(to.r, to.g, to.b)),
-			ColorSequenceKeypoint.new(1, state.fill),
-		})
+		grad.Rotation = kind == "sweep" and 25 or 90
+		grad.Color = ringToSequence(ring, 0)
 		grad.Parent = ctx.gradientTarget
+		-- Negated phase so the pattern still travels in the direction the old Offset ramp
+		-- moved it (scrollStops emits C(x + p), which drifts the other way). scrollStops
+		-- takes p modulo 1, so a negative phase is fine.
 		ticks[#ticks + 1] = function(now)
-			grad.Offset = Vector2.new(SoulAnimModel.phase(anim, now) * 2 - 1, 0)
-		end
-
-	elseif kind == "gradient" and ctx.gradientTarget then
-		for i = 1, #ctx.fillTargets do
-			ctx.fillTargets[i](WHITE)
-		end
-		local grad = Instance.new("UIGradient")
-		grad.Rotation = 90 -- vertical stops
-		grad.Color = stopsToSequence(anim.stops)
-		grad.Parent = ctx.gradientTarget
-		ticks[#ticks + 1] = function(now)
-			grad.Offset = Vector2.new(0, SoulAnimModel.phase(anim, now) * 2 - 1)
+			grad.Color = ringToSequence(ring, -SoulAnimModel.phase(anim, now))
 		end
 
 	elseif kind == "flash" and ctx.rimStroke then

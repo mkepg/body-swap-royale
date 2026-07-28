@@ -4,6 +4,143 @@ All notable changes to this project are documented here.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2026-07-27]
+
+### Changed
+- **The trail card is now DERIVED from the equipped ribbon, not tuned alongside it.** The
+  card and the body were still two hand-authored tables that happened to agree; `world` is
+  now the only authored description, and the card's thickness, shoulder offsets, length,
+  taper, bead pattern and fade are all computed from it. Retune a ribbon and its card
+  follows automatically — there are no parallel preview numbers left to drift. The card's
+  fade is literally the ribbon's own `WidthScale` × its own transparency ramp, both sides
+  share one `FLOW_RING` and one derived flow rate, and the ordering is machine-checked (a
+  wider/longer/further-out ribbon must be wider/longer/further-out on its card).
+- **The equipped ribbon now flows too.** The travelling highlight existed only on the shop
+  card, which is precisely the "what you see is not what you get" the derivation was meant
+  to close — so `SoulController` scrolls the same shared ring at the same derived rate
+  through the live `Trail.Color`. `Trail.Color` runs head→tail, the opposite of the card's
+  gradient, so the phase is negated to keep the light travelling away from the body on
+  both. Measured in-game: world ribbon flows on **119/119 frames** at ~5/255 per frame,
+  matching the card's ~4/255, with frame time unchanged at 60 fps.
+- **Removed the Soul Shop's white outline.** The panel's chunky white `UIStroke` read as a
+  hard sticker edge around the whole shop; it is now the panel's own `panelDark`, kept
+  (rather than deleted) so the rounded corner still anti-aliases against the world behind.
+
+## [2026-07-26]
+
+### Added
+- **`TrailModel` (shared, pure, lune-tested)** — ONE description of every Soul trail, now
+  consumed by both the world renderer and the shop card preview. They were written
+  independently and had drifted: the world drew Roblox `Trail` ribbons from an if-chain
+  while the shop drew three static rarity-tinted bars, so **Soul Stream and Sparkline were
+  pixel-identical on their cards** — two different 900-coin Rare items a player could not
+  tell apart — and no card showed the soul colour the trail actually wears. The spec's
+  trail table (§7) now lives in data, and `previewDots` is machine-checked so **no two
+  trails can ever preview the same again** (plus bead-signature, taper, box-fit, rarity-
+  escalation and catalog-coverage assertions).
+
+### Fixed
+- **Soul halo animations were sub-pixel, not mistimed.** Reported as laggy/stuttering
+  across all styles. Measured per-frame displacement at real billboard sizes first: at
+  24px every geometric animation moved **well under one pixel per frame** — Eclipse's aura
+  advanced **0.033 px/frame, one pixel every 30 frames**, so the rasteriser held it still
+  and then ticked. Orbit was the fastest at 0.419. **Classic and Ring had no structural
+  animation at all** and were frozen solid with a static colour. Billboard *tracking* was
+  ruled out by measurement (0/120 stalled frames while walking), as was frame rate.
+  Fixed by making motion perceptible rather than merely correct:
+  **`SoulAnimModel.breathe`** (continuous, wrap-safe cosine) is now every style's primary
+  aliveness channel — transparency is a blend factor, not a spatial quantity, so it is
+  smooth at *any* pixel size — and the geometric rates were raised into one coherent
+  `TEMPO` family (orbit 3.0s→1.8s/rev, seraph ring 6.0s→3.6s, eclipse aura amplitude
+  roughly doubled, pulse ripple 1.6s→1.25s and wider). Seraph's three shards twinkle on
+  staggered phases. Measured after: **all six styles animate on 149/149 frames** (Classic
+  and Ring: 0 before), orbit and seraph geometric motion up ~86% (0.78 and 0.34 px/frame),
+  and every style carries a 0.004–0.04 per-frame transparency delta with **no still
+  frames**. Per-halo property-write budget raised 3 → 8 and documented.
+- **Soul trails looked bland because they were untapered, flat-coloured rectangles.**
+  In-game review showed blunt hard-edged bands in muddy flat colour, with wisp/stream/
+  sparkline nearly indistinguishable. Rebuilt from `TrailModel`: **`WidthScale` taper to a
+  point** (the single biggest win), a **colour ramp** (hot at the body → soul colour down
+  the wake) instead of one flat `ColorSequence`, a curved transparency falloff, and
+  `MaxLength` so a swap or round-start re-placement can't smear one ribbon across the
+  arena. Each trail now has a structural signature: Wisp 1 narrow strand, Stream 1 wide
+  smooth banner, Sparkline **3 real bead humps** that visibly break the ribbon, Comet a
+  hot core inside a wide sheath, Meteor twin shoulder wakes **plus a new centre core**,
+  shimmering on a continuous `breathe` rather than the old hard half-cycle
+  `NumberSequence` swap. Two iterations from the in-game visual pass: `LightEmission 0.85`
+  blew every trail out to pure white (additive blend) → 0.35, and the Comet/Meteor white
+  cores were erasing the soul colour → tints softened.
+- **Trail cards now show what you'd actually wear.** The static rarity-tinted bars are
+  replaced by a live **linear wake** in the player's own soul colour, in a wide box (a wake
+  is a streak, not a blob), carrying the same taper / bead pattern / strand count as the
+  body. Three in-game iterations to get there, each rejecting the previous:
+  a circular sweep looped seamlessly for free but read as an orbiting *comma* — an
+  orbiting crescent is not what you equip; transverse dot sampling broke into a dotted
+  line wherever the taper outran the spacing, and widening those samples into overlapping
+  slices ribbed the wake into a corrugated block. What shipped is a stack of **head-
+  anchored longitudinal bars** (decreasing length, increasing thickness) carrying one fade
+  gradient each — smooth taper, ~3 frames per strand, **24 instances for the whole tab**
+  instead of 139. The wake is **parked** with its head near the right edge rather than
+  sweeping off-frame, because a travelling wake meant the card showed only a fragment of
+  the item at any moment (you'd catch Soul Stream as a bare tail); motion is instead light
+  **streaming backward through** it via the same wrap-safe `SoulAnimModel.scrollStops`
+  used by the halo colours. Measured: every wake flows on **119/119 frames** at ~4/255 per
+  frame — no stall, no pop — at a clean 60fps. Trail cards also carry a one-line
+  **behaviour descriptor** ("WIDE SILK RIBBON", "BEADED DASHES") so the Stream/Sparkline
+  pair is unambiguous by text as well as by shape, and the Default card's "no trail" mock
+  uses the same linear vocabulary, greyed and still. Card layout is machine-checked
+  in-game for wake/name/descriptor/button collisions (0 remaining).
+
+## [2026-07-25]
+
+### Fixed
+- **Soul halo animations no longer pop at the loop wrap (root cause, not a workaround).**
+  Reported as "some styles and items look laggy or choppy". Ruled OUT by in-game
+  measurement first: the client held a flat 60.1 Hz with **0 frames > 20 ms** and 874 GUI
+  descendants on the busiest tab, so it was never throughput, layout thrash or asset
+  loading. Per-frame property sampling found the real cause — **four animations driven by
+  the sawtooth phase `(t % period)/period` mapped to a value that disagrees at p=0 and
+  p=1**, so the renderer faithfully drew a one-frame jump every cycle:
+  - `sweep` (Gilded) and `gradient` (Duskfall) scrolled a `UIGradient` by ramping `Offset`
+    from −1 to +1. A UIGradient **clamps** outside `[0,1]`, so most of the period showed a
+    flat clamped edge (motion stalled — the "laggy" read) and then jumped the full width in
+    one frame; with Duskfall's non-cyclic purple/pink/orange stops the two clamped edges are
+    *different colours*, so it hard-popped orange→purple every 7 s (measured: a **1.995**
+    one-frame `Offset` delta).
+  - `pulse` and `seraph` ripples faded on a linear `0.2 + 0.8p` ramp, which snapped straight
+    back to `0.2` at the wrap — the ring **materialised at 80 % opacity out of nowhere**
+    every 1.6 s / 2.4 s (measured: a **0.79** one-frame transparency jump).
+
+  Fixed in the pure, lune-tested layer: **`SoulAnimModel.scrollStops`** treats the stops as
+  a cyclic *ring* and emits the keypoints for `C(x + p)` with both endpoints equal, so the
+  sequence is continuous across its own seam *and* across the period wrap — the band travels
+  forever with no stall and no jump (`Offset` now stays at 0 and the ColorSequence itself is
+  rebuilt, one property write per frame — the same budget the old `Offset` write cost).
+  **`SoulAnimModel.rippleFade`** replaces the linear ramp with `1 − (1−minT)·sin(πp)`, which
+  is fully transparent at *both* ends, so the ripple's size reset happens unseen. `sweep` and
+  `gradient` now share one code path in `SoulStyles` (they were always the same thing).
+  Measured after: gradient one-frame jump **1.995 → 0.000** with **no stalled frame** in the
+  cycle (max colour delta ~4/255); ripple opacity at the size-reset frame **0.201 → 0.98**
+  (i.e. invisible); frame time unchanged (confirmed against an all-cards-destroyed control).
+  `steps` (Neon Buzz / Static) and `flash` (Stormcloud) are the two **deliberate**
+  discontinuities and are untouched.
+
+### Changed
+- **Dedicated Soul Shop mark on the shop toggle** (`HudTheme.makeShopMark`). The entry
+  button still used the pre-token glyph — two flat gold circles that merged into one
+  amorphous blob at 47 px — while every other coin in the game is the shared
+  `makeCoinMedallion`. The mark is now built *from* that token: two medallions stacked on a
+  diagonal (the front one punched out of a dark cut, ring-scaled with the mark so it never
+  re-merges) with the game's cyan **soul** lifting off them — five-layer concentric falloff,
+  deliberately rim-less and facet-less so it reads as energy rather than a third coin.
+  One coin alone is the *balance* token; the second coin plus the soul are what make this
+  read as the shop. Verified at 32/48/72/128 px.
+- `HudTheme.makeCoinMedallion(sizePx, zIndex)` now owns the facet-above-disc ZIndex
+  relationship instead of every caller re-deriving it; `ClientShopHud`'s duplicate
+  `coinToken` wrapper is gone (3 call sites now use the token directly).
+- `HudTheme.Color.soul` / `.soulBright` name the identity cyan so new work has one place to
+  reach for it.
+
 ## [2026-07-22]
 
 ### Fixed / Changed

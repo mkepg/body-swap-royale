@@ -33,6 +33,12 @@ HudTheme.Color = {
 	panelStroke = Color3.fromRGB(255, 255, 255),
 	shadow = Color3.fromRGB(0, 0, 0),
 	panelDark = Color3.fromRGB(17, 22, 31),
+	-- The free Soul cyan -- the game's identity accent (equipped state, active tab, level
+	-- badge, and the shop mark's spark). Named here so new work has one place to reach for
+	-- it; the pre-existing literals in SoulStyles/ClientShopHud/ClientEconomyHud are the
+	-- same value and can migrate to this token whenever they're next touched.
+	soul = Color3.fromRGB(57, 214, 224),
+	soulBright = Color3.fromRGB(186, 250, 255),
 }
 
 -- semantic accent -> panel gradient stops { top, bottom }
@@ -144,15 +150,21 @@ function HudTheme.styleText(label, fontKey)
 end
 
 -- The gold coin "medallion" currency token -- ONE source so the balance readout,
--- the shop header, and shop prices all render the identical coin. Returns an
--- unparented sizePx-square Frame; the caller parents + positions it. Facet/ring
+-- the shop header, shop prices and the shop mark all render the identical coin. Returns
+-- an unparented sizePx-square Frame; the caller parents + positions it. Facet/ring
 -- scale with sizePx so it reads at 14px (a price) or 26px (the readout).
-function HudTheme.makeCoinMedallion(sizePx)
+-- `zIndex` is optional: under Sibling ZIndexBehavior the facet must ride ABOVE the disc,
+-- so the token owns that relationship (facet = disc + 1) rather than every caller
+-- re-deriving it.
+function HudTheme.makeCoinMedallion(sizePx, zIndex)
 	local med = Instance.new("Frame")
 	med.Name = "CoinMedallion"
 	med.Size = UDim2.fromOffset(sizePx, sizePx)
 	med.BackgroundColor3 = Color3.new(1, 1, 1)
 	med.BorderSizePixel = 0
+	if zIndex then
+		med.ZIndex = zIndex
+	end
 	local corner = Instance.new("UICorner")
 	corner.CornerRadius = UDim.new(1, 0)
 	corner.Parent = med
@@ -179,6 +191,88 @@ function HudTheme.makeCoinMedallion(sizePx)
 	fc.Parent = facet
 	facet.Parent = med
 	return med
+end
+
+-- The Soul Shop MARK -- the shop entry point's dedicated icon, drawn from the same gold
+-- medallion token as the balance readout and every price, so the button finally speaks the
+-- currency language (it used to be two flat gold circles that merged into one blob at
+-- 47px -- the pre-token glyph). Composition, and why each piece is there:
+--   * TWO coins, not one -- a single medallion IS the balance token; a stack reads "spend".
+--   * the front coin sits in a dark cut so the pair can never merge into a blob again.
+--   * a cyan soul spark lifting off the stack -- coins buy SOULS, and cyan is the game's
+--     identity accent (equipped state, active tab, level badge).
+-- Returns an unparented sizePx-square Frame; the caller parents + positions it.
+function HudTheme.makeShopMark(sizePx, zIndex)
+	local z = zIndex or 1
+	local px = function(f) return math.max(4, math.floor(sizePx * f + 0.5)) end
+
+	local root = Instance.new("Frame")
+	root.Name = "ShopMark"
+	root.Size = UDim2.fromOffset(sizePx, sizePx)
+	root.BackgroundTransparency = 1
+	root.BorderSizePixel = 0
+	root.ZIndex = z
+
+	local function place(inst, sx, sy)
+		inst.AnchorPoint = Vector2.new(0.5, 0.5)
+		inst.Position = UDim2.fromScale(sx, sy)
+		inst.Parent = root
+	end
+
+	-- Diagonal read, lower-left to upper-right: coins sit low and the soul lifts off them.
+	-- back coin: smaller and set back, so the stack reads as depth not as two siblings
+	local back = HudTheme.makeCoinMedallion(px(0.50), z + 1)
+	back.Name = "CoinBack"
+	place(back, 0.28, 0.46)
+
+	-- dark cut behind the front coin: a disc ringed a hair larger than the coin, in the
+	-- panel's own dark, so the front coin is punched cleanly out of the one behind it and
+	-- the pair can never merge. The ring scales with the mark -- a fixed pixel offset reads
+	-- as a chunky band at 32px and disappears at 128px.
+	local frontPx = px(0.58)
+	local ring = math.max(2, math.floor(sizePx * 0.045 + 0.5))
+	local cut = Instance.new("Frame")
+	cut.Name = "Cut"
+	cut.Size = UDim2.fromOffset(frontPx + ring * 2, frontPx + ring * 2)
+	cut.BackgroundColor3 = HudTheme.Color.panelDark
+	cut.BorderSizePixel = 0
+	cut.ZIndex = z + 2
+	local cutCorner = Instance.new("UICorner")
+	cutCorner.CornerRadius = UDim.new(1, 0)
+	cutCorner.Parent = cut
+	place(cut, 0.52, 0.60)
+
+	local front = HudTheme.makeCoinMedallion(frontPx, z + 3)
+	front.Name = "CoinFront"
+	place(front, 0.52, 0.60)
+
+	-- The soul: the game's own halo grammar in miniature -- concentric cyan discs falling
+	-- off to a bright core, i.e. BUILDERS.classic at icon scale. Deliberately FEATURELESS
+	-- (no rim, no facet): next to two detailed gold coins a smooth glowing orb reads as
+	-- energy, where a rimmed disc with an inner shape just read as a third coin.
+	-- Five layers rather than three: Roblox Frames have no blur, so a soft falloff has to
+	-- be stepped, and three steps banded into visible concentric rings -- which is exactly
+	-- the coin grammar we are avoiding.
+	local SOUL = {
+		{ f = 1.00, t = 0.82 }, { f = 0.80, t = 0.64 }, { f = 0.62, t = 0.44 },
+		{ f = 0.46, t = 0.22 }, { f = 0.30, t = 0.00 },
+	}
+	for i, layer in ipairs(SOUL) do
+		local d = px(0.42 * layer.f)
+		local orb = Instance.new("Frame")
+		orb.Name = "Soul" .. i
+		orb.Size = UDim2.fromOffset(d, d)
+		orb.BackgroundColor3 = i == #SOUL and HudTheme.Color.soulBright or HudTheme.Color.soul
+		orb.BackgroundTransparency = layer.t
+		orb.BorderSizePixel = 0
+		orb.ZIndex = z + 4 + i
+		local oc = Instance.new("UICorner")
+		oc.CornerRadius = UDim.new(1, 0)
+		oc.Parent = orb
+		place(orb, 0.78, 0.24)
+	end
+
+	return root
 end
 
 -- Build a chunky themed panel (root > shadow + panel) in `parent`, sized `size`,
