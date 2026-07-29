@@ -696,6 +696,13 @@ Bodies Saved: 3   Swap-Survival: 71%
 | Robux | Real money purchase | Premium cosmetics, Souls, gamepasses, currency conversion |
 | Tokens | Limited-time events only | Event-exclusive items |
 
+> **Update (2026-07-17):** the first coin sink is SHIPPED — Soul Shop slice 1 (25-item
+> catalog: halo colors/styles/trails, direct coin purchases, persistent equips). See the
+> [slice-1 spec](superpowers/specs/2026-07-16-soul-shop-slice1-design.md); boxes,
+> featured rotation, and Robux products remain parked as slices 2–4. Note: shipping the
+> shop retired the "zero client→server remotes" property (validated-remote decision
+> recorded in the spec §3).
+
 ### Reward Systems
 
 **Per-Round Rewards:**

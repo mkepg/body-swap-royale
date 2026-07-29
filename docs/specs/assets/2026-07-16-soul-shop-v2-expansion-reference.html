@@ -1,0 +1,221 @@
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:ital,wght@0,400;0,600;0,700;0,800&display=swap" rel="stylesheet">
+<style>
+  .bsr { font-family:'Nunito',sans-serif; --gold:#ffc94d; --dusk1:#241636; --dusk2:#4a2e52; --dusk3:#b4685a;
+         --cy:#39d6e0; --c-common:#b8c0cd; --c-uncommon:#5ed17a; --c-rare:#4da6ff; --c-epic:#b06cf0; --c-legend:#ffc94d; }
+  .bsr h2,.bsr h3,.bsr h4 { font-family:'Fredoka',sans-serif; }
+  .bsr .lede { font-size:13px; color:#9aa2b6; line-height:1.55; max-width:860px; }
+  .bsr .iter-note { font-size:11.5px; color:#77809a; border-left:3px solid #3a4150; padding:3px 0 3px 10px; margin:12px 0 0; line-height:1.55; }
+  .bsr .divider { height:1px; background:#2a303c; margin:30px 0 18px; }
+  .bsr .subtitle2 { font-size:12.5px; color:#8891a3; margin:2px 0 0; }
+
+  .bsr .igrid { display:grid; grid-template-columns:repeat(4,1fr); gap:11px; margin:14px 0 4px; }
+  .bsr .item { background:#171621; border:1.5px solid #322f44; border-radius:14px; overflow:hidden; cursor:pointer; transition:transform .15s,border-color .15s; position:relative; }
+  .bsr .item:hover { transform:translateY(-2px); }
+  .bsr .item.selected { border-color:#ff5c5c; box-shadow:0 0 0 2px rgba(255,92,92,.35); }
+  .bsr .item.selected::after { content:"FLAGGED"; position:absolute; top:7px; left:7px; font-size:8.5px; font-weight:800; letter-spacing:.08em; color:#ff8d8d; background:rgba(40,10,10,.85); padding:2px 7px; border-radius:8px; z-index:5; }
+  .bsr .item.legendary { border-color:#8a6a20; }
+  .bsr .item.legendary::before { content:""; position:absolute; inset:-1.5px; border-radius:14px; padding:1.5px; background:linear-gradient(110deg,#e0a93c,#ffe9a8,#e0a93c,#8a6a20); background-size:300%; animation:goldsweep 3s linear infinite; -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0); -webkit-mask-composite:xor; mask-composite:exclude; pointer-events:none; }
+  @keyframes goldsweep { to { background-position:-300% 0; } }
+  .bsr .stage { height:96px; background:linear-gradient(160deg,var(--dusk1) 0%,var(--dusk2) 55%,var(--dusk3) 135%); display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden; }
+  .bsr .stage::before { content:""; position:absolute; width:5px; height:5px; border-radius:50%; background:rgba(255,210,150,.35); left:14%; top:20%; box-shadow:34px 26px 4px rgba(160,220,255,.25), 130px 8px 4px rgba(255,170,220,.22), 100px 48px 5px rgba(190,255,200,.18); }
+  .bsr .meta { padding:8px 10px 10px; }
+  .bsr .meta .nm { font-family:'Fredoka'; font-weight:600; font-size:13.5px; color:#fff; }
+  .bsr .meta .why { font-size:10.5px; color:#9aa2b6; line-height:1.4; margin-top:2px; min-height:42px; }
+  .bsr .rowline { display:flex; justify-content:space-between; align-items:center; margin-top:6px; }
+  .bsr .tag { font-family:'Fredoka'; font-weight:600; font-size:9.5px; letter-spacing:.05em; padding:2px 7px; border-radius:8px; color:#10131a; }
+  .bsr .t-common{background:var(--c-common)} .bsr .t-uncommon{background:var(--c-uncommon)} .bsr .t-rare{background:var(--c-rare)} .bsr .t-epic{background:var(--c-epic)}
+  .bsr .t-legend{background:linear-gradient(110deg,#e0a93c 20%,#ffe9a8 45%,#e0a93c 70%);background-size:200%;animation:goldsweep 2.6s linear infinite;}
+  .bsr .price { font-weight:800; font-size:12px; color:var(--gold); }
+  .bsr .newpill { position:absolute; top:7px; right:7px; z-index:4; font-size:8.5px; font-weight:800; letter-spacing:.09em; color:#06272b; background:var(--cy); padding:2px 7px; border-radius:8px; }
+
+  /* ================= COLORS ================= */
+  .bsr .dot44 { width:42px; height:42px; border-radius:50%; }
+  .bsr .sw-moonlit { background:rgb(226,218,255); box-shadow:0 0 14px rgba(226,218,255,.55); }
+  .bsr .sw-frostbite { background:rgb(190,235,255); box-shadow:0 0 14px rgba(190,235,255,.55); }
+  .bsr .sw-seafoam { background:rgb(160,255,210); box-shadow:0 0 14px rgba(160,255,210,.5); }
+  .bsr .sw-ember { animation:ember 1.3s infinite; }
+  @keyframes ember { 0%,100%{background:#c81e14; box-shadow:0 0 12px rgba(200,30,20,.6)} 28%{background:#ff9636; box-shadow:0 0 20px rgba(255,150,54,.75)} 46%{background:#e8443a} 62%{background:#ffb056; box-shadow:0 0 22px rgba(255,176,86,.8)} 80%{background:#a81810} }
+  .bsr .sw-tidepool { animation:tidepool 4s ease-in-out infinite alternate; }
+  @keyframes tidepool { from{background:rgb(30,90,220); box-shadow:0 0 14px rgba(30,90,220,.6)} to{background:rgb(45,220,200); box-shadow:0 0 16px rgba(45,220,200,.6)} }
+  .bsr .sw-neonbuzz { animation:neonbuzz 2.8s steps(1) infinite; }
+  @keyframes neonbuzz { 0%,100%{background:#ffe9c9; box-shadow:0 0 18px rgba(255,233,201,.8)} 7%{background:#54483c; box-shadow:none} 9%{background:#ffe9c9; box-shadow:0 0 18px rgba(255,233,201,.8)} 11%{background:#54483c; box-shadow:none} 13%{background:#ffe9c9; box-shadow:0 0 18px rgba(255,233,201,.8)} 62%{background:#ffe9c9; box-shadow:0 0 18px rgba(255,233,201,.8)} 64%{background:#8a7a62; box-shadow:0 0 6px rgba(255,233,201,.3)} 66%{background:#ffe9c9; box-shadow:0 0 18px rgba(255,233,201,.8)} }
+  .bsr .sw-void { background:rgb(30,16,48); border:3.5px solid rgb(190,120,255); box-shadow:0 0 16px rgba(190,120,255,.65), inset 0 0 8px rgba(190,120,255,.35); }
+  .bsr .sw-static { animation:staticc 3.4s steps(1) infinite; }
+  @keyframes staticc { 0%,100%{background:#cdd4de; box-shadow:0 0 12px rgba(205,212,222,.6)} 22%{background:#9fd8de} 24%{background:#cdd4de} 47%{background:#dec4b8} 52%{background:#cdd4de} 71%{background:#aab6d8} 74%{background:#e8e4da} 76%{background:#cdd4de} }
+  .bsr .sw-duskfall { background:linear-gradient(180deg,#7a4bd6 0%,#e86a9a 45%,#ffb35c 100%); background-size:100% 220%; animation:duskfall 7s ease-in-out infinite alternate; box-shadow:0 0 14px rgba(232,106,154,.55); }
+  @keyframes duskfall { from{background-position:0 0} to{background-position:0 100%} }
+  .bsr .sw-gilded { background:linear-gradient(115deg,#c99a2e 25%,#ffe08a 45%,#c99a2e 65%); background-size:220% 100%; animation:goldsweep2 3s linear infinite; box-shadow:0 0 14px rgba(255,215,120,.5); }
+  @keyframes goldsweep2 { to { background-position:-220% 0; } }
+  .bsr .sw-aurora { animation:aurora 6s ease-in-out infinite alternate; }
+  @keyframes aurora { from{background:rgb(200,110,255); box-shadow:0 0 16px rgba(200,110,255,.6)} to{background:rgb(120,255,180); box-shadow:0 0 16px rgba(120,255,180,.6)} }
+  .bsr .sw-prism { background:#ff5a5a; animation:prism 8s linear infinite; box-shadow:0 0 16px rgba(255,255,255,.35); }
+  @keyframes prism { to { filter:hue-rotate(360deg); } }
+
+  /* ================= STYLES ================= */
+  .bsr .halo-wrap { position:relative; width:64px; height:64px; display:flex; align-items:center; justify-content:center; }
+  .bsr .st-ring { width:42px; height:42px; border-radius:50%; border:8px solid var(--cy); box-shadow:0 0 12px rgba(57,214,224,.5), inset 0 0 8px rgba(57,214,224,.3); }
+  .bsr .st-pulse { width:32px; height:32px; border-radius:50%; background:var(--cy); box-shadow:0 0 12px rgba(57,214,224,.6); }
+  .bsr .st-pulse::after { content:""; position:absolute; inset:0; margin:auto; width:32px; height:32px; border-radius:50%; border:3px solid var(--cy); animation:ripple 1.6s ease-out infinite; }
+  @keyframes ripple { from{transform:scale(1); opacity:.8} to{transform:scale(1.9); opacity:0} }
+  .bsr .orbit-carrier { position:absolute; inset:0; animation:spin 3s linear infinite; }
+  @keyframes spin { to{transform:rotate(360deg)} }
+  .bsr .orbit-carrier i { position:absolute; width:10px; height:10px; border-radius:50%; background:var(--cy); box-shadow:0 0 8px rgba(57,214,224,.7); }
+  .bsr .orbit-carrier i:first-child { left:-1px; top:50%; margin-top:-5px; } .bsr .orbit-carrier i:last-child { right:-1px; top:50%; margin-top:-5px; }
+  .bsr .st-orbit-core { width:28px; height:28px; border-radius:50%; background:var(--cy); box-shadow:0 0 12px rgba(57,214,224,.6); }
+  .bsr .st-hexline { width:44px; height:44px; background:transparent; clip-path:polygon(50% 0,93% 25%,93% 75%,50% 100%,7% 75%,7% 25%); position:relative; animation:spin 9s linear infinite; }
+  .bsr .st-hexline::before { content:""; position:absolute; inset:0; background:var(--cy); clip-path:polygon(50% 0,93% 25%,93% 75%,50% 100%,7% 75%,7% 25%); }
+  .bsr .st-hexline::after { content:""; position:absolute; inset:6px; background:#171621; opacity:.92; clip-path:polygon(50% 0,93% 25%,93% 75%,50% 100%,7% 75%,7% 25%); }
+  .bsr .hex-stage-fix::after { background:#3a2a47; opacity:1; }
+  .bsr .st-marquee { position:absolute; inset:8px; border-radius:50%; }
+  .bsr .st-marquee i { position:absolute; width:8px; height:8px; border-radius:50%; background:var(--cy); animation:chase 1.2s steps(1) infinite; }
+  .bsr .st-marquee i:nth-child(1){top:-4px;left:50%;margin-left:-4px;animation-delay:0s} .bsr .st-marquee i:nth-child(2){top:9%;right:2%;animation-delay:.15s}
+  .bsr .st-marquee i:nth-child(3){top:50%;right:-4px;margin-top:-4px;animation-delay:.3s} .bsr .st-marquee i:nth-child(4){bottom:9%;right:2%;animation-delay:.45s}
+  .bsr .st-marquee i:nth-child(5){bottom:-4px;left:50%;margin-left:-4px;animation-delay:.6s} .bsr .st-marquee i:nth-child(6){bottom:9%;left:2%;animation-delay:.75s}
+  .bsr .st-marquee i:nth-child(7){top:50%;left:-4px;margin-top:-4px;animation-delay:.9s} .bsr .st-marquee i:nth-child(8){top:9%;left:2%;animation-delay:1.05s}
+  @keyframes chase { 0%{opacity:1; box-shadow:0 0 10px rgba(57,214,224,.9)} 25%{opacity:.25; box-shadow:none} 100%{opacity:.25} }
+  .bsr .st-marquee-core { width:22px; height:22px; border-radius:50%; background:var(--cy); box-shadow:0 0 10px rgba(57,214,224,.6); }
+  .bsr .st-eclipse { width:42px; height:42px; border-radius:50%; background:#191026; border:6px solid var(--cy); box-shadow:0 0 20px rgba(57,214,224,.75), inset 0 0 10px rgba(57,214,224,.25); }
+  .bsr .st-constel { position:absolute; inset:2px; animation:spin 14s linear infinite; }
+  .bsr .st-constel .star { position:absolute; width:10px; height:10px; background:var(--cy); clip-path:polygon(50% 0,62% 38%,100% 50%,62% 62%,50% 100%,38% 62%,0 50%,38% 38%); filter:drop-shadow(0 0 4px rgba(57,214,224,.9)); animation:twinkle 2.2s ease-in-out infinite; }
+  .bsr .st-constel .star:nth-child(1){top:2px;left:46%;animation-delay:0s} .bsr .st-constel .star:nth-child(2){bottom:16%;left:8%;animation-delay:.7s} .bsr .st-constel .star:nth-child(3){bottom:16%;right:8%;animation-delay:1.4s}
+  @keyframes twinkle { 0%,100%{transform:scale(1)} 50%{transform:scale(1.45)} }
+  .bsr .st-constel .link { position:absolute; height:1.5px; background:rgba(57,214,224,.4); }
+  .bsr .st-constel .link:nth-child(4){ width:38px; top:31%; left:13%; transform:rotate(56deg); } .bsr .st-constel .link:nth-child(5){ width:38px; top:31%; right:13%; transform:rotate(-56deg); } .bsr .st-constel .link:nth-child(6){ width:40px; bottom:19%; left:19%; }
+  .bsr .st-turbine { width:48px; height:48px; border-radius:50%; background:repeating-conic-gradient(#2a2436 0 22deg, var(--cy) 22deg 30deg); animation:spin 5s linear infinite; box-shadow:0 0 16px rgba(57,214,224,.5); position:relative; }
+  .bsr .st-turbine::after { content:""; position:absolute; inset:13px; border-radius:50%; background:#171621; border:3px solid var(--cy); box-shadow:0 0 8px rgba(57,214,224,.6); }
+  .bsr .turbine-stage::after { background:#3a2a47; }
+  .bsr .st-seraph-core { width:20px; height:20px; border-radius:50%; background:var(--cy); box-shadow:0 0 14px rgba(57,214,224,.8); }
+  .bsr .st-seraph-core::after { content:""; position:absolute; inset:0; margin:auto; width:20px; height:20px; border-radius:50%; border:2px solid var(--cy); animation:ripple 2.4s ease-out infinite; }
+  .bsr .seraph-ring { position:absolute; inset:5px; border-radius:50%; border:2.5px solid rgba(57,214,224,.85); animation:spin 6s linear infinite; box-shadow:0 0 10px rgba(57,214,224,.4); }
+  .bsr .seraph-ring i { position:absolute; width:8px; height:8px; background:var(--cy); border-radius:2px; transform:rotate(45deg); box-shadow:0 0 8px rgba(57,214,224,.8); }
+  .bsr .seraph-ring i:nth-child(1){ top:-4px; left:50%; margin-left:-4px; } .bsr .seraph-ring i:nth-child(2){ bottom:5px; left:-2px; } .bsr .seraph-ring i:nth-child(3){ bottom:5px; right:-2px; }
+  /* GEMINI — the swap motif: two souls trading places */
+  .bsr .st-gemini { position:absolute; inset:0; }
+  .bsr .st-gemini i { position:absolute; top:50%; width:19px; height:19px; margin-top:-9px; border-radius:50%; background:var(--cy); box-shadow:0 0 12px rgba(57,214,224,.75); }
+  .bsr .st-gemini i:nth-child(1) { left:6px; animation:swapA 2.6s cubic-bezier(.6,-0.2,.4,1.2) infinite; }
+  .bsr .st-gemini i:nth-child(2) { right:6px; animation:swapB 2.6s cubic-bezier(.6,-0.2,.4,1.2) infinite; opacity:.85; transform:scale(.82); }
+  @keyframes swapA { 0%,18%{transform:translate(0,0)} 48%,68%{transform:translate(33px,-16px)} 82%,100%{transform:translate(0,0)} }
+  @keyframes swapB { 0%,18%{transform:scale(.82) translate(0,0)} 48%,68%{transform:scale(.82) translate(-40px,19px)} 82%,100%{transform:scale(.82) translate(0,0)} }
+
+  /* ================= TRAILS ================= */
+  .bsr .track { position:relative; width:90%; height:56px; overflow:hidden; }
+  .bsr .runner { position:absolute; right:5px; top:50%; width:12px; height:12px; margin-top:-6px; border-radius:50%; background:var(--cy); box-shadow:0 0 10px rgba(57,214,224,.8); animation:bob2 2.2s ease-in-out infinite; z-index:3; }
+  @keyframes bob2 { 0%,100%{transform:translateY(-4px)} 50%{transform:translateY(4px)} }
+  .bsr .ribbon { position:absolute; right:12px; left:0; top:50%; animation:bob2 2.2s ease-in-out infinite; }
+  .bsr .tr-wisp { height:4px; margin-top:-2px; background:linear-gradient(90deg,transparent,rgba(57,214,224,.75)); border-radius:2px; }
+  .bsr .tr-skate-a { height:3px; margin-top:-8px; background:linear-gradient(90deg,transparent,rgba(57,214,224,.8)); border-radius:2px; }
+  .bsr .tr-skate-b { height:3px; margin-top:6px; background:linear-gradient(90deg,transparent 12%,rgba(57,214,224,.8)); border-radius:2px; }
+  .bsr .tr-stream { height:15px; margin-top:-7px; background:linear-gradient(90deg,transparent,rgba(57,214,224,.85)); border-radius:8px; }
+  .bsr .tr-cape { height:30px; margin-top:-15px; background:linear-gradient(90deg,transparent 5%,rgba(57,214,224,.28) 55%,rgba(57,214,224,.75)); border-radius:6px 10px 10px 6px; -webkit-mask:linear-gradient(180deg,#000 0 62%,rgba(0,0,0,.35) 78%,transparent); mask:linear-gradient(180deg,#000 0 62%,rgba(0,0,0,.35) 78%,transparent); }
+  .bsr .tr-comet-core { height:6px; margin-top:-3px; background:linear-gradient(90deg,transparent,#bffcff); border-radius:3px; z-index:2; }
+  .bsr .tr-comet-glow { height:22px; margin-top:-11px; background:linear-gradient(90deg,transparent,rgba(57,214,224,.4)); border-radius:11px; filter:blur(1.5px); }
+  .bsr .tr-helix-a, .bsr .tr-helix-b { height:6px; border-radius:3px; background:linear-gradient(90deg,transparent,rgba(57,214,224,.9)); -webkit-mask:repeating-linear-gradient(90deg,#000 0 26px, rgba(0,0,0,.15) 26px 52px); mask:repeating-linear-gradient(90deg,#000 0 26px, rgba(0,0,0,.15) 26px 52px); }
+  .bsr .tr-helix-a { margin-top:-3px; animation:helixA 1.5s ease-in-out infinite, bob2 2.2s ease-in-out infinite; }
+  .bsr .tr-helix-b { margin-top:-3px; opacity:.75; animation:helixB 1.5s ease-in-out infinite, bob2 2.2s ease-in-out infinite; -webkit-mask-position:26px 0; mask-position:26px 0; }
+  @keyframes helixA { 0%,100%{transform:translateY(-8px)} 50%{transform:translateY(8px)} }
+  @keyframes helixB { 0%,100%{transform:translateY(8px)} 50%{transform:translateY(-8px)} }
+  .bsr .tr-meteor-a { height:7px; margin-top:-11px; background:linear-gradient(90deg,transparent,rgba(57,214,224,.9)); border-radius:4px; transform:skewY(2.5deg); animation:mpulse 1.1s ease-in-out infinite, bob2 2.2s ease-in-out infinite; }
+  .bsr .tr-meteor-b { height:7px; margin-top:4px; background:linear-gradient(90deg,transparent,rgba(57,214,224,.9)); border-radius:4px; transform:skewY(-2.5deg); animation:mpulse 1.1s ease-in-out .55s infinite, bob2 2.2s ease-in-out infinite; }
+  @keyframes mpulse { 0%,100%{opacity:.55} 50%{opacity:1} }
+  /* SKYBOUND — ignites only while airborne */
+  .bsr .sky-runner { position:absolute; right:5px; top:50%; width:12px; height:12px; margin-top:-6px; border-radius:50%; background:var(--cy); box-shadow:0 0 10px rgba(57,214,224,.8); animation:hop 2.4s cubic-bezier(.5,0,.5,1) infinite; z-index:3; }
+  @keyframes hop { 0%,14%{transform:translateY(14px)} 38%{transform:translateY(-16px)} 60%,74%{transform:translateY(14px)} 84%{transform:translateY(-4px)} 94%,100%{transform:translateY(14px)} }
+  .bsr .tr-skybound { height:16px; margin-top:-8px; background:linear-gradient(90deg,transparent,#a5f3f8 92%,#fff); border-radius:8px; animation:hopTrail 2.4s cubic-bezier(.5,0,.5,1) infinite; }
+  @keyframes hopTrail { 0%,14%{opacity:0; transform:translateY(14px)} 22%{opacity:1} 38%{opacity:1; transform:translateY(-16px)} 52%{opacity:1} 60%,74%{opacity:0; transform:translateY(14px)} 84%{opacity:.8; transform:translateY(-4px)} 94%,100%{opacity:0; transform:translateY(14px)} }
+  .bsr .groundline { position:absolute; bottom:8px; left:4%; right:4%; height:2px; background:rgba(255,255,255,.14); border-radius:1px; }
+
+  .bsr .pricing { width:100%; border-collapse:collapse; margin-top:10px; font-size:12.5px; }
+  .bsr .pricing th { font-family:'Fredoka'; font-weight:600; text-align:left; color:#fff; border-bottom:1px solid #3a4150; padding:6px 8px; }
+  .bsr .pricing td { padding:6px 8px; border-bottom:1px solid #262b38; color:#c8cdd8; }
+</style>
+
+<div class="bsr">
+<h2>Soul Shop v2 — expanded catalog (29 items)</h2>
+<p class="lede">Round two, designed against one test: <b>could any other game sell this?</b> If yes, it got cut or reworked. Ten new concepts pull directly from the game's own identity — the swap motif from your store icon, the broadcast marquee, Hex-A-Gone, the Soul Turbine, and the JUMP mechanic. Everything remains particle-free (billboard UI + Trail instances). Click any card to flag it; NEW chips mark v2 additions.</p>
+
+<div class="divider"></div>
+<h3>Halo colors — 12</h3>
+<p class="subtitle2">Three families: <b>pale light</b> (commons), <b>living color</b> (animated), and <b>broadcast glitch</b> (the game-show family — hard cuts, not smooth fades).</p>
+<div class="igrid" data-multiselect>
+  <div class="item" data-choice="c-moonlit" onclick="toggleSelect(this)"><div class="stage"><div class="dot44 sw-moonlit"></div></div>
+    <div class="meta"><div class="nm">Moonlit</div><div class="why">Pale lavender-white. The first buy: obviously not one of the 8 free hues.</div><div class="rowline"><span class="tag t-common">COMMON</span><span class="price">◈ 200</span></div></div></div>
+  <div class="item" data-choice="c-frostbite" onclick="toggleSelect(this)"><div class="stage"><div class="dot44 sw-frostbite"></div></div>
+    <div class="meta"><div class="nm">Frostbite</div><div class="why">Glacial ice-light — far paler than free cyan.</div><div class="rowline"><span class="tag t-common">COMMON</span><span class="price">◈ 200</span></div></div></div>
+  <div class="item" data-choice="c-seafoam" onclick="toggleSelect(this)"><div class="stage"><div class="dot44 sw-seafoam"></div></div>
+    <div class="meta"><div class="nm">Seafoam</div><div class="why">Soft mint glow, the pastel answer to free green.</div><div class="rowline"><span class="tag t-common">COMMON</span><span class="price">◈ 200</span></div></div></div>
+  <div class="item" data-choice="c-ember" onclick="toggleSelect(this)"><div class="stage"><div class="dot44 sw-ember"></div></div>
+    <div class="meta"><div class="nm">Ember</div><div class="why">Irregular fire-flicker, crimson→hot orange. Motion is the identity.</div><div class="rowline"><span class="tag t-uncommon">UNCOMMON</span><span class="price">◈ 450</span></div></div></div>
+  <div class="item" data-choice="c-tidepool" onclick="toggleSelect(this)"><div class="stage"><div class="dot44 sw-tidepool"></div></div>
+    <div class="meta"><div class="nm">Tidepool</div><div class="why">Slow 4s breathe, deep ocean to tropical shallows.</div><div class="rowline"><span class="tag t-uncommon">UNCOMMON</span><span class="price">◈ 450</span></div></div></div>
+  <div class="item" data-choice="c-neonbuzz" onclick="toggleSelect(this)"><span class="newpill">NEW</span><div class="stage"><div class="dot44 sw-neonbuzz"></div></div>
+    <div class="meta"><div class="nm">Neon Buzz</div><div class="why">A failing marquee sign: warm neon that stutters, dies, and snaps back. Pure broadcast-world.</div><div class="rowline"><span class="tag t-uncommon">UNCOMMON</span><span class="price">◈ 450</span></div></div></div>
+  <div class="item" data-choice="c-void" onclick="toggleSelect(this)"><div class="stage"><div class="dot44 sw-void"></div></div>
+    <div class="meta"><div class="nm">Void</div><div class="why">Near-black heart in a luminous violet rim — legible by construction.</div><div class="rowline"><span class="tag t-rare">RARE</span><span class="price">◈ 900</span></div></div></div>
+  <div class="item" data-choice="c-static" onclick="toggleSelect(this)"><span class="newpill">NEW</span><div class="stage"><div class="dot44 sw-static"></div></div>
+    <div class="meta"><div class="nm">Static</div><div class="why">Channel-hop: hard snaps between off-air tints. The soul of a broken broadcast.</div><div class="rowline"><span class="tag t-rare">RARE</span><span class="price">◈ 900</span></div></div></div>
+  <div class="item" data-choice="c-duskfall" onclick="toggleSelect(this)"><span class="newpill">NEW</span><div class="stage"><div class="dot44 sw-duskfall"></div></div>
+    <div class="meta"><div class="nm">Duskfall</div><div class="why">The festival sunset itself — a plum→rose→amber gradient that slowly sets and rises inside your halo.</div><div class="rowline"><span class="tag t-rare">RARE</span><span class="price">◈ 900</span></div></div></div>
+  <div class="item" data-choice="c-gilded" onclick="toggleSelect(this)"><div class="stage"><div class="dot44 sw-gilded"></div></div>
+    <div class="meta"><div class="nm">Gilded</div><div class="why">Metallic sweep in the sweeper-lantern gold.</div><div class="rowline"><span class="tag t-epic">EPIC</span><span class="price">◈ 1,800</span></div></div></div>
+  <div class="item" data-choice="c-aurora" onclick="toggleSelect(this)"><div class="stage"><div class="dot44 sw-aurora"></div></div>
+    <div class="meta"><div class="nm">Aurora</div><div class="why">Drifts purple→green on the sky-aurora's exact base color. Wear the sky.</div><div class="rowline"><span class="tag t-epic">EPIC</span><span class="price">◈ 1,800</span></div></div></div>
+  <div class="item legendary" data-choice="c-prism" onclick="toggleSelect(this)"><div class="stage"><div class="dot44 sw-prism"></div></div>
+    <div class="meta"><div class="nm">Prism</div><div class="why">Full 8s hue orbit. THE rainbow one — one per server if you're lucky.</div><div class="rowline"><span class="tag t-legend">LEGENDARY</span><span class="price">◈ 4,000</span></div></div></div>
+</div>
+
+<div class="divider"></div>
+<h3>Halo styles — 9</h3>
+<p class="subtitle2">Every style is a colorless frame for your equipped color. New in v2: three arena/broadcast homages and <b>Gemini</b> — the swap motif itself, promoted to flagship legendary.</p>
+<div class="igrid" data-multiselect>
+  <div class="item" data-choice="s-ring" onclick="toggleSelect(this)"><div class="stage"><div class="halo-wrap"><div class="st-ring"></div></div></div>
+    <div class="meta"><div class="nm">Ring</div><div class="why">The literal halo. Quiet confidence; the style entry point.</div><div class="rowline"><span class="tag t-uncommon">UNCOMMON</span><span class="price">◈ 450</span></div></div></div>
+  <div class="item" data-choice="s-pulse" onclick="toggleSelect(this)"><div class="stage"><div class="halo-wrap"><div class="st-pulse"></div></div></div>
+    <div class="meta"><div class="nm">Pulse</div><div class="why">A heartbeat ripple every 1.6s. Alive without being busy.</div><div class="rowline"><span class="tag t-uncommon">UNCOMMON</span><span class="price">◈ 450</span></div></div></div>
+  <div class="item" data-choice="s-orbit" onclick="toggleSelect(this)"><div class="stage"><div class="halo-wrap"><div class="st-orbit-core"></div><div class="orbit-carrier"><i></i><i></i></div></div></div>
+    <div class="meta"><div class="nm">Twin Orbit</div><div class="why">Two satellites circling your core; motion reads at any distance.</div><div class="rowline"><span class="tag t-rare">RARE</span><span class="price">◈ 900</span></div></div></div>
+  <div class="item" data-choice="s-hexline" onclick="toggleSelect(this)"><span class="newpill">NEW</span><div class="stage"><div class="halo-wrap"><div class="st-hexline hex-stage-fix"></div></div></div>
+    <div class="meta"><div class="nm">Hexline</div><div class="why">A slow-turning hex-tile outline — Hex-A-Gone worn as a crown. Arena pride.</div><div class="rowline"><span class="tag t-rare">RARE</span><span class="price">◈ 900</span></div></div></div>
+  <div class="item" data-choice="s-marquee" onclick="toggleSelect(this)"><span class="newpill">NEW</span><div class="stage"><div class="halo-wrap"><div class="st-marquee-core"></div><div class="st-marquee"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div></div>
+    <div class="meta"><div class="nm">Marquee</div><div class="why">Chase-lights circling your soul, straight off the lobby's show sign. You ARE the headline act.</div><div class="rowline"><span class="tag t-rare">RARE</span><span class="price">◈ 900</span></div></div></div>
+  <div class="item" data-choice="s-eclipse" onclick="toggleSelect(this)"><div class="stage"><div class="halo-wrap"><div class="st-eclipse"></div></div></div>
+    <div class="meta"><div class="nm">Eclipse</div><div class="why">Figure-ground flip: dark heart, blazing corona.</div><div class="rowline"><span class="tag t-epic">EPIC</span><span class="price">◈ 1,800</span></div></div></div>
+  <div class="item" data-choice="s-constellation" onclick="toggleSelect(this)"><span class="newpill">NEW</span><div class="stage"><div class="halo-wrap"><div class="st-constel"><div class="star"></div><div class="star"></div><div class="star"></div><div class="link"></div><div class="link"></div><div class="link"></div></div></div></div>
+    <div class="meta"><div class="nm">Constellation</div><div class="why">Three twinkling stars in a slowly wheeling triangle, faint light-lines between. Your own night sky.</div><div class="rowline"><span class="tag t-epic">EPIC</span><span class="price">◈ 1,800</span></div></div></div>
+  <div class="item" data-choice="s-turbine" onclick="toggleSelect(this)"><span class="newpill">NEW</span><div class="stage"><div class="halo-wrap"><div class="st-turbine turbine-stage"></div></div></div>
+    <div class="meta"><div class="nm">Turbine</div><div class="why">The Soul Sweeper's 12-seam disc, miniaturized and spinning over your head. Survived the arena? Wear the arena.</div><div class="rowline"><span class="tag t-epic">EPIC</span><span class="price">◈ 1,800</span></div></div></div>
+  <div class="item legendary" data-choice="s-gemini" onclick="toggleSelect(this)"><span class="newpill">NEW</span><div class="stage"><div class="halo-wrap"><div class="st-gemini"><i></i><i></i></div></div></div>
+    <div class="meta"><div class="nm">Gemini</div><div class="why">Two souls forever trading places — the swap itself, worn as a halo. The store icon's ⇄ made living. The flagship.</div><div class="rowline"><span class="tag t-legend">LEGENDARY</span><span class="price">◈ 4,000</span></div></div></div>
+</div>
+
+<div class="divider"></div>
+<h3>Soul trails — 8</h3>
+<p class="subtitle2">New in v2: feet-level <b>Skates</b>, the vertical <b>Cape</b>, corkscrew <b>Helix</b>, and the legendary <b>Skybound</b> — a trail that only ignites while you're airborne, in the game whose bars scream JUMP.</p>
+<div class="igrid" data-multiselect>
+  <div class="item" data-choice="t-wisp" onclick="toggleSelect(this)"><div class="stage"><div class="track"><div class="ribbon tr-wisp"></div><div class="runner"></div></div></div>
+    <div class="meta"><div class="nm">Wisp</div><div class="why">A thin whisper of light. The subtle entry trail.</div><div class="rowline"><span class="tag t-uncommon">UNCOMMON</span><span class="price">◈ 450</span></div></div></div>
+  <div class="item" data-choice="t-skates" onclick="toggleSelect(this)"><span class="newpill">NEW</span><div class="stage"><div class="track"><div class="ribbon tr-skate-a"></div><div class="ribbon tr-skate-b"></div><div class="runner"></div></div></div>
+    <div class="meta"><div class="nm">Skates</div><div class="why">Twin hairlines from your feet — you're not running, you're figure-skating the arena.</div><div class="rowline"><span class="tag t-uncommon">UNCOMMON</span><span class="price">◈ 450</span></div></div></div>
+  <div class="item" data-choice="t-stream" onclick="toggleSelect(this)"><div class="stage"><div class="track"><div class="ribbon tr-stream"></div><div class="runner"></div></div></div>
+    <div class="meta"><div class="nm">Soul Stream</div><div class="why">The full silk ribbon. The definitive soul-trail.</div><div class="rowline"><span class="tag t-rare">RARE</span><span class="price">◈ 900</span></div></div></div>
+  <div class="item" data-choice="t-cape" onclick="toggleSelect(this)"><span class="newpill">NEW</span><div class="stage"><div class="track"><div class="ribbon tr-cape"></div><div class="runner"></div></div></div>
+    <div class="meta"><div class="nm">Cape</div><div class="why">A tall banner of light from head to waist — a superhero cape made of your soul color.</div><div class="rowline"><span class="tag t-rare">RARE</span><span class="price">◈ 900</span></div></div></div>
+  <div class="item" data-choice="t-comet" onclick="toggleSelect(this)"><div class="stage"><div class="track"><div class="ribbon tr-comet-glow"></div><div class="ribbon tr-comet-core"></div><div class="runner"></div></div></div>
+    <div class="meta"><div class="nm">Comet</div><div class="why">White-hot core in a soft color sheath — the sweeper's embedded-neon language, worn.</div><div class="rowline"><span class="tag t-epic">EPIC</span><span class="price">◈ 1,800</span></div></div></div>
+  <div class="item" data-choice="t-helix" onclick="toggleSelect(this)"><span class="newpill">NEW</span><div class="stage"><div class="track"><div class="ribbon tr-helix-a"></div><div class="ribbon tr-helix-b"></div><div class="runner"></div></div></div>
+    <div class="meta"><div class="nm">Helix</div><div class="why">Two strands corkscrewing behind you — a DNA ribbon of light, from spinning attachment points.</div><div class="rowline"><span class="tag t-epic">EPIC</span><span class="price">◈ 1,800</span></div></div></div>
+  <div class="item" data-choice="t-meteor" onclick="toggleSelect(this)"><div class="stage"><div class="track"><div class="ribbon tr-meteor-a"></div><div class="ribbon tr-meteor-b"></div><div class="runner"></div></div></div>
+    <div class="meta"><div class="nm">Meteor</div><div class="why">Twin alternating-pulse shoulder streams. (Demoted from legendary — Skybound outclassed it.)</div><div class="rowline"><span class="tag t-epic">EPIC</span><span class="price">◈ 1,800</span></div></div></div>
+  <div class="item legendary" data-choice="t-skybound" onclick="toggleSelect(this)"><span class="newpill">NEW</span><div class="stage"><div class="track"><div class="groundline"></div><div class="ribbon tr-skybound"></div><div class="sky-runner"></div></div></div>
+    <div class="meta"><div class="nm">Skybound</div><div class="why">Ignites ONLY while airborne — wings that exist mid-jump and vanish on landing. In the game whose amber bars scream JUMP, every hop becomes a signature.</div><div class="rowline"><span class="tag t-legend">LEGENDARY</span><span class="price">◈ 4,000</span></div></div></div>
+</div>
+
+<div class="divider"></div>
+<h3>What changed from v1, and why</h3>
+<div class="iter-note" style="margin-top:8px">
+<b>Added a third color family.</b> v1's colors were all "pretty light." The broadcast-glitch family (Neon Buzz, Static) uses HARD cuts — steps, not tweens — a motion signature no smooth-fading color can be confused with, and it's the first cosmetic lane that could only belong to a game-show world. Duskfall brings the world's own sunset into the halo.<br><br>
+<b>Styles now tell the game's story.</b> v1's styles were good geometry but generic (any game could ship Ring/Pulse). v2 adds four homages with real lore: Hexline (the arena), Marquee (the show), Turbine (the sweeper monument), Constellation (the festival night sky) — and <b>Gemini</b>, two souls endlessly trading places: the entire game in one halo, and the same ⇄ motif as the shipped store icon. It replaces Seraph as the legendary style; Seraph was cut — ornate but story-less, and its shard-ring read as noise at 24px next to Gemini's clean two-dot swap.<br><br>
+<b>Trails got verticality and behavior.</b> v1 trails were all horizontal ribbons of different widths. v2 adds the feet plane (Skates), the vertical plane (Cape), rotation (Helix), and state-reactivity (Skybound — airborne-only ignition, reading jump state client-side; zero server involvement, zero fairness surface: it shows information everyone already sees). Meteor demoted to Epic; a legendary should be a mechanic, not a bigger ribbon.<br><br>
+<b>Count: 29 items</b> (12 colors / 9 styles / 8 trails) · rarity spread: 3C / 6U / 8R / 9E / 3L · prices unchanged (◈200/450/900/1,800/4,000). Sum to own everything: ◈ 35,750 ≈ a committed month — the GDD's "~3 months for a meaningful collection" leaves headroom for slices 2–3.
+</div>
+</div>

@@ -19,6 +19,7 @@ local WorldShell = require(script.WorldShell)
 local ArenaDressing = require(script.ArenaDressing)
 local LobbyStage = require(script.LobbyStage)
 local ClientEconomyHud = require(script.ClientEconomyHud)
+local ClientShopHud = require(script.ClientShopHud)
 local DeviceOrientation = require(script.DeviceOrientation)
 local SweeperController = require(script.SweeperController)
 
@@ -33,6 +34,7 @@ WorldShell.start()
 ArenaDressing.start()
 LobbyStage.start()
 ClientEconomyHud.start()
+ClientShopHud.start()
 DeviceOrientation.start()
 
 -- Soul Sweeper (arena #2) cosmetics: T4 glow-up dressing (wedge seams/rim ring/
