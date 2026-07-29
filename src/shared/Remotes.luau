@@ -19,6 +19,8 @@ local REMOTE_EVENTS = {
 	"RewardGranted",  -- server->client: per-round reward delta { coins, xp, leveledUp }
 	"ProfileUpdated", -- server->client: authoritative HUD state { coins, level, xpIntoLevel, xpForNext, progress }
 	"ShowHint",       -- server->client: first-session hint { id, text, duration, anchor }
+	"ShopRequest", -- client->server (THE FIRST): { action = "buy"|"equip", itemId, kind? } -- a CLAIM, validated server-side (spec §5.2)
+	"ShopResult",  -- server->client: { ok, action, itemId, err? }
 }
 
 local function getFolder()

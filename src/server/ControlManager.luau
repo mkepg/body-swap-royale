@@ -16,7 +16,10 @@ local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local ControlModel = require(ReplicatedStorage.Shared.ControlModel)
 local SoulPalette = require(ReplicatedStorage.Shared.SoulPalette)
 local Config = require(ReplicatedStorage.Shared.Config)
+local SoulResolveModel = require(ReplicatedStorage.Shared.SoulResolveModel)
+local ShopCatalog = require(ReplicatedStorage.Shared.ShopCatalog)
 local BodyManager = require(script.Parent.BodyManager)
+local EconomyService = require(script.Parent.EconomyService)
 local SetControlledBody = Remotes.get("SetControlledBody")
 local SoulMap = Remotes.get("SoulMap")
 
@@ -27,14 +30,28 @@ local model = ControlModel.new()
 local soulColor = {} -- [player] = Color3
 local soulIndex = 0
 
--- Broadcast every controlled body's current Soul color so each client can place
--- a halo on it (and follow it across swaps). Built from the live control map.
+-- Broadcast every controlled body's RESOLVED Soul identity (spec §5.4): the
+-- equipped premium color when valid, else the auto-assigned palette color --
+-- resolved HERE so every consumer of "player X's color" agrees by construction.
+-- Entries also carry equip ids for client-side style/anim/trail rendering.
 function ControlManager.broadcastSoulMap()
 	local list = {}
 	for body, player in pairs(model.controllerOf) do
-		local color = soulColor[player]
-		if color then
-			list[#list + 1] = { body = body, color = color }
+		local assigned = soulColor[player]
+		if assigned then
+			local profile = EconomyService.getProfile(player)
+			local resolved = SoulResolveModel.resolve(
+				profile and profile.equipped or nil, ShopCatalog,
+				{ r = math.floor(assigned.R * 255 + 0.5),
+				  g = math.floor(assigned.G * 255 + 0.5),
+				  b = math.floor(assigned.B * 255 + 0.5) })
+			list[#list + 1] = {
+				body = body,
+				color = Color3.fromRGB(resolved.fill.r, resolved.fill.g, resolved.fill.b),
+				colorId = resolved.colorId,
+				styleId = resolved.styleId,
+				trailId = resolved.trailId,
+			}
 		end
 	end
 	SoulMap:FireAllClients(list)
