@@ -1,0 +1,26 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  specs:
+    name: Lune specs
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Pinned to the same lune version as rokit.toml. Bump both together.
+      - name: Install lune 0.10.4
+        run: |
+          curl -fsSL -o lune.zip \
+            https://github.com/lune-org/lune/releases/download/v0.10.4/lune-0.10.4-linux-x86_64.zip
+          unzip -q lune.zip -d "$RUNNER_TEMP/lune"
+          chmod +x "$RUNNER_TEMP/lune/lune"
+          echo "$RUNNER_TEMP/lune" >> "$GITHUB_PATH"
+
+      - name: Run specs
+        run: bash scripts/test.sh
