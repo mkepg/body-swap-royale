@@ -17,7 +17,7 @@
 **Every commit that touches Config.luau MUST use this exact procedure** (interactive `git add -p` is unavailable):
 
 ```bash
-cd "c:/Users/gomez/repos/Roblox_Projects/body-swap-royale"
+cd "<repo-root>"
 # 1. Temporarily restore committed values (working tree only)
 sed -i 's/^Config.ARENA_OVERRIDE = "sweeper"$/Config.ARENA_OVERRIDE = ""/' src/shared/Config.luau
 sed -i 's/^Config.SOLO_TEST_MODE = true$/Config.SOLO_TEST_MODE = false/' src/shared/Config.luau
@@ -37,7 +37,7 @@ git diff src/shared/Config.luau | grep -cE '^\+Config\.(ARENA_OVERRIDE = "sweepe
 ## Test command (used by every task)
 
 ```bash
-cd "c:/Users/gomez/repos/Roblox_Projects/body-swap-royale"
+cd "<repo-root>"
 export PATH="$HOME/.rokit/bin:$PATH"
 for f in tests/*.spec.luau; do lune run "$f" || { echo "FAILED: $f"; break; }; done
 ```

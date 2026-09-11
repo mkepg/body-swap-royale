@@ -6,7 +6,7 @@
 
 **Tech Stack:** Markdown docs; Windows PowerShell + `System.Drawing` (no working ImageMagick); Git Bash for git. Reference spec: `docs/specs/2026-07-12-experience-thumbnails-design.md`.
 
-**Conventions for every task:** run commands from repo root `c:/Users/gomez/repos/Roblox_Projects/body-swap-royale`. NEVER `git add -A`/`git add .`; stage only the exact files named. NEVER stage `src/shared/Config.luau` (uncommitted dev flips). Branch is already `feat/experience-thumbnails`.
+**Conventions for every task:** run commands from repo root `<repo-root>`. NEVER `git add -A`/`git add .`; stage only the exact files named. NEVER stage `src/shared/Config.luau` (uncommitted dev flips). Branch is already `feat/experience-thumbnails`.
 
 ---
 
@@ -457,8 +457,8 @@ git commit -m "feat(thumbnails): add composite-caption.ps1 (Fredoka caption band
 ## Task 6: End-to-end dry run + memory update
 
 **Files:**
-- Modify: `C:/Users/gomez/.claude/projects/c--Users-gomez-repos-Roblox-Projects-body-swap-royale/memory/MEMORY.md`
-- Create: `C:/Users/gomez/.claude/projects/c--Users-gomez-repos-Roblox-Projects-body-swap-royale/memory/experience-thumbnails-slice.md`
+- Modify: `<project-memory>/MEMORY.md`
+- Create: `<project-memory>/experience-thumbnails-slice.md`
 
 - [ ] **Step 1: Dry-run the full finalize chain on the reference image**
 
