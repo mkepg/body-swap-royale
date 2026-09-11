@@ -16,7 +16,7 @@ self-contained: every prompt needed is inline, so it works even if the other
 
 ## 0. Project context (read before doing anything)
 
-- **Repo:** `C:\Users\gomez\repos\Roblox_Projects\body-swap-royale` (Roblox/Luau, Rojo).
+- **Repo:** `<repo-root>` (Roblox/Luau, Rojo).
 - **Branch discipline:** start work on a fresh branch off `main`. The arena-dim
   work is merged; the icon kit was committed on an **un-merged** branch
   (`feat/experience-icon`) and currently also exists as **untracked** files under

@@ -4,6 +4,33 @@ All notable changes to this project are documented here.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2026-09-11]
+
+### Added
+- **Continuous integration.** `.github/workflows/ci.yml` runs the full Lune spec suite on
+  every push and pull request, installing the same lune 0.10.4 pinned in `rokit.toml`
+  directly from its release rather than via a third-party action, so CI and local runs
+  execute byte-identical tooling. The workflow invokes `bash scripts/test.sh` — the same
+  entry point used locally, so there is no second, drifting definition of "the tests."
+- **`LICENSE` — source-available, all rights reserved.** Reading, study, and running the
+  code to evaluate it are explicitly permitted; redistribution and shipping it as another
+  experience are not. Chosen over MIT deliberately: MIT would license a commercial Roblox
+  game for anyone to clone and publish.
+- **Four real gameplay screenshots** under `docs/marketing/screenshots/`, captured from a
+  live Studio session (Hex-A-Gone, Soul Sweeper, the lobby, the Soul Shop). The repo
+  previously had only generated marketing art, which showed what the game was *pitched* as
+  rather than what it renders.
+- **`docs/README.md`** — an index over the 36 specs, 36 plans, 21 smoke-test procedures and
+  the GDD/TDD, grouped by the system each slice builds.
+
+### Changed
+- **README rewritten for a reader who has never seen the project.** It now leads with the
+  hero capture and the architecture story the TDD already recorded — the two networking
+  models that were prototyped and rejected before network-ownership transfer was adopted —
+  and states plainly why the codebase is testable at all: pure logic lives in Roblox-free
+  `src/shared/` modules, which is what lets 33 specs run in CI with no engine present.
+  Also documents the `SOLO_TEST_MODE` caveat that rounds need two players to start.
+
 ## [2026-07-27]
 
 ### Changed
