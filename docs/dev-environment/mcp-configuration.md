@@ -22,7 +22,7 @@ scope. Local-scope MCP servers are stored under the *project key* inside
 `~/.claude.json`:
 
 ```
-projects → "C:/Users/gomez/repos/Roblox_Projects/body-swap-royale" → mcpServers
+projects → "<absolute-path-to-this-repo>" → mcpServers
 ```
 
 The Claude Code CLI resolves that project key from its working directory, so the
