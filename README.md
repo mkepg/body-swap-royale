@@ -6,7 +6,7 @@ Players are periodically reshuffled into each other's avatars on a shrinking
 arena. The body you are standing in right now is not yours, it will not be yours
 in thirty seconds, and the last surviving body wins the round.
 
-[![CI](https://github.com/KaeL-0/body-swap-royale/actions/workflows/ci.yml/badge.svg)](https://github.com/KaeL-0/body-swap-royale/actions/workflows/ci.yml)
+[![CI](https://github.com/mkepg/body-swap-royale/actions/workflows/ci.yml/badge.svg)](https://github.com/mkepg/body-swap-royale/actions/workflows/ci.yml)
 ![Luau](https://img.shields.io/badge/Luau-Rojo%207.6.1-00A2FF)
 ![Specs](https://img.shields.io/badge/specs-33%20passing-brightgreen)
 ![Status](https://img.shields.io/badge/status-pre--alpha-orange)
@@ -112,7 +112,7 @@ Studio plugin. Full instructions, including troubleshooting, live in
 [`docs/dev-environment/getting-started.md`](docs/dev-environment/getting-started.md).
 
 ```bash
-git clone https://github.com/KaeL-0/body-swap-royale.git && cd body-swap-royale
+git clone https://github.com/mkepg/body-swap-royale.git && cd body-swap-royale
 rokit install                                # pulls rojo 7.6.1 + lune 0.10.4
 export PATH="$HOME/.rokit/bin:$PATH"         # persist in your shell rc
 rojo plugin install                          # once per machine
