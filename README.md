@@ -11,7 +11,7 @@ in thirty seconds, and the last surviving body wins the round.
 ![Specs](https://img.shields.io/badge/specs-33%20passing-brightgreen)
 ![Status](https://img.shields.io/badge/status-pre--alpha-orange)
 
-🎮 **[Play it on Roblox →](https://www.roblox.com/share?code=33c81f6992e6f247ad092b7e546da6bc&type=ExperienceDetails)**
+🎮 **[Play it on Roblox →](https://www.roblox.com/games/126417156496497/Body-Swap-Royale)**
 
 ![The Hex-A-Gone arena](docs/marketing/screenshots/01-hex-arena.png)
 
