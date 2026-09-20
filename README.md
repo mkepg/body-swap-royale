@@ -11,6 +11,8 @@ in thirty seconds, and the last surviving body wins the round.
 ![Specs](https://img.shields.io/badge/specs-33%20passing-brightgreen)
 ![Status](https://img.shields.io/badge/status-pre--alpha-orange)
 
+🎮 **[Play it on Roblox →](https://www.roblox.com/share?code=33c81f6992e6f247ad092b7e546da6bc&type=ExperienceDetails)**
+
 ![The Hex-A-Gone arena](docs/marketing/screenshots/01-hex-arena.png)
 
 ---
@@ -105,7 +107,7 @@ system looks the way it does. The architecture section above isn't reconstructed
 after the fact; it's what the documents said at the time, including the parts
 that turned out to be wrong.
 
-## Quickstart
+## Quick start
 
 You need [Rokit](https://github.com/rojo-rbx/rokit), Roblox Studio, and the Rojo
 Studio plugin. Full instructions, including troubleshooting, live in
