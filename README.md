@@ -156,6 +156,12 @@ rokit.toml                    Pinned tool versions
 - [Critical review](docs/reviews/2026-07-03-critical-review.md) — an honest pass over the weak points
 - [CHANGELOG.md](CHANGELOG.md) — the full build history
 
+## Status
+
+Pre-alpha and playable. Two arenas, the swap system, the Soul cosmetics shop,
+and the lobby all work end to end; balance and content are still moving. Built
+and maintained by one developer.
+
 ## License
 
 Source-available, **all rights reserved** — see [LICENSE](LICENSE). You're very
