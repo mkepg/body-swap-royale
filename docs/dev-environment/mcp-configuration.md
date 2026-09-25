@@ -1,84 +1,46 @@
-# MCP Configuration — Roblox Studio MCP across CLI + VS Code
+# MCP Configuration: the Roblox Studio MCP
 
-**Audience:** anyone setting up the Roblox Studio MCP (or any other MCP) for use
-with Claude Code on this project.
+**Audience:** anyone wiring the Roblox Studio MCP server into an MCP-capable
+editor, so Studio can be inspected, screenshotted and probed from outside the app.
 
 ## TL;DR
 
-The Roblox Studio MCP server (`C:/Tools/rbx-studio-mcp.exe --stdio`) is registered
-at **user scope** in `~/.claude.json`, so it is available to **every** Claude Code
-surface (CLI, VS Code extension, JetBrains plugin) for this Windows user, on any
-project.
+The Roblox Studio MCP server runs as `C:/Tools/rbx-studio-mcp.exe --stdio`. It is
+registered at **user scope**, so every editor surface on this Windows account
+picks it up on any project, and nothing machine-specific lands in the repo.
 
-```bash
-claude mcp list
-# Roblox_Studio: C:/Tools/rbx-studio-mcp.exe --stdio - ✓ Connected
-```
+Drop the server binary in `C:/Tools/` and install the companion Studio plugin it
+ships with. Studio has to be open, with that plugin allowed to accept
+connections, before the server will answer anything.
 
-## Background — why this doc exists
+## Scopes, and why this project uses user scope
 
-Originally the MCP was registered without a scope flag, which defaults to **local**
-scope. Local-scope MCP servers are stored under the *project key* inside
-`~/.claude.json`:
-
-```
-projects → "<absolute-path-to-this-repo>" → mcpServers
-```
-
-The Claude Code CLI resolves that project key from its working directory, so the
-MCP appeared in `/mcp` from the terminal. The VS Code extension didn't see it,
-because it runs as a separate Claude Code instance and its project-key resolution
-didn't line up with that path — leaving the MCP invisible inside VS Code.
-
-## The three MCP scopes
+Most MCP clients offer three places to register a server:
 
 | Scope | Where it lives | Visible to |
 |-------|---------------|------------|
-| **local** | `~/.claude.json` under the current project's key | CLI launched from that project dir |
-| **project** | `.mcp.json` at repo root (commit to git) | Anyone working on the repo (CLI + IDE) |
-| **user** | `~/.claude.json` at the user level | All your projects, all surfaces — only you |
+| **local** | the client's config, under the current project's key | that client only, launched from that project directory |
+| **project** | `.mcp.json` at repo root (committed) | anyone working on the repo |
+| **user** | the client's config at the user level | all your projects, all surfaces, only you |
 
-MCP servers are **not** configured in `settings.json` / `settings.local.json` —
-those files hold permissions, hooks, env vars, etc.
+This project uses **user** scope. The binary sits at a machine-specific path and
+is Windows-only, so it is not something a teammate on another OS could reuse. User
+scope keeps it out of the repo while still working everywhere on this machine.
 
-## How this project is configured
+Registering at **local** scope is the usual mistake. The server then binds to a
+single project key, so it appears in a terminal launched from that directory and
+is invisible from an editor extension whose project-key resolution differs.
 
-User scope, set with:
+MCP servers are not configured in an editor's `settings.json`. That file holds
+permissions, hooks and environment variables.
 
-```bash
-claude mcp add Roblox_Studio -s user -- "C:/Tools/rbx-studio-mcp.exe" --stdio
-```
+## Troubleshooting
 
-Rationale: the MCP binary lives at a machine-specific path (`C:/Tools/...`) and
-isn't something teammates on other OSes would share. User scope keeps it out of
-the repo while still working everywhere on this machine.
+When the server works in one surface but not another:
 
-If a teammate joins on Windows and wants the same setup, they run the same
-`claude mcp add ... -s user` command after dropping `rbx-studio-mcp.exe` in
-`C:/Tools/`.
-
-## Useful commands
-
-```bash
-# List configured MCP servers and connection status
-claude mcp list
-
-# Inspect a specific server
-claude mcp get Roblox_Studio
-
-# Remove from a given scope
-claude mcp remove Roblox_Studio -s user      # or -s local / -s project
-
-# Switch to project scope (creates .mcp.json in repo root)
-claude mcp add Roblox_Studio -s project -- "C:/Tools/rbx-studio-mcp.exe" --stdio
-```
-
-## Troubleshooting — "MCP works in CLI but not in VS Code" (or vice versa)
-
-1. Run `claude mcp list` from the CLI in the project dir — confirm it's listed.
-2. Run `claude mcp get <Name>` and look at the printed **scope**.
-   - If it says `local`, the MCP is bound to this project's key and other
-     surfaces may not pick it up. Re-add it at `user` or `project` scope.
-3. Restart the VS Code extension after changing scopes.
-4. If the binary is missing or the path is wrong, `claude mcp list` will show
-   the server as failed instead of `✓ Connected`.
+1. List the configured MCP servers and confirm `Roblox_Studio` is among them.
+2. Check its reported **scope**. If it reads `local`, re-register at `user` or
+   `project` scope.
+3. Restart the editor extension after changing scopes.
+4. If the binary is missing or its path is wrong, the server is reported as
+   failed rather than connected.

@@ -95,9 +95,7 @@ rm tests/_smoke.luau
 
 ```bash
 git add rokit.toml tests/.gitkeep
-git commit -m "chore: add rokit toolchain with lune + rojo for terminal tests
-
-Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
+git commit -m "chore: add rokit toolchain with lune + rojo for terminal tests"
 ```
 
 ---
@@ -202,9 +200,7 @@ Expected: PASS — prints `derange: deterministic single-cycle OK`, `derange: n=
 
 ```bash
 git add src/shared/ControlModel.luau tests/control_model.spec.luau
-git commit -m "feat: add pure ControlModel.derange (Sattolo) with lune tests
-
-Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
+git commit -m "feat: add pure ControlModel.derange (Sattolo) with lune tests"
 ```
 
 ---
@@ -293,9 +289,7 @@ Expected: PASS — includes `addPlayer: self-control + bijection OK`
 
 ```bash
 git add src/shared/ControlModel.luau tests/control_model.spec.luau
-git commit -m "feat: ControlModel state, addPlayer, controlledBody, bijectionHolds
-
-Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
+git commit -m "feat: ControlModel state, addPlayer, controlledBody, bijectionHolds"
 ```
 
 ---
@@ -394,9 +388,7 @@ Expected: PASS — includes `swap: derangement + bijection + pairs OK` and `swap
 
 ```bash
 git add src/shared/ControlModel.luau tests/control_model.spec.luau
-git commit -m "feat: ControlModel.swap (derange current bodies, preserve bijection)
-
-Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
+git commit -m "feat: ControlModel.swap (derange current bodies, preserve bijection)"
 ```
 
 ---
@@ -534,9 +526,7 @@ Expected: PASS — includes `removePlayer: case 1 (own body) OK`, `removePlayer:
 
 ```bash
 git add src/shared/ControlModel.luau tests/control_model.spec.luau
-git commit -m "feat: ControlModel.removePlayer absorb rule (fixes disconnect yank/orphan)
-
-Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
+git commit -m "feat: ControlModel.removePlayer absorb rule (fixes disconnect yank/orphan)"
 ```
 
 ---
@@ -635,9 +625,7 @@ Expected: **no matches in `ControlManager.luau` or `SwapController.luau` consume
 
 ```bash
 git add src/server/ControlManager.luau
-git commit -m "refactor: ControlManager delegates state to ControlModel
-
-Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
+git commit -m "refactor: ControlManager delegates state to ControlModel"
 ```
 
 ---
@@ -787,9 +775,7 @@ git commit -m "fix: safe disconnect handling via ControlManager.removePlayer
 
 PlayerRemoving no longer destroys a player's avatar body unconditionally
 (which could yank a body another player controlled or orphan one). Control
-rotation now uses the pure ControlModel derangement.
-
-Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
+rotation now uses the pure ControlModel derangement."
 ```
 
 ---
@@ -856,9 +842,7 @@ Expected: PASS — `ALL CONTROLMODEL TESTS PASSED`
 
 ```bash
 git add CHANGELOG.md docs/body-swap-royale-tdd.md
-git commit -m "docs: record disconnect fix in CHANGELOG and resolve TDD open issue
-
-Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
+git commit -m "docs: record disconnect fix in CHANGELOG and resolve TDD open issue"
 ```
 
 ---

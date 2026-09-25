@@ -146,9 +146,7 @@ Expected: every suite prints its PASSED line; exit code 0
 
 ```bash
 git add src/shared/SweeperModel.luau src/shared/Config.luau src/server/SweeperHazard.luau tests/sweeper_model.spec.luau docs/specs/2026-07-09-soul-sweeper-v2_4-hitbox-visual-alignment-design.md docs/plans/2026-07-09-soul-sweeper-v2_4-hitbox-visual-alignment.md
-git commit -m "fix(sweeper-v2.4): derive kill band from visible bar thickness
-
-Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
+git commit -m "fix(sweeper-v2.4): derive kill band from visible bar thickness"
 ```
 
 ---
@@ -410,9 +408,7 @@ Expected: every suite passes; exit code 0
 
 ```bash
 git add src/shared/SweeperModel.luau src/shared/Config.luau src/server/SweeperHazard.luau src/client/SweeperController.luau tests/sweeper_model.spec.luau
-git commit -m "fix(sweeper-v2.4): strike-test the render-lagged sweep window + lag probe
-
-Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
+git commit -m "fix(sweeper-v2.4): strike-test the render-lagged sweep window + lag probe"
 ```
 
 ---
@@ -470,9 +466,7 @@ Expected: all pass (client-only change; suite green confirms nothing else drifte
 
 ```bash
 git add src/client/SweeperController.luau
-git commit -m "feat(sweeper-v2.4): dim dressing Neon to accent level (kill tells stay bright)
-
-Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
+git commit -m "feat(sweeper-v2.4): dim dressing Neon to accent level (kill tells stay bright)"
 ```
 
 ---
@@ -505,8 +499,8 @@ Insert as the first bullet under the existing `## [2026-07-09]` / `### Added` he
   count. Dim pass: dressing Neon dropped to accent level (rim accent 0→0.55, wake-lit 0.15→0.5,
   chase 0.1/0.6→0.4/0.75, rotors 0.35→0.6, shaft 0.7→0.8, lenses 0.2→0.5); the amber-blade /
   crimson-underglow kill tells stay full-brightness and gain contrast. Verified: full lune run
-  green. See [spec](superpowers/specs/2026-07-09-soul-sweeper-v2_4-hitbox-visual-alignment-design.md)
-  and [plan](superpowers/plans/2026-07-09-soul-sweeper-v2_4-hitbox-visual-alignment.md).
+  green. See [spec](../specs/2026-07-09-soul-sweeper-v2_4-hitbox-visual-alignment-design.md)
+  and [plan](../plans/2026-07-09-soul-sweeper-v2_4-hitbox-visual-alignment.md).
 ```
 
 - [ ] **Step 2: Smoke-test addendum**
@@ -538,9 +532,7 @@ Solo-verifiable (`SOLO_TEST_MODE = true` + `ARENA_OVERRIDE = "sweeper"`):
 
 ```bash
 git add CHANGELOG.md docs/smoke-tests/2026-07-08-soul-sweeper-v2-smoke-test.md
-git commit -m "docs(sweeper-v2.4): CHANGELOG + smoke addendum
-
-Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
+git commit -m "docs(sweeper-v2.4): CHANGELOG + smoke addendum"
 ```
 
 ---

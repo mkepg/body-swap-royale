@@ -12,11 +12,7 @@
 - Pure modules are Roblox-free (no `Vector3`/`CFrame`/`Color3`/`game`), number-in/number-out; the server converts to Roblox types.
 - Lune test runner: `export PATH="$HOME/.rokit/bin:$PATH"; lune run tests/<name>.spec`. Test files use the `expect`/`fail` helper pattern (see `tests/tile_field_model.spec.luau`).
 - Geometry-build modules expose a singleton `build()` guarded against rebuild (see `HazardSystem.build`).
-- Commit after each task. End commit messages with the `Co-Authored-By` trailer below.
-
-```
-Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>
-```
+- Commit after each task.
 
 ---
 
@@ -161,9 +157,7 @@ Expected: PASS — prints `ALL SpawnLayout TESTS PASSED`.
 
 ```bash
 git add src/shared/SpawnLayout.luau tests/spawn_layout.spec.luau
-git commit -m "feat(lobby): pure SpawnLayout (arena + balcony slot math)
-
-Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
+git commit -m "feat(lobby): pure SpawnLayout (arena + balcony slot math)"
 ```
 
 ---
@@ -208,9 +202,7 @@ Expected: PASS (unchanged) — confirms the repo still parses; Config itself is 
 
 ```bash
 git add src/shared/Config.luau
-git commit -m "feat(lobby): balcony geometry + grid config tunables
-
-Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
+git commit -m "feat(lobby): balcony geometry + grid config tunables"
 ```
 
 ---
@@ -341,9 +333,7 @@ return LobbyArea
 
 ```bash
 git add src/server/LobbyArea.luau
-git commit -m "feat(lobby): LobbyArea builds the elevated balcony geometry
-
-Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
+git commit -m "feat(lobby): LobbyArea builds the elevated balcony geometry"
 ```
 
 ---
@@ -492,9 +482,7 @@ Expected: PASS (unchanged). BodyManager itself is Roblox-bound and verified by t
 
 ```bash
 git add src/server/BodyManager.luau
-git commit -m "feat(lobby): BodyManager spawns on the balcony + returnToLobby
-
-Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
+git commit -m "feat(lobby): BodyManager spawns on the balcony + returnToLobby"
 ```
 
 ---
@@ -606,9 +594,7 @@ Expected: PASS (unchanged). RoundManager is Roblox-bound and verified by the smo
 
 ```bash
 git add src/server/RoundManager.luau
-git commit -m "feat(lobby): build balcony, victory cam, relocate at Lobby reset
-
-Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
+git commit -m "feat(lobby): build balcony, victory cam, relocate at Lobby reset"
 ```
 
 ---
@@ -674,9 +660,7 @@ across the round lifecycle, and the victory cam. Pairs with the unit test
 
 ```bash
 git add docs/smoke-tests/2026-06-21-lobby-staging-area-smoke-test.md
-git commit -m "docs(lobby): 2-client smoke test for the staging area
-
-Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
+git commit -m "docs(lobby): 2-client smoke test for the staging area"
 ```
 
 ---

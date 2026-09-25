@@ -6,7 +6,7 @@
 
 **Spec:** `docs/specs/2026-07-09-soul-sweeper-v2_1-jumpclub-refinement-design.md` (read FIRST — this plan implements its numbered decisions).
 
-**Conventions:** as v2 plan (`2026-07-08-soul-sweeper-v2-turbine.md` header): lune suite must stay green after every task (`export PATH="$HOME/.rokit/bin:$PATH"; for f in tests/*.spec.luau; do lune run "$f" || break; done` — 24 suites). Commit per task, no Co-Authored-By.
+**Conventions:** as v2 plan (`2026-07-08-soul-sweeper-v2-turbine.md` header): lune suite must stay green after every task (`export PATH="$HOME/.rokit/bin:$PATH"; for f in tests/*.spec.luau; do lune run "$f" || break; done` — 24 suites). Commit per task.
 
 ---
 

@@ -324,7 +324,7 @@ git commit -m "feat(marketing): finalize-icon script (center-crop + 512px downsc
 Run in the main session with the user after Tasks 1–3 land:
 
 - [ ] **B1 Generate:** user runs master + V1–V4 in Bing and Gemini (≥10 images) → `candidates/`
-- [ ] **B2 Review:** Claude reads every candidate, scores vs. spec §8, pushes 512/128/64 px gallery to the visual companion; user picks winner/traits
+- [ ] **B2 Review:** read every candidate, score vs. spec §8, push 512/128/64 px gallery to the visual companion; user picks winner/traits
 - [ ] **B3 Refine:** ≤2 merged-traits rounds (`r1`, `r2`), re-rolled by user; if BOTH tools fail the chunky-3D style across the whole batch, escalate the spec §9 style fallback (bold 2D illustration) as an explicit re-decision with the user
 - [ ] **B4 Finalize:** run `scripts/finalize-icon.ps1`, commit `final/icon-512.png` + chosen candidates, user uploads via Creator Dashboard (README steps), confirm live
 - [ ] **B5 Close out:** CHANGELOG entry; merge via finishing-a-development-branch (Config dev flips stay uncommitted)

@@ -7,15 +7,17 @@ Concept spec: `docs/specs/2026-07-12-experience-icon-swap-concept-design.md`
 ## Layout
 
 - `prompts.md` — Gemini-only "Swap Arrows" kit: Master + variants V1–V4 + failure fixes F1–F7
-- `candidates/` — EVERY generated image, named `gemini-{variant}-{roll}.png`
-  (`variant` ∈ `swap` (master) | `v1`..`v4` | `r1` | `r2` for refinement rounds;
-  `roll` = 1, 2, 3…). Earlier `bing-*` / `master*` files are historical.
 - `final/icon-512.png` — the shipped asset; the repo copy is the source of truth
+
+Generated rolls are named `gemini-{variant}-{roll}.png` (`variant` ∈ `swap`
+(master) | `v1`..`v4` | `r1` | `r2` for refinement rounds; `roll` = 1, 2, 3…).
+They are kept in a local scratch folder rather than committed, so clones stay
+small. Only the finalized asset lands in the repo.
 
 ## Workflow
 
 1. **Generate (user):** upload `reference/ref-avatar.png` to Gemini and run
-   Master + V1–V4 (≥10 images). Save everything to `candidates/`.
+   Master + V1–V4 (≥10 images). Keep every roll in the local scratch folder.
 2. **Review:** every candidate scored against the concept-spec §3 checklist;
    3-size gallery (512/128/64 px) pushed to the visual companion; user picks
    the winner or winning traits.

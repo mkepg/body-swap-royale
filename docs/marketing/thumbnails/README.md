@@ -16,12 +16,15 @@ is the workflow of record.
 
 - `prompts.md` — Gemini kit: four Masters (T1–T4) + per-frame variants + failure-fixes.
 - `reference/ref-avatar.png` — grey R15 avatar; upload with EVERY prompt.
-- `candidates/` — every roll, `gemini-t{frame}-{variant}-{roll}.png` (frame ∈ `t1`..`t4`; variant ∈ `m`|`v1`..|`r1`/`r2`; roll = 1,2,…). Bad rolls are data — keep them.
 - `final/` — shipped assets `thumb-1-1920.png` … `thumb-4-1920.png`.
+
+Rolls are named `gemini-t{frame}-{variant}-{roll}.png` (frame ∈ `t1`..`t4`;
+variant ∈ `m`|`v1`..|`r1`/`r2`; roll = 1,2,…) and kept in a local scratch folder
+rather than committed, so clones stay small. Only the finished frames land here.
 
 ## Workflow
 
-1. **Generate (user):** upload `reference/ref-avatar.png` to Gemini, run the Master + variants for each frame, request 16:9 landscape. Save everything to `candidates/`.
+1. **Generate (user):** upload `reference/ref-avatar.png` to Gemini, run the Master + variants for each frame, request 16:9 landscape. Keep every roll in the local scratch folder.
 2. **Review:** score each candidate vs the spec §6 checklist; verify legibility by downscaling to carousel width.
 3. **Refine (≤2 rounds per frame):** merged-traits prompt, re-rolled in Gemini.
 4. **Finalize (per frame):**

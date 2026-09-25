@@ -698,7 +698,7 @@ Bodies Saved: 3   Swap-Survival: 71%
 
 > **Update (2026-07-17):** the first coin sink is SHIPPED — Soul Shop slice 1 (25-item
 > catalog: halo colors/styles/trails, direct coin purchases, persistent equips). See the
-> [slice-1 spec](superpowers/specs/2026-07-16-soul-shop-slice1-design.md); boxes,
+> [slice-1 spec](specs/2026-07-16-soul-shop-slice1-design.md); boxes,
 > featured rotation, and Robux products remain parked as slices 2–4. Note: shipping the
 > shop retired the "zero client→server remotes" property (validated-remote decision
 > recorded in the spec §3).
@@ -903,7 +903,7 @@ These systems address real weaknesses but carry enough risk — of removing chao
 
 > **Update (2026-07-03):** Bug #2's two correctness layers are now **IMPLEMENTED**, ahead of and
 > independent from the full rescue-based rule below — see the
-> [Core Loop Correctness Bundle](superpowers/specs/2026-07-03-core-loop-correctness-design.md).
+> [Core Loop Correctness Bundle](specs/2026-07-03-core-loop-correctness-design.md).
 > Layer 1: swap handoff zeroes body velocity server-authoritatively, so inherited momentum no
 > longer cancels grace. Layer 2: a current-state floor-beneath probe excludes void-bound bodies
 > from the derangement at commit — a doomed body is never handed to a victim; the griefer keeps

@@ -8,7 +8,7 @@
 
 **Spec:** `docs/specs/2026-07-08-soul-sweeper-v2-turbine-design.md` (read it first — every task below implements a numbered spec section).
 
-**Conventions:** identical to the v1 plan (`docs/plans/2026-07-07-soul-sweeper-arena.md` header): pure modules in `src/shared/` lune-tested via `export PATH="$HOME/.rokit/bin:$PATH"; lune run tests/<file>.spec.luau`; full suite must stay green after every task (`for f in tests/*.spec.luau; do lune run "$f" || break; done` — 23 suites today, 24 after Task 1). Commit per task, no Co-Authored-By on task commits.
+**Conventions:** identical to the v1 plan (`docs/plans/2026-07-07-soul-sweeper-arena.md` header): pure modules in `src/shared/` lune-tested via `export PATH="$HOME/.rokit/bin:$PATH"; lune run tests/<file>.spec.luau`; full suite must stay green after every task (`for f in tests/*.spec.luau; do lune run "$f" || break; done` — 23 suites today, 24 after Task 1). Commit per task.
 
 ---
 

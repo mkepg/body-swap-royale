@@ -183,9 +183,7 @@ Expected: PASS — ends with `ALL CADENCEMODEL TESTS PASSED`.
 
 ```bash
 git add tests/cadence_model.spec.luau src/shared/CadenceModel.luau
-git commit -m "feat(cadence): pure CadenceModel for dynamic swap interval
-
-Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
+git commit -m "feat(cadence): pure CadenceModel for dynamic swap interval"
 ```
 
 ---
@@ -346,9 +344,7 @@ Expected: PASS — `ALL CADENCEMODEL TESTS PASSED` (confirms `Config` still load
 
 ```bash
 git add src/shared/Config.luau src/server/RoundManager.luau
-git commit -m "feat(cadence): drive RoundManager swap interval from CadenceModel
-
-Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
+git commit -m "feat(cadence): drive RoundManager swap interval from CadenceModel"
 ```
 
 ---
@@ -463,9 +459,7 @@ Expected: no matches (docs may still mention it historically; `src/` must be cle
 
 ```bash
 git add docs/smoke-tests/2026-06-22-dynamic-cadence-smoke-test.md docs/smoke-tests/2026-06-18-round-loop-smoke-test.md
-git commit -m "docs(cadence): smoke test for dynamic cadence; drop CYCLE_SECONDS refs
-
-Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
+git commit -m "docs(cadence): smoke test for dynamic cadence; drop CYCLE_SECONDS refs"
 ```
 
 ---

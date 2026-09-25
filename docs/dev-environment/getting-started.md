@@ -135,7 +135,7 @@ docs/
   body-swap-royale-tdd.md           Technical design (architecture, networking, perf)
   dev-environment/                   Dev setup (this file, MCP config)
   smoke-tests/                       Manual Studio procedures
-  superpowers/specs|plans/           Per-feature design + implementation plans
+  specs/ , plans/                    Per-feature design + implementation plans
 scripts/test.sh                     Lune spec runner
 default.project.json                Rojo project mapping
 rokit.toml                          Pinned tool versions

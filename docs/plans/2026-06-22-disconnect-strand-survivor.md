@@ -86,9 +86,7 @@ Expected: every line is an `ALL ... TESTS PASSED` (regression: pure modules unch
 
 ```bash
 git add src/server/ControlManager.luau
-git commit -m "feat(disconnect): ControlManager returns absorb decision + regrantControl
-
-Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
+git commit -m "feat(disconnect): ControlManager returns absorb decision + regrantControl"
 ```
 
 ---
@@ -150,9 +148,7 @@ Expected: every line is an `ALL ... TESTS PASSED`.
 
 ```bash
 git add src/server/BodyManager.luau
-git commit -m "feat(disconnect): BodyManager.sendToArena repositions a body to its arena slot
-
-Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
+git commit -m "feat(disconnect): BodyManager.sendToArena repositions a body to its arena slot"
 ```
 
 ---
@@ -216,9 +212,7 @@ Expected: every line is an `ALL ... TESTS PASSED`.
 
 ```bash
 git add src/server/RoundManager.luau
-git commit -m "fix(disconnect): rescue an alive survivor stranded by an eliminated leaver's absorb
-
-Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
+git commit -m "fix(disconnect): rescue an alive survivor stranded by an eliminated leaver's absorb"
 ```
 
 ---
@@ -278,9 +272,7 @@ Bodies are named `Body_<UserId>` under `workspace.Bodies`; players have no `Char
 
 ```bash
 git add docs/smoke-tests/2026-06-22-disconnect-strand-smoke-test.md
-git commit -m "docs(disconnect): smoke test for the survivor-rescue fix
-
-Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
+git commit -m "docs(disconnect): smoke test for the survivor-rescue fix"
 ```
 
 ---

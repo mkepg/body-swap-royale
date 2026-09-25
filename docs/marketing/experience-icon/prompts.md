@@ -7,7 +7,7 @@ symbol between their heads — "these two players are swapping bodies." See
 **Tool:** Gemini only (Bing was dropped — inferior results). **Reference-guided:**
 upload `reference/ref-avatar.png` (grey R15 avatar) with EVERY prompt — it guides
 the block proportions/silhouette for BOTH avatars. Generate square 1:1. Save EVERY
-output — good and bad — to `candidates/` as `gemini-{variant}-{roll}.png`
+output — good and bad — to the local scratch folder as `gemini-{variant}-{roll}.png`
 (e.g. `gemini-swap-1.png`, `gemini-v2-1.png`). Bad outputs are data.
 The Master prompt's variant token is `swap` (save Master rolls as `gemini-swap-1.png`, `-2`, …); the four variants use `v1`–`v4`; refinement rounds use `r1`/`r2`.
 

@@ -87,14 +87,13 @@ src/client/     18 modules — HUD, input, camera, arena dressing, soul VFX
 
 ## How it's developed
 
-This project is built on a
-deliberately strict loop, and the artifacts are committed rather than thrown
-away. Every feature slice gets:
+This project is built on a deliberately strict loop, and the artifacts are
+committed rather than thrown away. Every feature slice gets:
 
-1. A **design spec** in [`docs/specs/`](docs/specs/) —
-   agreed before any code is written (36 of them).
-2. An **implementation plan** in [`docs/plans/`](docs/plans/)
-   — the ordered steps (36).
+1. A **design spec** in [`docs/specs/`](docs/specs/), agreed before any code is
+   written (36 of them).
+2. An **implementation plan** in [`docs/plans/`](docs/plans/), the ordered steps
+   (36).
 3. **Lune specs** for anything pure, written against the design.
 4. A **smoke-test procedure** in [`docs/smoke-tests/`](docs/smoke-tests/) for the
    runtime behavior specs can't reach.

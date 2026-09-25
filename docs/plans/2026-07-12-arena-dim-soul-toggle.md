@@ -121,9 +121,7 @@ Expected: `ALL GlowDim TESTS PASSED`.
 
 ```bash
 git add src/shared/GlowDim.luau tests/glow_dim.spec.luau
-git commit -m "feat(arena): GlowDim pure module + lune tests
-
-Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
+git commit -m "feat(arena): GlowDim pure module + lune tests"
 ```
 
 ---
@@ -166,9 +164,7 @@ Edit B — old_string: `Config.SOLO_TEST_MODE = true` → new_string: `Config.SO
 
 ```bash
 git add src/shared/Config.luau
-git commit -m "feat(arena): Config.SOUL_HALO_ENABLED + Config.ARENA_GLOW_DIM
-
-Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
+git commit -m "feat(arena): Config.SOUL_HALO_ENABLED + Config.ARENA_GLOW_DIM"
 ```
 
 - [ ] **Step 4: VERIFY the commit did NOT include the dev flips:**
@@ -239,9 +235,7 @@ Expected: `1`.
 
 ```bash
 git add src/client/SoulController.luau
-git commit -m "feat(arena): gate Soul halo behind Config.SOUL_HALO_ENABLED
-
-Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
+git commit -m "feat(arena): gate Soul halo behind Config.SOUL_HALO_ENABLED"
 ```
 
 ---
@@ -326,9 +320,7 @@ new_string:
 
 ```bash
 git add src/client/WorldShell.luau
-git commit -m "feat(arena): route WorldShell wisp/crowd/aurora glow through GlowDim
-
-Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
+git commit -m "feat(arena): route WorldShell wisp/crowd/aurora glow through GlowDim"
 ```
 
 ---
@@ -384,9 +376,7 @@ new_string:
 
 ```bash
 git add src/client/LobbyStage.luau
-git commit -m "feat(arena): route LobbyStage ring/orb glow through GlowDim
-
-Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
+git commit -m "feat(arena): route LobbyStage ring/orb glow through GlowDim"
 ```
 
 ---
@@ -428,9 +418,7 @@ new_string:
 
 ```bash
 git add src/client/ArenaDressing.luau
-git commit -m "feat(arena): route hex floor-trim glow through GlowDim
-
-Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
+git commit -m "feat(arena): route hex floor-trim glow through GlowDim"
 ```
 
 ---
@@ -491,9 +479,7 @@ local RIM_ACCENT_TRANSPARENCY = GlowDim.apply(0.55, DIM)
 
 ```bash
 git add src/client/SweeperController.luau
-git commit -m "feat(arena): route Soul Sweeper dressing glow through GlowDim
-
-Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
+git commit -m "feat(arena): route Soul Sweeper dressing glow through GlowDim"
 ```
 
 ---
@@ -531,8 +517,8 @@ new_string:
   cosmetic Neon through `GlowDim.apply`). `Config.SOUL_HALO_ENABLED` (default true) gates
   the over-head Soul identity halo for clean marketing screenshots. Verified: 26/26 lune
   suites; Studio visual pass pending. See
-  [spec](superpowers/specs/2026-07-12-arena-dim-soul-toggle-design.md) and
-  [plan](superpowers/plans/2026-07-12-arena-dim-soul-toggle.md).
+  [spec](../specs/2026-07-12-arena-dim-soul-toggle-design.md) and
+  [plan](../plans/2026-07-12-arena-dim-soul-toggle.md).
 
 ## [2026-07-10]
 ```
@@ -541,9 +527,7 @@ new_string:
 
 ```bash
 git add CHANGELOG.md
-git commit -m "docs(arena): CHANGELOG for cosmetic-dim + soul-halo toggle
-
-Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
+git commit -m "docs(arena): CHANGELOG for cosmetic-dim + soul-halo toggle"
 ```
 
 ---

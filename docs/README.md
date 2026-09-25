@@ -27,8 +27,8 @@ before the current one was adopted.
 
 ## Feature slices
 
-36 design specs in [`superpowers/specs/`](superpowers/specs/) and 36 matching
-implementation plans in [`superpowers/plans/`](superpowers/plans/), grouped by
+36 design specs in [`specs/`](specs/) and 36 matching
+implementation plans in [`plans/`](plans/), grouped by
 the system they build:
 
 **Core loop & swap mechanic** — round state, round manager, grace window, round

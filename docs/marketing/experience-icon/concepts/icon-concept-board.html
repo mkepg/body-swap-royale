@@ -339,7 +339,7 @@ footer .rec{font-family:'Titan One',cursive; color:var(--paper); font-size:20px;
 function pick(id,name){
   document.querySelectorAll('.concept').forEach(c=>c.classList.remove('sel'));
   document.getElementById(id).classList.add('sel');
-  document.getElementById('selnote').textContent = '✓ Selected: Concept '+id+' — '+name+'.  Tell Claude "let\'s go with '+name+'".';
+  document.getElementById('selnote').textContent = '✓ Selected: Concept '+id+' — '+name+'.';
 }
 </script>
 </body>

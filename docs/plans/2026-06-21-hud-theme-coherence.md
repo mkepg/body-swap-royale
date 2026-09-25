@@ -215,9 +215,7 @@ Expected: PASS (`ALL RoundScreenModel TESTS PASSED`). Then re-read the module an
 
 ```bash
 git add src/client/HudTheme.luau
-git commit -m "feat(ui): HudTheme single source of truth for HUD zones/caps/skin
-
-Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
+git commit -m "feat(ui): HudTheme single source of truth for HUD zones/caps/skin"
 ```
 
 ---
@@ -372,9 +370,7 @@ Expected: PASS (`ALL SwapTelegraphModel TESTS PASSED`). Then confirm `src/client
 
 ```bash
 git add src/client/ClientSwapHud.luau
-git commit -m "feat(ui): migrate swap HUD timer + big countdown onto HudTheme
-
-Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
+git commit -m "feat(ui): migrate swap HUD timer + big countdown onto HudTheme"
 ```
 
 ---
@@ -604,9 +600,7 @@ Expected: PASS (`ALL RoundScreenModel TESTS PASSED`). Then confirm: `src/client/
 
 ```bash
 git add src/client/ClientRoundHud.luau
-git commit -m "feat(ui): kid-friendly bookend banner via HudTheme (state-colored, pop-in)
-
-Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
+git commit -m "feat(ui): kid-friendly bookend banner via HudTheme (state-colored, pop-in)"
 ```
 
 ---
@@ -656,9 +650,7 @@ individual HUD modules (that is the whole point of the shared theme).
 
 ```bash
 git add docs/smoke-tests/2026-06-20-round-bookends-smoke-test.md
-git commit -m "docs: extend bookend smoke test with HUD consistency + skin checks
-
-Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
+git commit -m "docs: extend bookend smoke test with HUD consistency + skin checks"
 ```
 
 ---

@@ -4,7 +4,7 @@
 
 **Spec:** `docs/specs/2026-07-09-soul-sweeper-v2_2-touch-elimination-design.md` (read FIRST).
 
-**Conventions:** as prior plans — lune suite green after every task (`export PATH="$HOME/.rokit/bin:$PATH"; for f in tests/*.spec.luau; do lune run "$f" || break; done`, 24 files). Commit per task, no Co-Authored-By.
+**Conventions:** as prior plans — lune suite green after every task (`export PATH="$HOME/.rokit/bin:$PATH"; for f in tests/*.spec.luau; do lune run "$f" || break; done`, 24 files). Commit per task.
 
 ---
 

@@ -169,9 +169,7 @@ Expected: all 25 suites pass, exit 0
 
 ```bash
 git add src/shared/TouchJumpLayout.luau tests/touch_jump_layout.spec.luau src/shared/Config.luau docs/specs/2026-07-10-mobile-jump-button-design.md docs/plans/2026-07-10-mobile-jump-button.md
-git commit -m "feat(mobile): pure TouchJumpLayout (default TouchJump rules, comfort scale)
-
-Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
+git commit -m "feat(mobile): pure TouchJumpLayout (default TouchJump rules, comfort scale)"
 ```
 
 ---
@@ -390,9 +388,7 @@ Expected: all 25 pass
 
 ```bash
 git add src/client/InputController.luau
-git commit -m "feat(mobile): default-replica touch jump button (responsive, comfort-scaled; CAS button removed)
-
-Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
+git commit -m "feat(mobile): default-replica touch jump button (responsive, comfort-scaled; CAS button removed)"
 ```
 
 ---
@@ -425,8 +421,8 @@ the new FIRST version section):
   `humanoid.Jump` re-assert is unchanged; visibility follows the humanoid binding like the
   default thumbstick (hides when spectating). `TOUCH_JUMP_FORCE` dev flag renders it on desktop
   for Studio verification. CAS jump button fully removed. See
-  [spec](superpowers/specs/2026-07-10-mobile-jump-button-design.md) and
-  [plan](superpowers/plans/2026-07-10-mobile-jump-button.md).
+  [spec](../specs/2026-07-10-mobile-jump-button-design.md) and
+  [plan](../plans/2026-07-10-mobile-jump-button.md).
 ```
 
 - [ ] **Step 2: Smoke doc**
@@ -460,9 +456,7 @@ as needed for a quick round; `TOUCH_JUMP_FORCE = true` substitutes desktop Play 
 
 ```bash
 git add CHANGELOG.md docs/smoke-tests/2026-07-10-mobile-jump-button-smoke-test.md
-git commit -m "docs(mobile): jump button CHANGELOG + smoke test
-
-Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
+git commit -m "docs(mobile): jump button CHANGELOG + smoke test"
 ```
 
 ---

@@ -23,7 +23,7 @@
 - [ ] **Step 5:** Commit:
 ```
 git add src/shared/WorldLayout.luau tests/world_layout.spec.luau
-git commit -m "$(printf 'refactor(world): drop unused WorldLayout.festoonStrand/buntingFlags\n\nCo-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>')"
+git commit -m "$(printf 'refactor(world): drop unused WorldLayout.festoonStrand/buntingFlags')"
 ```
 
 ---
@@ -133,7 +133,7 @@ Config.LOBBY_STAGE_ORB_MESH = ""
 - [ ] **Step 4:** Commit:
 ```
 git add src/shared/Config.luau
-git commit -m "$(printf 'feat(world): swap lobby box config for beyblade disc/barrier + cosmetic\n\nCo-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>')"
+git commit -m "$(printf 'feat(world): swap lobby box config for beyblade disc/barrier + cosmetic')"
 ```
 
 ---
@@ -229,7 +229,7 @@ return LobbyArea
 - [ ] **Step 3:** Commit:
 ```
 git add src/server/LobbyArea.luau
-git commit -m "$(printf 'feat(world): rebuild LobbyArea as a beyblade disc + invisible rim barrier\n\nLoad-bearing: CanCollide Cylinder disc (top at LOBBY_ORIGIN.Y) ringed by\na gap-free invisible barrier taller than a jump. Body placement unchanged.\n\nCo-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>')"
+git commit -m "$(printf 'feat(world): rebuild LobbyArea as a beyblade disc + invisible rim barrier\n\nLoad-bearing: CanCollide Cylinder disc (top at LOBBY_ORIGIN.Y) ringed by\na gap-free invisible barrier taller than a jump. Body placement unchanged.')"
 ```
 
 ---
@@ -415,7 +415,7 @@ return LobbyStage
 - [ ] **Step 3:** Commit:
 ```
 git add src/client/LobbyStage.luau
-git commit -m "$(printf 'feat(world): re-dress LobbyStage as the beyblade (energy rings, taper, tip, spectator souls)\n\nCo-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>')"
+git commit -m "$(printf 'feat(world): re-dress LobbyStage as the beyblade (energy rings, taper, tip, spectator souls)')"
 ```
 
 ---
@@ -436,7 +436,7 @@ WITH:
 - [ ] **Step 3:** Commit:
 ```
 git add src/client/ArenaDressing.luau
-git commit -m "$(printf 'fix(world): mount the marquee off the lobby disc radius (was pad depth)\n\nCo-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>')"
+git commit -m "$(printf 'fix(world): mount the marquee off the lobby disc radius (was pad depth)')"
 ```
 
 ---

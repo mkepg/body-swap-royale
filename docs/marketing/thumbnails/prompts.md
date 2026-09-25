@@ -12,7 +12,7 @@ get what they see. See
 **Tool:** Gemini only. **Reference-guided:** upload `reference/ref-avatar.png`
 (grey R15) with EVERY prompt; request 16:9 landscape.
 
-Save EVERY output — good and bad — to `candidates/` as
+Save EVERY output — good and bad — to the local scratch folder as
 `gemini-t{frame}-{variant}-{roll}.png` (frame ∈ `t1`..`t4`; variant ∈
 `m` (master) | `v1`/`v2` | `r1`/`r2` for refine rounds; roll = 1, 2, …).
 Bad outputs are data.

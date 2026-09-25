@@ -116,7 +116,7 @@ Expected: PASS, prints `worldlayout: tierRows OK` and `ALL WorldLayout TESTS PAS
 
 ```bash
 git add src/shared/WorldLayout.luau tests/world_layout.spec.luau
-git commit -m "$(printf 'feat(world): add pure WorldLayout.tierRows for U-wrap crowd\n\nCo-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>')"
+git commit -m "$(printf 'feat(world): add pure WorldLayout.tierRows for U-wrap crowd')"
 ```
 
 ---
@@ -188,7 +188,7 @@ Expected: PASS, prints `worldlayout: festoonStrand OK`.
 
 ```bash
 git add src/shared/WorldLayout.luau tests/world_layout.spec.luau
-git commit -m "$(printf 'feat(world): add pure WorldLayout.festoonStrand catenary points\n\nCo-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>')"
+git commit -m "$(printf 'feat(world): add pure WorldLayout.festoonStrand catenary points')"
 ```
 
 ---
@@ -251,7 +251,7 @@ Expected: PASS, prints `worldlayout: buntingFlags OK` then `ALL WorldLayout TEST
 
 ```bash
 git add src/shared/WorldLayout.luau tests/world_layout.spec.luau
-git commit -m "$(printf 'feat(world): add pure WorldLayout.buntingFlags placement\n\nCo-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>')"
+git commit -m "$(printf 'feat(world): add pure WorldLayout.buntingFlags placement')"
 ```
 
 ---
@@ -342,7 +342,7 @@ Expected: exactly **1** matching line. If 2+, you duplicated the block — remov
 
 ```bash
 git add src/shared/Config.luau
-git commit -m "$(printf 'feat(world): add LOBBY_STAGE_* config for the grandstand stage\n\nCo-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>')"
+git commit -m "$(printf 'feat(world): add LOBBY_STAGE_* config for the grandstand stage')"
 ```
 
 ---
@@ -644,7 +644,7 @@ Expected: **2** matching lines — `local LobbyStage = require(script.LobbyStage
 
 ```bash
 git add src/client/LobbyStage.luau src/client/init.client.luau
-git commit -m "$(printf 'feat(world): build the lobby grandstand stage (Slice 2)\n\nAdd-only client LobbyStage: deck, U-wrap soul crowd, festoon lights,\nbunting, back crest. Reuses WorldShell cheer triggers. Server geometry\nuntouched; hybrid assets fall back to code.\n\nCo-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>')"
+git commit -m "$(printf 'feat(world): build the lobby grandstand stage (Slice 2)\n\nAdd-only client LobbyStage: deck, U-wrap soul crowd, festoon lights,\nbunting, back crest. Reuses WorldShell cheer triggers. Server geometry\nuntouched; hybrid assets fall back to code.')"
 ```
 
 ---
@@ -698,7 +698,7 @@ Keep `Config.HAZARDS_ENABLED = false` so the floor stays safe while observing th
 
 ```bash
 git add docs/smoke-tests/2026-06-26-lobby-grandstand-stage-smoke-test.md
-git commit -m "$(printf 'docs(smoke): add lobby grandstand stage smoke test\n\nCo-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>')"
+git commit -m "$(printf 'docs(smoke): add lobby grandstand stage smoke test')"
 ```
 
 ---
@@ -735,7 +735,7 @@ Fill in the smoke-test doc Result section (date, outcome, Config values changed)
 
 ```bash
 git add src/shared/Config.luau docs/smoke-tests/2026-06-26-lobby-grandstand-stage-smoke-test.md
-git commit -m "$(printf 'chore(world): MCP-verify + tune lobby grandstand stage\n\nCo-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>')"
+git commit -m "$(printf 'chore(world): MCP-verify + tune lobby grandstand stage')"
 ```
 
 ---

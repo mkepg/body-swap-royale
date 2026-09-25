@@ -211,9 +211,7 @@ Expected: PASS — ends with `ALL RoundScreenModel TESTS PASSED`.
 
 ```bash
 git add src/shared/RoundScreenModel.luau tests/round_screen_model.spec.luau
-git commit -m "feat(ui): pure RoundScreenModel for Lobby/Results bookends
-
-Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
+git commit -m "feat(ui): pure RoundScreenModel for Lobby/Results bookends"
 ```
 
 ---
@@ -274,9 +272,7 @@ Expected: still PASS (this confirms the repo's tooling runs; `RoundManager` itse
 
 ```bash
 git add src/server/RoundManager.luau
-git commit -m "feat(server): tick post-round countdown for the Results banner
-
-Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
+git commit -m "feat(server): tick post-round countdown for the Results banner"
 ```
 
 ---
@@ -497,9 +493,7 @@ Expected: still PASS (model unchanged; this just reconfirms tooling).
 
 ```bash
 git add src/client/ClientRoundHud.luau
-git commit -m "feat(client): render Lobby/Results bookend banner via RoundScreenModel
-
-Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
+git commit -m "feat(client): render Lobby/Results bookend banner via RoundScreenModel"
 ```
 
 ---
@@ -569,9 +563,7 @@ Perform the 6 checks above with a 2-client Studio session. Record results. If an
 
 ```bash
 git add docs/smoke-tests/2026-06-20-round-bookends-smoke-test.md
-git commit -m "docs: 2-client smoke test for round-flow bookends
-
-Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
+git commit -m "docs: 2-client smoke test for round-flow bookends"
 ```
 
 ---

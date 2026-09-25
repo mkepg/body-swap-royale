@@ -2,7 +2,7 @@
 
 **Session:** MCP-driven, Studio solo Play, `SOLO_TEST_MODE = true` + `ARENA_OVERRIDE = "sweeper"`
 dev pins active. Branch `feat/soul-shop-slice1` at `b89a122`. Spec:
-[2026-07-16-soul-shop-slice1-design.md](../superpowers/specs/2026-07-16-soul-shop-slice1-design.md).
+[2026-07-16-soul-shop-slice1-design.md](../specs/2026-07-16-soul-shop-slice1-design.md).
 
 ## Machine-verified (this session)
 

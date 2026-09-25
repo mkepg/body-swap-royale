@@ -171,9 +171,7 @@ Expected: every spec prints its `ALL ... TESTS PASSED` line (18 specs now, inclu
 
 ```bash
 git add src/shared/MoveDirection.luau tests/move_direction.spec.luau
-git commit -m "feat(controls): add pure MoveDirection (camera-relative move vector -> world dir)
-
-Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
+git commit -m "feat(controls): add pure MoveDirection (camera-relative move vector -> world dir)"
 ```
 
 ---
@@ -283,9 +281,7 @@ parse/format sanity check only; true verification is the Task 5 smoke test.)
 
 ```bash
 git add src/client/InputController.luau
-git commit -m "feat(controls): add InputController seam (PlayerModule move + CAS jump)
-
-Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
+git commit -m "feat(controls): add InputController seam (PlayerModule move + CAS jump)"
 ```
 
 ---
@@ -401,9 +397,7 @@ git add src/client/ClientControl.luau
 git commit -m "feat(controls): drive body from device-agnostic InputController + MoveDirection
 
 Replaces the WASD-only key table and Space handler; jump now binds keyboard,
-gamepad ButtonA, and an auto-created touch button. Camera unchanged.
-
-Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
+gamepad ButtonA, and an auto-created touch button. Camera unchanged."
 ```
 
 ---
@@ -528,9 +522,7 @@ git add src/client/SoulController.luau
 git commit -m "fix(controls): grace shimmer 'moved' via device-agnostic InputController.isMoving
 
 Was watching raw WASD/Space (never fired on touch/gamepad), so the shimmer
-misbehaved off keyboard. Now polls the unified move vector.
-
-Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
+misbehaved off keyboard. Now polls the unified move vector."
 ```
 
 ---
@@ -616,9 +608,7 @@ contingency (custom thumbstick) is the follow-up.
 
 ```bash
 git add docs/smoke-tests/2026-07-02-cross-platform-controls-smoke-test.md
-git commit -m "docs(controls): add cross-platform controls smoke-test doc
-
-Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
+git commit -m "docs(controls): add cross-platform controls smoke-test doc"
 ```
 
 ---

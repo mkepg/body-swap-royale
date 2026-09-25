@@ -258,7 +258,7 @@ git commit -m "docs(icon): mark master4-ref resume as superseded by Swap Arrows"
 
 After the three tasks, the kit is ready. The user then, outside this plan:
 1. Uploads `reference/ref-avatar.png` to Gemini and rolls the Master + V1–V4 → `candidates/gemini-swap-*.png`.
-2. Claude scores them vs the spec §3 checklist and verifies the 64px read (PowerShell + System.Drawing downscale — there is no working ImageMagick; `convert` is Windows `convert.exe`).
+2. Score them vs the spec §3 checklist and verify the 64px read (PowerShell + System.Drawing downscale — there is no working ImageMagick; `convert` is Windows `convert.exe`).
 3. Pick a winner → ≤2 refine rounds → `finalize-icon.ps1` + bottom-right ✦ watermark inpaint → `final/icon-512.png` → upload via Creator Dashboard.
 
 ---

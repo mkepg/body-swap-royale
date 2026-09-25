@@ -56,9 +56,7 @@ Config.GLOW_DIM_HEX_WARNING = 0.0
 - [ ] **Step 3: Commit only Config:**
 ```bash
 git add src/shared/Config.luau
-git commit -m "feat(arena): per-effect dim knobs replace global ARENA_GLOW_DIM (default 0.0)
-
-Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
+git commit -m "feat(arena): per-effect dim knobs replace global ARENA_GLOW_DIM (default 0.0)"
 ```
 
 - [ ] **Step 4: VERIFY no dev flips in the commit:**
@@ -105,9 +103,7 @@ new:
 - [ ] **Step 8: Commit:**
 ```bash
 git add src/client/WorldShell.luau
-git commit -m "feat(arena): per-effect knobs for wisps/crowd/aurora
-
-Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
+git commit -m "feat(arena): per-effect knobs for wisps/crowd/aurora"
 ```
 
 ---
@@ -130,9 +126,7 @@ new:
 - [ ] **Step 3: Commit:**
 ```bash
 git add src/client/LobbyStage.luau
-git commit -m "feat(arena): per-effect knobs for lobby rings + spectator orbs
-
-Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
+git commit -m "feat(arena): per-effect knobs for lobby rings + spectator orbs"
 ```
 
 ---
@@ -145,9 +139,7 @@ Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
 - [ ] **Step 2: Commit:**
 ```bash
 git add src/client/ArenaDressing.luau
-git commit -m "feat(arena): per-effect knob for hex floor trim
-
-Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
+git commit -m "feat(arena): per-effect knob for hex floor trim"
 ```
 
 ---
@@ -193,9 +185,7 @@ local DORMANT_TRANSPARENCY = GlowDim.apply(Config.SWEEP_STANDBY_TRANSPARENCY, Co
 - [ ] **Step 2: Commit:**
 ```bash
 git add src/client/SweeperController.luau
-git commit -m "feat(arena): per-effect knobs for sweeper wake/chase/rotor/shaft/lens/rim/dormant
-
-Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
+git commit -m "feat(arena): per-effect knobs for sweeper wake/chase/rotor/shaft/lens/rim/dormant"
 ```
 
 ---
@@ -268,9 +258,7 @@ new:
 - [ ] **Step 6: Commit:**
 ```bash
 git add src/server/SweeperHazard.luau
-git commit -m "feat(arena): per-effect knob for sweeper kill tells (default 0 = full bright)
-
-Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
+git commit -m "feat(arena): per-effect knob for sweeper kill tells (default 0 = full bright)"
 ```
 
 ---
@@ -300,9 +288,7 @@ local function applyPhase(tile, phase)
 - [ ] **Step 3: Commit:**
 ```bash
 git add src/server/HazardSystem.luau
-git commit -m "feat(arena): per-effect knob for hex tile warning (color darken; default 0 = full red)
-
-Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
+git commit -m "feat(arena): per-effect knob for hex tile warning (color darken; default 0 = full red)"
 ```
 
 ---
@@ -335,8 +321,8 @@ Expected: every line `PASS` (26 suites). Any `FAIL` → STOP (BLOCKED).
   cosmetic Neon through `GlowDim.apply`). `Config.SOUL_HALO_ENABLED` (default true) gates
   the over-head Soul identity halo for clean marketing screenshots. Verified: 26/26 lune
   suites; Studio visual pass pending. See
-  [spec](superpowers/specs/2026-07-12-arena-dim-soul-toggle-design.md) and
-  [plan](superpowers/plans/2026-07-12-arena-dim-soul-toggle.md).
+  [spec](../specs/2026-07-12-arena-dim-soul-toggle-design.md) and
+  [plan](../plans/2026-07-12-arena-dim-soul-toggle.md).
 ```
 new_string:
 ```lua
@@ -351,15 +337,13 @@ new_string:
   deliberately tuned. `Config.SOUL_HALO_ENABLED` (default true) gates the over-head Soul
   identity halo for clean marketing screenshots. Verified: 26/26 lune suites; Studio
   visual pass pending. See
-  [spec](superpowers/specs/2026-07-12-arena-dim-soul-toggle-design.md) and
-  [plan](superpowers/plans/2026-07-12b-per-effect-dim.md).
+  [spec](../specs/2026-07-12-arena-dim-soul-toggle-design.md) and
+  [plan](../plans/2026-07-12b-per-effect-dim.md).
 ```
 - [ ] **Step 4: Commit:**
 ```bash
 git add CHANGELOG.md
-git commit -m "docs(arena): CHANGELOG for per-effect dim knobs
-
-Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
+git commit -m "docs(arena): CHANGELOG for per-effect dim knobs"
 ```
 
 ---

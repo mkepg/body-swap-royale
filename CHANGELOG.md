@@ -255,8 +255,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   lobby + eliminated spectators. Verified: 32/32 lune suites; 16-check solo Studio MCP
   pass (found + fixed 2 runtime-only bugs: unparented toggle, banner cap stuck (0,0));
   manual pass + 2-client smoke pending. See
-  [spec](superpowers/specs/2026-07-16-soul-shop-slice1-design.md),
-  [plan](superpowers/plans/2026-07-16-soul-shop-slice1.md), and
+  [spec](docs/specs/2026-07-16-soul-shop-slice1-design.md),
+  [plan](docs/plans/2026-07-16-soul-shop-slice1.md), and
   [smoke record](smoke-tests/2026-07-16-soul-shop-slice1-smoke-test.md).
 
 ## [2026-07-14]
@@ -292,8 +292,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   Verified: 26/26 lune suites (strike math untouched); Studio visual pass vs
   the reference (live + dormant states, hub and rim close-ups, grazing-angle
   artifact hunts, console clean). See
-  [spec](superpowers/specs/2026-07-13-sweeper-t4-visual-glowup-design.md) and
-  [plan](superpowers/plans/2026-07-13-sweeper-t4-visual-glowup.md).
+  [spec](docs/specs/2026-07-13-sweeper-t4-visual-glowup-design.md) and
+  [plan](docs/plans/2026-07-13-sweeper-t4-visual-glowup.md).
 
 ## [2026-07-12]
 
@@ -311,8 +311,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   deliberately tuned. `Config.SOUL_HALO_ENABLED` (default true) gates the over-head Soul
   identity halo for clean marketing screenshots. Verified: 26/26 lune suites; Studio
   visual pass pending. See
-  [spec](superpowers/specs/2026-07-12-arena-dim-soul-toggle-design.md) and
-  [plan](superpowers/plans/2026-07-12b-per-effect-dim.md).
+  [spec](docs/specs/2026-07-12-arena-dim-soul-toggle-design.md) and
+  [plan](docs/plans/2026-07-12b-per-effect-dim.md).
 
 ## [2026-07-10]
 
@@ -330,8 +330,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `RenderPriority.Last` `humanoid.Jump` re-assert is unchanged; visibility follows the humanoid
   binding like the default thumbstick (hides when spectating, pressed sprite reset on release).
   `TOUCH_JUMP_FORCE` dev flag renders it on desktop for Studio verification. CAS jump button
-  fully removed. See [spec](superpowers/specs/2026-07-10-mobile-jump-button-design.md) and
-  [plan](superpowers/plans/2026-07-10-mobile-jump-button.md).
+  fully removed. See [spec](docs/specs/2026-07-10-mobile-jump-button-design.md) and
+  [plan](docs/plans/2026-07-10-mobile-jump-button.md).
 
 ## [2026-07-09]
 
@@ -354,8 +354,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   0→0.55, wake-lit 0.15→0.5, chase 0.1/0.6→0.4/0.75, rotors 0.35→0.6, shaft 0.7→0.8, lenses
   0.2→0.5); the amber-blade / crimson-underglow kill tells stay full-brightness and gain
   contrast. Verified: 24/24 lune suites. See
-  [spec](superpowers/specs/2026-07-09-soul-sweeper-v2_4-hitbox-visual-alignment-design.md)
-  and [plan](superpowers/plans/2026-07-09-soul-sweeper-v2_4-hitbox-visual-alignment.md).
+  [spec](docs/specs/2026-07-09-soul-sweeper-v2_4-hitbox-visual-alignment-design.md)
+  and [plan](docs/plans/2026-07-09-soul-sweeper-v2_4-hitbox-visual-alignment.md).
 - **Soul Sweeper v2.3 — collision fix, round-start formation, beam redesign.** Playtest report:
   the HIGH bar killed standing players and the LOW bar spared them — inverted behavior. **Root
   cause (verified live):** a standing normalized-R15 root sits at **3.001 studs** above the
@@ -397,8 +397,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   spawn tiles don't arm for the first `GRACE_SECONDS` either (review-endorsed). With physics
   knockback gone, the movement validator no longer needs beam-zone exceptions — full validator
   coverage is restored platform-wide (no rubber-banding anywhere during normal play). Verified:
-  24/24 lune suites. See [spec](superpowers/specs/2026-07-09-soul-sweeper-v2_2-touch-elimination-design.md)
-  and [plan](superpowers/plans/2026-07-09-soul-sweeper-v2_2-touch-elimination.md).
+  24/24 lune suites. See [spec](docs/specs/2026-07-09-soul-sweeper-v2_2-touch-elimination-design.md)
+  and [plan](docs/plans/2026-07-09-soul-sweeper-v2_2-touch-elimination.md).
 - **Soul Sweeper v2.1 — "Jump Club" refinement.** Platform scaled up (`SWEEP_PLATFORM_RADIUS 38→52`,
   `SWEEP_HOLE_RADIUS 10→12`, `SWEEP_HUB_RADIUS 5→6`, anchor offset); true-circle visual via client
   EditableMesh annulus over densified invisible-locally 48-segment collision ring (0.1 stud max

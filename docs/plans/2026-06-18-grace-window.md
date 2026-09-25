@@ -202,8 +202,6 @@ feat: pure GraceModel (post-swap grace decision)
 Time-injected per-player grace state + canDieFromHazard predicate
 (TDD §2): unconditional floor first, then in-window-and-not-moved.
 Lune-tested.
-
-Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>
 EOF
 )"
 ```
@@ -251,8 +249,6 @@ feat: add Config.GRACE_MOVE_EPSILON
 
 Horizontal displacement threshold that ends the post-swap grace window
 early once the player has oriented.
-
-Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>
 EOF
 )"
 ```
@@ -494,8 +490,6 @@ HasMovedSinceSwap from horizontal travel in the void monitor, and routes
 the void kill through eliminateFromHazard, which consults GraceModel
 before eliminating. Disconnect elimination stays ungated. Clears grace
 on eliminate/disconnect.
-
-Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>
 EOF
 )"
 ```
@@ -653,8 +647,6 @@ docs: record post-swap grace window (status 🟡→🟢)
 
 CHANGELOG + smoke-test grace procedure; flip grace status in GDD
 inventory and TDD §2/§10.
-
-Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>
 EOF
 )"
 ```

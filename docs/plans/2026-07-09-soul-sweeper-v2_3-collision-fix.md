@@ -4,7 +4,7 @@
 
 **Spec:** `docs/specs/2026-07-09-soul-sweeper-v2_3-collision-fix-design.md` (read FIRST — root causes + exact decisions).
 
-**Conventions:** as prior plans; suite green after every task (24 files); commit per task, no Co-Authored-By.
+**Conventions:** as prior plans; suite green after every task (24 files); commit per task.
 
 ---
 
