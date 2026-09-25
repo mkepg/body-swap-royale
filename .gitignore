@@ -9,9 +9,11 @@ sourcemap.json
 
 # Local assistant scaffolding. Kept on disk, never committed.
 .superpowers/
+.sdd/
 docs/superpowers/
 .claude/
 CLAUDE.md
+CLAUDE.local.md
 AGENTS.md
 
 # Windows Explorer per-folder settings
